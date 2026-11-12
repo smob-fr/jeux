@@ -1,1 +1,3 @@
 node_modules/
+# copie du kit, générée par npm run build
+www/kit/

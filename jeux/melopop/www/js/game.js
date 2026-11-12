@@ -1,18 +1,18 @@
 // Mélo Pop — moteur de jeu « match-3 », tutoriel et interface.
 import { getLevel, LEVEL_COUNT, WORLDS } from "./levels.js";
-import { Ads } from "./ads.js";
-import { Sound } from "./sound.js";
 import { FX, PALETTE } from "./fx.js";
-import { ICONS } from "./icons.js";
-import { Store, PRODUCTS } from "./store.js";
-import { Notify } from "./notify.js";
+import { Sound } from "./sons.js";
+import JEU from "../kit/jeu.js";
+import {
+  configurer, Ads, Store, Notify, rappelsStandard, ICONS,
+  creerSauvegarde, creerVies, creerInventaire, creerCadeau, aujourdhui,
+  fenetre, Ecrans, Boutique, ouvrirReglages, appliquerReglages, proposerRappels, Tutoriel,
+} from "../kit/index.js";
 
-const VERSION = "2.0.0";
+configurer(JEU);
 const N = 8;
 const GLYPHS = ["♪", "♫", "♩", "♬", "♭", "♯"].map((g) => g + "︎");
 const RAINBOW = -1;
-const MAX_LIVES = 5;
-const LIFE_REGEN_MS = 20 * 60e3;
 
 // Durées des animations (ms) : volontairement posées, pour qu'on voie chaque étape.
 const T_SWAP = 270, T_POP = 380, T_FALL_BASE = 200, T_FALL_ROW = 60, T_PAUSE = 110;
@@ -22,43 +22,35 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const key = (r, c) => r * N + c;
 const inside = (r, c) => r >= 0 && r < N && c >= 0 && c < N;
 const fmt = (n) => Math.round(n).toLocaleString("fr-FR");
-const today = () => new Date().toISOString().slice(0, 10);
 
 /* ====================================================================== */
 /* Sauvegarde                                                             */
 /* ====================================================================== */
-const SAVE_KEY = "melopop.v1";
-const DEFAULT_SAVE = () => ({
-  unlocked: 1, stars: {}, best: {}, lives: MAX_LIVES, livesTs: Date.now(),
-  sound: true, music: true, haptics: true, boosters: { hammer: 3, bomb: 2, star: 1, shuffle: 2, moves: 1 },
-  boosterTutoDone: false, boosterSeen: {},
-  lastGift: "", tutorialDone: false, intros: {},
-  noAds: false, bought: {}, notif: null, // notif : null = pas encore proposé
+// Les noms des champs ne changent jamais : les joueurs gardent leur progression.
+const BOOSTER_START = { hammer: 3, bomb: 2, star: 1, shuffle: 2, moves: 1 };
+const sauvegarde = creerSauvegarde({
+  cle: "melopop.v1",
+  defauts: () => ({
+    unlocked: 1, stars: {}, best: {}, lives: 5, livesTs: Date.now(),
+    sound: true, music: true, haptics: true, boosters: { ...BOOSTER_START },
+    boosterTutoDone: false, boosterSeen: {},
+    lastGift: "", tutorialDone: false, intros: {},
+    noAds: false, bought: {}, notif: null, // notif : null = pas encore proposé
+  }),
+  completer: (d) => { d.intros = d.intros || {}; d.bought = d.bought || {}; },
 });
-const save = (() => {
-  const d = DEFAULT_SAVE();
-  try { Object.assign(d, JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); } catch (e) { /* vide */ }
-  d.boosters = { hammer: 3, bomb: 2, star: 1, shuffle: 2, moves: 1, ...d.boosters };
-  d.boosterSeen = d.boosterSeen || {};
-  d.intros = d.intros || {};
-  d.bought = d.bought || {};
-  return d;
-})();
-function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* stockage indisponible */ } }
-
-function refreshLives() {
-  if (save.lives >= MAX_LIVES) { save.livesTs = Date.now(); return; }
-  const gained = Math.floor((Date.now() - save.livesTs) / LIFE_REGEN_MS);
-  if (gained > 0) {
-    save.lives = Math.min(MAX_LIVES, save.lives + gained);
-    save.livesTs += gained * LIFE_REGEN_MS;
-    persist();
-  }
-}
-function nextLifeIn() {
-  const ms = Math.max(0, LIFE_REGEN_MS - (Date.now() - save.livesTs));
-  return `${Math.floor(ms / 60e3)}:${String(Math.floor((ms % 60e3) / 1e3)).padStart(2, "0")}`;
-}
+const save = sauvegarde.data;
+const persist = () => sauvegarde.enregistrer();
+const vies = creerVies(save, { enregistrer: persist });
+const inventaire = creerInventaire(save, { depart: BOOSTER_START, enregistrer: persist });
+const GIFTS = [
+  { kind: "hammer", label: "1 marteau", icon: "hammer" },
+  { kind: "shuffle", label: "1 mélange", icon: "shuffle" },
+  { kind: "life", label: "1 vie", icon: "heart" },
+  { kind: "hammer2", label: "2 marteaux", icon: "hammer" },
+];
+const cadeau = creerCadeau(save, { tirages: GIFTS, enregistrer: persist });
+const modal = fenetre;
 
 /* ====================================================================== */
 /* État de la partie                                                      */
@@ -617,7 +609,7 @@ async function useTargeted(kind, r, c) {
 
 function boosterCard(kind, { first = false } = {}) {
   const b = BOOSTERS[kind];
-  return `<div class="modal-icon booster-icon">${ICONS[b.icon]}</div><h2>${b.name}</h2><p>${b.desc}</p>
+  return `<div class="kit-fenetre-icone booster-icon">${ICONS[b.icon]}</div><h2>${b.name}</h2><p>${b.desc}</p>
     ${first ? `<p class="muted">Les bonus ne coûtent <b>aucun coup</b>.</p>` : ""}`;
 }
 
@@ -630,9 +622,9 @@ async function onBooster(kind) {
   if (save.boosters[kind] <= 0) {
     modal(`${boosterCard(kind)}
       <p>Tu n'en as plus. Regarde une courte vidéo pour en obtenir un, ou choisis un lot dans la boutique.</p>
-      <button class="btn big reward" data-act="reward">${ICONS.video} Obtenir 1 ${b.name.toLowerCase()}</button>
-      <button class="btn" data-act="shop">${ICONS.cart} Voir les lots de bonus</button>
-      <button class="btn ghost" data-act="close">Non merci</button>`, async (act) => {
+      <button class="kit-btn big reward" data-act="reward">${ICONS.video} Obtenir 1 ${b.name.toLowerCase()}</button>
+      <button class="kit-btn" data-act="shop">${ICONS.cart} Voir les lots de bonus</button>
+      <button class="kit-btn ghost" data-act="close">Non merci</button>`, async (act) => {
       if (act === "reward" && (await Ads.rewarded())) {
         save.boosters[kind]++; persist(); updateBoosters();
         Sound.gift();
@@ -644,7 +636,7 @@ async function onBooster(kind) {
   // Première utilisation : on explique le bonus avant de l'utiliser.
   if (!save.boosterSeen[kind] && !btut) {
     const go = await new Promise((done) => modal(`${boosterCard(kind, { first: true })}
-      <button class="btn big" data-act="use">Utiliser</button><button class="btn ghost" data-act="close">Plus tard</button>`,
+      <button class="kit-btn big" data-act="use">Utiliser</button><button class="kit-btn ghost" data-act="close">Plus tard</button>`,
       (act) => done(act === "use")));
     save.boosterSeen[kind] = true; persist();
     if (!go) return;
@@ -690,28 +682,16 @@ function updateBoosters() {
   } else hint.hidden = true;
 }
 
-/** Bonus gagnés en jouant : 3 étoiles pour la première fois, et un coffre tous les 5 niveaux. */
+/** Bonus gagnés en jouant : 3 étoiles pour la première fois, et un coffre tous les 5 niveaux (convention du kit). */
 function levelRewards(prevStars, stars) {
-  const gains = [];
-  const give = (n) => {
-    for (let k = 0; k < n; k++) {
-      const kind = BOOSTER_KEYS[Math.floor(Math.random() * BOOSTER_KEYS.length)];
-      save.boosters[kind]++;
-      gains.push(kind);
-    }
-  };
-  if (stars === 3 && prevStars < 3) give(1);
-  if (level.number % 5 === 0 && prevStars === 0) give(2);
-  persist();
-  return gains;
+  return inventaire.recompensesNiveau({ numero: level.number, etoilesAvant: prevStars, etoiles: stars });
 }
 
 /* ---------------------------------------------------------------------- */
 /* Tutoriel des bonus (niveau 3)                                          */
 /* ---------------------------------------------------------------------- */
 async function runBoosterTutorial() {
-  const layer = tutLayer();
-  layer.hidden = false;
+  openTutLayer();
   let waiter = null;
   btut = {
     allowed: null,
@@ -750,8 +730,7 @@ async function runBoosterTutorial() {
     <li><span class="tut-ico">${ICONS.star}</span><span>finir un niveau avec <b>3 étoiles</b> ;</span></li>
     <li><span class="tut-ico">${ICONS.chest}</span><span>un <b>coffre tous les 5 niveaux</b> ;</span></li>
     <li><span class="tut-ico">${ICONS.cart}</span><span>des <b>lots de bonus</b> dans la boutique.</span></li></ul>`, { button: "Jouer" });
-  layer.hidden = true;
-  $("#tut-bubble").hidden = true;
+  Tutoriel.fermer();
   btut = null;
   save.boosterTutoDone = true;
   persist();
@@ -869,45 +848,23 @@ function simulateTutorial(g0) {
   return runs.length === 1 && runs[0].dir === "v" && runs[0].cells.some(([r, c]) => r === 3 && c === 6);
 }
 
-function tutLayer() { return $("#tut"); }
-function spotlight(rect, round = false) {
-  const s = $("#tut-spot");
-  if (!rect) { s.hidden = true; return; }
-  s.hidden = false;
-  const pad = 6;
-  Object.assign(s.style, {
-    left: rect.left - pad + "px", top: rect.top - pad + "px",
-    width: rect.width + pad * 2 + "px", height: rect.height + pad * 2 + "px",
-  });
-  s.classList.toggle("round", round);
-}
 function cellsRect(cells) {
   const b = boardEl().getBoundingClientRect();
   const rs = cells.map((p) => p[0]), cs = cells.map((p) => p[1]);
   const r0 = Math.min(...rs), r1 = Math.max(...rs), c0 = Math.min(...cs), c1 = Math.max(...cs);
   return { left: b.left + c0 * cell, top: b.top + r0 * cell, width: (c1 - c0 + 1) * cell, height: (r1 - r0 + 1) * cell };
 }
+const spotlight = (rect, round) => Tutoriel.projecteur(rect, round);
+const bubble = (html, { near, button } = {}) => Tutoriel.bulle(html, { pres: near, bouton: button });
 function showHand(from, to) {
-  const h = $("#tut-hand");
-  if (!from) { h.hidden = true; return; }
+  if (!from) { Tutoriel.main(null); return; }
   const [x1, y1] = cellCenter(...from), [x2, y2] = cellCenter(...to);
-  h.hidden = false;
-  h.style.left = x1 + "px"; h.style.top = y1 + "px";
-  h.style.setProperty("--dx", x2 - x1 + "px");
-  h.style.setProperty("--dy", y2 - y1 + "px");
+  Tutoriel.main({ x: x1, y: y1 }, { x: x2, y: y2 });
 }
-/** Bulle d'explication. Si `button` est donné, attend que le joueur appuie. */
-function bubble(html, { near, button } = {}) {
-  const bb = $("#tut-bubble");
-  bb.innerHTML = `<div class="tut-text">${html}</div>${button ? `<button class="btn big small-btn" id="tut-ok">${button}</button>` : ""}`;
-  bb.hidden = false;
-  // Au-dessus ou en dessous de la zone mise en valeur.
-  const H = innerHeight;
-  if (near && near.top > H * 0.45) { bb.style.top = ""; bb.style.bottom = H - near.top + 18 + "px"; }
-  else { bb.style.bottom = ""; bb.style.top = (near ? near.top + near.height : H * 0.3) + 18 + "px"; }
-  bb.classList.remove("in"); void bb.offsetWidth; bb.classList.add("in");
-  if (!button) return Promise.resolve();
-  return new Promise((res) => { $("#tut-ok").onclick = () => { Sound.tap(); res(); }; });
+/** Ouvre le calque du tutoriel, avec le cadre d'alignement propre à Mélo Pop. */
+function openTutLayer() {
+  Tutoriel.ouvrir();
+  Tutoriel.calque.appendChild($("#tut-run"));
 }
 
 /** Entoure l'alignement que le coup va former, et fait briller les notes déjà en place. */
@@ -925,8 +882,7 @@ function showRun(run, partners) {
 const g = (c, sp) => `<span class="tut-gem">${gemHtml(c, sp)}</span>`;
 
 async function runTutorial() {
-  const layer = tutLayer();
-  layer.hidden = false;
+  openTutLayer();
   const steps = [
     { info: "goal" },
     { info: "moves" },
@@ -996,8 +952,7 @@ async function runTutorial() {
         À toi de jouer !`, { button: "Jouer" });
     }
   }
-  layer.hidden = true;
-  $("#tut-bubble").hidden = true;
+  Tutoriel.fermer();
   tut = null;
   save.tutorialDone = true;
   persist();
@@ -1060,7 +1015,7 @@ function goalChips(lv, withProgress) {
 /** Grande carte « Objectif » au début du niveau, qui rejoint ensuite le bandeau du haut. */
 async function goalSplash() {
   const el = $("#goal-splash");
-  el.innerHTML = `<small class="eyebrow">Niveau ${level.number}</small><div class="gs-title">Objectif</div>
+  el.innerHTML = `<small class="kit-surtitre">Niveau ${level.number}</small><div class="gs-title">Objectif</div>
     <div class="gs-goals">${goalSentence(level)}</div><div class="gs-moves">en <b>${level.moves}</b> coups</div>`;
   el.hidden = false;
   el.className = "in";
@@ -1142,13 +1097,13 @@ function levelCard(index) {
   if (save.lives <= 0) { showNoLives(index); return; }
   const lv = getLevel(index);
   const st = save.stars[index] || 0;
-  modal(`<small class="eyebrow">${worldOf(index).name}</small><h2>Niveau ${lv.number}</h2>
+  modal(`<small class="kit-surtitre">${worldOf(index).name}</small><h2>Niveau ${lv.number}</h2>
     <div class="stars small">${[1, 2, 3].map((n) => `<span class="star ${n <= st ? "on" : ""}">${ICONS.star}</span>`).join("")}</div>
-    <div class="goal-box"><small class="eyebrow">Objectif</small><div class="gs-goals">${goalSentence(lv)}</div>
+    <div class="goal-box"><small class="kit-surtitre">Objectif</small><div class="gs-goals">${goalSentence(lv)}</div>
       <div class="gs-moves">en <b>${lv.moves}</b> coups</div></div>
     ${save.best[index] ? `<p class="muted">Meilleur score : ${fmt(save.best[index])}</p>` : ""}
-    <button class="btn big" data-act="play">${ICONS.play} Jouer</button>
-    <button class="btn ghost" data-act="close">Retour</button>`, (act) => { if (act === "play") startLevel(index); });
+    <button class="kit-btn big" data-act="play">${ICONS.play} Jouer</button>
+    <button class="kit-btn ghost" data-act="close">Retour</button>`, (act) => { if (act === "play") startLevel(index); });
 }
 
 async function startLevel(index, { replayTutorial = false } = {}) {
@@ -1160,7 +1115,6 @@ async function startLevel(index, { replayTutorial = false } = {}) {
   btut = null;
   FX.setHue(worldOf(index).hue);
   await showScreen("game");
-  Ads.hideBanner();
   const b = boardEl();
   b.innerHTML = "";
   $("#level-title").textContent = "Niveau " + level.number;
@@ -1256,8 +1210,8 @@ const INTROS = {
 function introCard(id) {
   const it = INTROS[id];
   return new Promise((res) =>
-    modal(`<small class="eyebrow">Nouveau !</small><h2>${it.title}</h2><div class="intro-art">${it.art()}</div><p>${it.text}</p>
-      <button class="btn big" data-act="close">Compris !</button>`, res));
+    modal(`<small class="kit-surtitre">Nouveau !</small><h2>${it.title}</h2><div class="intro-art">${it.art()}</div><p>${it.text}</p>
+      <button class="kit-btn big" data-act="close">Compris !</button>`, res));
 }
 
 async function checkEnd() {
@@ -1314,24 +1268,24 @@ function onWin() {
   save.unlocked = Math.max(save.unlocked, Math.min(LEVEL_COUNT, level.number + 1));
   persist();
   const gains = levelRewards(prevStars, stars);
-  const gainHtml = gains.length ? `<div class="reward-box"><small class="eyebrow">${level.number % 5 === 0 && prevStars === 0 ? "Coffre de palier" : "Bonus gagné"}</small>
+  const gainHtml = gains.length ? `<div class="reward-box"><small class="kit-surtitre">${level.number % 5 === 0 && prevStars === 0 ? "Coffre de palier" : "Bonus gagné"}</small>
     <div class="reward-items">${gains.map((k) => `<span>${ICONS[BOOSTERS[k].icon]}<b>+1</b><small>${BOOSTERS[k].name}</small></span>`).join("")}</div></div>` : "";
   FX.confetti();
-  modal(`<small class="eyebrow">Niveau ${level.number}</small><h2>Bravo !</h2>
+  modal(`<small class="kit-surtitre">Niveau ${level.number}</small><h2>Bravo !</h2>
     <div class="stars">${[1, 2, 3].map((n) => `<span class="star" data-n="${n}">${ICONS.star}</span>`).join("")}</div>
     <p class="final-score" id="final-score">0</p>
     ${isRecord ? `<p class="record">Nouveau record !</p>` : ""}
     ${gainHtml}
-    <div class="row">
-      <button class="btn ghost" data-act="map">${ICONS.map} Carte</button>
-      ${level.number < LEVEL_COUNT ? `<button class="btn big" data-act="next">Suivant ${ICONS.play}</button>` : ""}
+    <div class="kit-rang">
+      <button class="kit-btn ghost" data-act="map">${ICONS.map} Carte</button>
+      ${level.number < LEVEL_COUNT ? `<button class="kit-btn big" data-act="next">Suivant ${ICONS.play}</button>` : ""}
     </div>`, async (act) => {
     await Ads.maybeInterstitial(level.number);
     if (level.number >= 2 && save.notif === null && Notify.supported) await askNotifications();
     if (act === "next") levelCard(level.number); else openMap();
   });
   // Les étoiles s'allument une à une, puis le score défile.
-  document.querySelectorAll("#modal-box .star").forEach((el, k) => {
+  document.querySelectorAll("#kit-fenetre-boite .star").forEach((el, k) => {
     if (k < stars) setTimeout(() => {
       el.classList.add("on");
       Sound.star();
@@ -1353,10 +1307,10 @@ function onOutOfMoves() {
   const reason = hasSideGoals() ? "Plus de coups !" : "Il manque des points…";
   modal(`<h2>${reason}</h2>
     <div class="goals-card">${goalChips(level, true)}</div>
-    ${save.boosters.moves > 0 ? `<button class="btn big" data-act="usemoves">${ICONS.clock} Utiliser un bonus +3 coups (${save.boosters.moves})</button>` : ""}
+    ${save.boosters.moves > 0 ? `<button class="kit-btn big" data-act="usemoves">${ICONS.clock} Utiliser un bonus +3 coups (${save.boosters.moves})</button>` : ""}
     ${!extraMovesUsed ? `<p>Regarde une courte vidéo pour obtenir <b>5 coups de plus</b>.</p>
-      <button class="btn big reward" data-act="reward">${ICONS.video} +5 coups</button>` : ""}
-    <button class="btn ghost" data-act="giveup">Abandonner</button>`, async (act) => {
+      <button class="kit-btn big reward" data-act="reward">${ICONS.video} +5 coups</button>` : ""}
+    <button class="kit-btn ghost" data-act="giveup">Abandonner</button>`, async (act) => {
     if (act === "usemoves") {
       save.boosters.moves--; persist(); updateBoosters();
       moves += 3; ended = false; updateHud(); scheduleHint();
@@ -1379,19 +1333,16 @@ function onOutOfMoves() {
   });
 }
 
-function loseLife() {
-  refreshLives();
-  if (save.lives >= MAX_LIVES) save.livesTs = Date.now();
-  save.lives = Math.max(0, save.lives - 1);
-  persist();
-}
+const refreshLives = () => vies.rafraichir();
+const loseLife = () => vies.perdre();
+const nextLifeIn = () => vies.prochaineDans();
 
 function onLose() {
   modal(`<h2>Niveau échoué</h2>
     <div class="lives-big">${ICONS.heart}<b>${save.lives}</b></div>
     <p>${save.lives ? "Il te reste " + save.lives + (save.lives > 1 ? " vies." : " vie.") : "Tu n'as plus de vie pour l'instant."}</p>
-    <div class="row"><button class="btn ghost" data-act="map">${ICONS.map} Carte</button>
-    <button class="btn big" data-act="retry">Réessayer</button></div>`, async (act) => {
+    <div class="kit-rang"><button class="kit-btn ghost" data-act="map">${ICONS.map} Carte</button>
+    <button class="kit-btn big" data-act="retry">Réessayer</button></div>`, async (act) => {
     await Ads.maybeInterstitial(level.number);
     if (act === "retry") startLevel(level.number - 1); else openMap();
   });
@@ -1399,17 +1350,17 @@ function onLose() {
 
 function showNoLives(index) {
   modal(`<div class="lives-big">${ICONS.heart}<b>${save.lives}</b></div><h2>${save.lives ? "Vies" : "Plus de vies"}</h2>
-    <p>${save.lives >= MAX_LIVES ? "Tes vies sont au maximum." : `Prochaine vie dans <b id="life-timer">${nextLifeIn()}</b>`}</p>
-    ${save.lives < MAX_LIVES ? `<button class="btn big reward" data-act="reward">${ICONS.video} Regarder une vidéo : +1 vie</button>
-      <button class="btn" data-act="buy">${ICONS.heart} Toutes mes vies : ${Store.priceOf(productById("melopop_lives"))}</button>` : ""}
-    <button class="btn ghost" data-act="close">${save.lives ? "Fermer" : "Plus tard"}</button>`, async (act) => {
+    <p>${vies.pleines ? "Tes vies sont au maximum." : `Prochaine vie dans <b id="life-timer">${nextLifeIn()}</b>`}</p>
+    ${!vies.pleines ? `<button class="kit-btn big reward" data-act="reward">${ICONS.video} Regarder une vidéo : +1 vie</button>
+      <button class="kit-btn" data-act="buy">${ICONS.heart} Toutes mes vies : ${Store.priceOf(Store.product("melopop_lives"))}</button>` : ""}
+    <button class="kit-btn ghost" data-act="close">${save.lives ? "Fermer" : "Plus tard"}</button>`, async (act) => {
     if (act === "buy") {
-      const ok = await purchase(productById("melopop_lives"));
+      const ok = await Boutique.acheter(Store.product("melopop_lives"));
       if (ok && index !== undefined) startLevel(index);
       return;
     }
     if (act === "reward" && (await Ads.rewarded())) {
-      save.lives = Math.min(MAX_LIVES, save.lives + 1); persist();
+      vies.gagner(1);
       updateLivesUi();
       Sound.gift();
       if (index !== undefined) startLevel(index);
@@ -1420,49 +1371,20 @@ function showNoLives(index) {
 /* ====================================================================== */
 /* Fenêtres, écrans                                                       */
 /* ====================================================================== */
-function modal(html, onAction) {
-  const m = $("#modal");
-  const box = $("#modal-box");
-  box.innerHTML = html;
-  m.classList.remove("closing");
-  m.classList.add("open");
-  box.onclick = (e) => {
-    const btn = e.target.closest("[data-act]");
-    if (!btn) return;
-    Sound.tap();
-    m.classList.add("closing");
-    setTimeout(() => {
-      m.classList.remove("open", "closing");
-      onAction && onAction(btn.dataset.act, btn);
-    }, 220);
-  };
-}
-
-let currentScreen = "loading";
-async function showScreen(id, beforeShow) {
-  if (id === currentScreen) { beforeShow && beforeShow(); return; }
-  const from = document.getElementById(currentScreen), to = document.getElementById(id);
-  currentScreen = id;
-  from?.classList.add("leaving");
-  await sleep(260);
-  from?.classList.remove("active", "leaving");
-  to.classList.add("active", "entering");
-  beforeShow && beforeShow();
-  void to.offsetWidth;
-  to.classList.remove("entering");
-  await sleep(350);
-}
+// Écrans : la bannière n'est permise que sur la carte (règle commune : jamais pendant le jeu).
+Ecrans.configurer({ initial: "loading", banniere: ["map"] });
+const showScreen = (id, beforeShow) => Ecrans.afficher(id, beforeShow);
 
 function updateLivesUi() {
   refreshLives();
   document.querySelectorAll(".lives").forEach((e) => (e.textContent = save.lives));
-  document.querySelectorAll(".lives-timer").forEach((e) => (e.textContent = save.lives >= MAX_LIVES ? "max" : nextLifeIn()));
+  document.querySelectorAll(".lives-timer").forEach((e) => (e.textContent = vies.pleines ? "max" : nextLifeIn()));
   const lt = $("#life-timer");
   if (lt) lt.textContent = nextLifeIn();
   const total = Object.values(save.stars).reduce((a, b) => a + b, 0);
   document.querySelectorAll(".total-stars").forEach((e) => (e.textContent = total));
   const giftBtn = $("#gift-btn");
-  if (giftBtn) giftBtn.classList.toggle("ready", save.lastGift !== today());
+  if (giftBtn) giftBtn.classList.toggle("ready", cadeau.pret);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1472,7 +1394,6 @@ const STEP_Y = 104, BANNER_H = 120, PAD_Y = 90;
 
 function openMap() {
   showScreen("map", renderMap);
-  Ads.showBanner();
 }
 function renderMap() {
   const wrap = $("#level-list");
@@ -1531,90 +1452,43 @@ function onMapScroll() {
 function openHome() {
   FX.setHue(WORLDS[0].hue);
   showScreen("home");
-  Ads.hideBanner();
   $("#play-label").textContent = save.unlocked > 1 ? `Niveau ${save.unlocked}` : "Commencer";
   updateLivesUi();
 }
 
-const GIFTS = [
-  { kind: "hammer", label: "1 marteau", icon: "hammer" },
-  { kind: "shuffle", label: "1 mélange", icon: "shuffle" },
-  { kind: "life", label: "1 vie", icon: "heart" },
-  { kind: "hammer2", label: "2 marteaux", icon: "hammer" },
-];
 function openGift() {
   Sound.tap();
-  if (save.lastGift === today()) {
-    modal(`<div class="modal-icon">${ICONS.gift}</div><h2>Cadeau du jour</h2><p>Tu as déjà ouvert le cadeau d'aujourd'hui. Reviens demain !</p>
-      <button class="btn big" data-act="close">OK</button>`);
+  if (!cadeau.pret) {
+    modal(`<div class="kit-fenetre-icone">${ICONS.gift}</div><h2>Cadeau du jour</h2><p>Tu as déjà ouvert le cadeau d'aujourd'hui. Reviens demain !</p>
+      <button class="kit-btn big" data-act="close">OK</button>`);
     return;
   }
-  modal(`<small class="eyebrow">Cadeau du jour</small><h2>Une surprise t'attend</h2>
+  modal(`<small class="kit-surtitre">Cadeau du jour</small><h2>Une surprise t'attend</h2>
     <button class="chest" data-act="open" aria-label="Ouvrir le cadeau">${ICONS.gift}</button>
     <p class="muted">Touche le cadeau pour l'ouvrir</p>`, (act) => {
     if (act !== "open") return;
-    const g = GIFTS[Math.floor(Math.random() * GIFTS.length)];
-    if (g.kind === "life") save.lives = Math.min(MAX_LIVES + 1, save.lives + 1);
-    else if (g.kind === "hammer2") save.boosters.hammer += 2;
-    else save.boosters[g.kind]++;
-    save.lastGift = today();
-    persist();
+    const g = cadeau.ouvrir();
+    if (g.kind === "life") vies.gagner(1, { depasser: true });
+    else if (g.kind === "hammer2") inventaire.ajouter("hammer", 2);
+    else inventaire.ajouter(g.kind);
     updateLivesUi();
     Sound.gift();
-    modal(`<small class="eyebrow">Cadeau du jour</small><div class="gift-reward">${ICONS[g.icon]}</div><h2>${g.label} !</h2>
-      <p class="muted">Un nouveau cadeau t'attend demain.</p><button class="btn big" data-act="close">Super !</button>`);
+    modal(`<small class="kit-surtitre">Cadeau du jour</small><div class="gift-reward">${ICONS[g.icon]}</div><h2>${g.label} !</h2>
+      <p class="muted">Un nouveau cadeau t'attend demain.</p><button class="kit-btn big" data-act="close">Super !</button>`);
     const r = $(".gift-reward").getBoundingClientRect();
     FX.sparkle(r.left + r.width / 2, r.top + r.height / 2, 24);
   });
 }
 
-function toggleRow(id, label, icon, on) {
-  return `<button class="toggle" data-act="${id}" aria-pressed="${on}"><span class="t-icon">${ICONS[icon]}</span><span class="t-label">${label}</span><span class="switch"><span></span></span></button>`;
-}
 function openSettings(fromGame = false) {
-  modal(`<h2>Réglages</h2>
-    <div class="toggles">
-      ${toggleRow("sfx", "Effets sonores", "sound", Sound.sfx)}
-      ${toggleRow("music", "Musique", "music", Sound.music)}
-      ${toggleRow("haptics", "Vibrations", "vibrate", Sound.haptics)}
-      ${Notify.supported ? toggleRow("notif", "Rappels", "bell", save.notif === true) : ""}
-    </div>
-    ${fromGame ? "" : `<button class="btn" data-act="tuto">Revoir le tutoriel</button>`}
-    ${fromGame ? "" : `<button class="btn" data-act="restore">Restaurer mes achats</button>`}
-    <button class="btn" data-act="help">Comment jouer</button>
-    ${Ads.privacyOptionsRequired ? `<button class="btn" data-act="privacy">Confidentialité et publicité</button>` : ""}
-    ${fromGame ? "" : `<button class="btn ghost danger" data-act="reset">Effacer ma progression</button>`}
-    <button class="btn big" data-act="close">Fermer</button>
-    <p class="version">Mélo Pop ${VERSION}</p>`, (act) => {
-    if (act === "sfx") { Sound.sfx = !Sound.sfx; save.sound = Sound.sfx; persist(); openSettings(fromGame); }
-    if (act === "music") { Sound.music = !Sound.music; save.music = Sound.music; persist(); openSettings(fromGame); }
-    if (act === "haptics") { Sound.haptics = !Sound.haptics; save.haptics = Sound.haptics; persist(); openSettings(fromGame); }
-    if (act === "notif") {
-      (async () => {
-        if (save.notif === true) save.notif = false;
-        else save.notif = await Notify.request();
-        persist();
-        if (!save.notif && (await Notify.permission()) === "denied") {
-          modal(`<h2>Rappels bloqués</h2><p>Les notifications sont désactivées pour Mélo Pop dans les réglages de ton téléphone. Active-les là-bas, puis reviens ici.</p>
-            <button class="btn big" data-act="close">OK</button>`, () => openSettings(fromGame));
-        } else openSettings(fromGame);
-      })();
-    }
-    if (act === "tuto") startLevel(0, { replayTutorial: true });
-    if (act === "restore") restorePurchases();
-    if (act === "help") openHelp(fromGame ? "game" : currentScreen);
-    if (act === "privacy") Ads.showPrivacyOptions();
-    if (act === "reset") confirmReset();
-    if (act === "close" && fromGame) resumeGame();
-  });
-}
-function confirmReset() {
-  modal(`<h2>Tout effacer ?</h2><p>Tes niveaux, étoiles et bonus seront perdus. Cette action est définitive.</p>
-    <div class="row"><button class="btn ghost" data-act="close">Annuler</button><button class="btn danger-fill" data-act="yes">Effacer</button></div>`, (act) => {
-    if (act !== "yes") return;
-    Object.assign(save, DEFAULT_SAVE());
-    persist();
-    openHome();
+  ouvrirReglages({
+    data: save, enregistrer: persist, enJeu: fromGame,
+    actions: {
+      tutoriel: () => startLevel(0, { replayTutorial: true }),
+      aide: () => openHelp(fromGame ? "game" : Ecrans.actuel),
+      effacer: () => { sauvegarde.reinitialiser(); openHome(); },
+      fermer: () => { if (fromGame) resumeGame(); },
+    },
   });
 }
 
@@ -1633,10 +1507,10 @@ function pause() {
   if (ended || busy || tut) return;
   Sound.tap();
   modal(`<h2>Pause</h2>
-    <button class="btn big" data-act="close">${ICONS.play} Reprendre</button>
-    <button class="btn" data-act="settings">Réglages</button>
-    <button class="btn" data-act="help">Comment jouer</button>
-    <button class="btn ghost danger" data-act="quit">Quitter le niveau (−1 vie)</button>`, (act) => {
+    <button class="kit-btn big" data-act="close">${ICONS.play} Reprendre</button>
+    <button class="kit-btn" data-act="settings">Réglages</button>
+    <button class="kit-btn" data-act="help">Comment jouer</button>
+    <button class="kit-btn ghost danger" data-act="quit">Quitter le niveau (−1 vie)</button>`, (act) => {
     if (act === "settings") openSettings(true);
     if (act === "help") openHelp("game");
     if (act === "quit") { ended = true; clearHint(); loseLife(); openMap(); }
@@ -1647,7 +1521,6 @@ function resumeGame() { scheduleHint(); }
 /* ---------------------------------------------------------------------- */
 /* Boutique                                                               */
 /* ---------------------------------------------------------------------- */
-const productById = (id) => PRODUCTS.find((p) => p.id === id);
 const SHOP_ART = {
   noads: () => `<div class="shop-art noads">${ICONS.noads}</div>`,
   starter: () => `<div class="shop-art">${ICONS.gift}</div>`,
@@ -1655,93 +1528,43 @@ const SHOP_ART = {
   big: () => `<div class="shop-art chest-art">${ICONS.chest}</div>`,
   lives: () => `<div class="shop-art heart">${ICONS.heart}</div>`,
 };
-
-function grantProduct(p) {
-  const g = p.grant || {};
-  for (const k of BOOSTER_KEYS) if (g[k]) save.boosters[k] = (save.boosters[k] || 0) + g[k];
-  if (g.lives === "full") { save.lives = Math.max(save.lives, MAX_LIVES); save.livesTs = Date.now(); }
-  if (p.type === "noads") { save.noAds = true; Ads.setRemoveAds(true); }
-  if (p.type === "once") save.bought[p.id] = true;
-  persist();
-  updateLivesUi();
-  if (currentScreen === "game") updateBoosters();
-}
-
-/** Achète un produit, l'accorde et affiche le résultat. Résout true si l'achat a réussi. */
-async function purchase(p) {
-  Sound.tap();
-  const res = await Store.buy(p);
-  if (!res.ok) {
-    if (res.error) modal(`<h2>Achat impossible</h2><p>${res.error}</p><button class="btn big" data-act="close">OK</button>`);
-    return false;
-  }
-  grantProduct(p);
-  Sound.gift();
-  FX.confetti();
-  await new Promise((done) => modal(`<small class="eyebrow">Merci !</small>${SHOP_ART[p.art]()}<h2>${p.title}</h2>
-    <p>${p.type === "noads" ? "Les publicités sont supprimées. Merci de soutenir Mélo Pop !" : "C'est ajouté à ton inventaire."}</p>
-    <button class="btn big" data-act="close">Super !</button>`, done));
-  if (currentScreen === "shop") renderShop();
-  return true;
-}
-
-async function restorePurchases() {
-  const res = await Store.restore();
-  const msg = !res.ok ? "La restauration n'a pas abouti. Vérifie ta connexion et réessaie."
-    : res.noAds || save.noAds ? "Ton achat « Sans pub » est bien actif sur cet appareil."
-    : "Aucun achat à restaurer pour ce compte.";
-  modal(`<h2>Restaurer mes achats</h2><p>${msg}</p><button class="btn big" data-act="close">OK</button>`);
-  if (currentScreen === "shop") renderShop();
-}
+Boutique.configurer({
+  data: save, enregistrer: persist,
+  art: (p) => (SHOP_ART[p.art] || SHOP_ART.starter)(),
+  // Contenu d'un lot (jeu.json › produits › contenu) : bonus et vies.
+  accorder: (p) => {
+    const g = p.contenu || {};
+    inventaire.ajouterContenu(g);
+    if (g.lives === "full") vies.remplir();
+  },
+  apres: () => { updateLivesUi(); if (Ecrans.actuel === "game") updateBoosters(); },
+  effet: () => FX.confetti(),
+  inventaire: () => BOOSTER_KEYS.map((k) => `<span title="${BOOSTERS[k].name}">${ICONS[BOOSTERS[k].icon]}<b>${save.boosters[k] || 0}</b></span>`).join("")
+    + `<span class="inv-heart">${ICONS.heart}<b>${save.lives}</b></span>`,
+});
 
 let shopReturn = "home";
-function openShop(ret = currentScreen) {
+function openShop(ret = Ecrans.actuel) {
   shopReturn = ret;
   showScreen("shop", renderShop);
-  Ads.hideBanner();
 }
 function closeShop() {
   if (shopReturn === "game") { showScreen("game"); resumeGame(); }
   else if (shopReturn === "map") openMap();
   else openHome();
 }
-function renderShop() {
-  const items = PRODUCTS.filter((p) => !(p.type === "once" && save.bought[p.id]));
-  $("#shop-inv").innerHTML = BOOSTER_KEYS.map((k) => `<span title="${BOOSTERS[k].name}">${ICONS[BOOSTERS[k].icon]}<b>${save.boosters[k] || 0}</b></span>`).join("")
-    + `<span class="inv-heart">${ICONS.heart}<b>${save.lives}</b></span>`;
-  $("#shop-list").innerHTML = items.map((p) => {
-    const owned = p.type === "noads" && save.noAds;
-    return `<article class="shop-card ${p.type === "noads" ? "featured" : ""}">
-      ${p.badge && !owned ? `<span class="badge">${p.badge}</span>` : ""}
-      ${SHOP_ART[p.art]()}
-      <div class="shop-text"><h3>${p.title}</h3><p>${p.desc}</p></div>
-      <button class="btn big buy" data-buy="${p.id}" ${owned ? "disabled" : ""}>${owned ? "Acheté ✓" : Store.priceOf(p)}</button>
-    </article>`;
-  }).join("") + (Store.available ? "" : `<p class="muted shop-note">La boutique n'est pas disponible pour le moment.</p>`);
-  $("#shop-list").querySelectorAll("[data-buy]").forEach((b) => (b.onclick = () => purchase(productById(b.dataset.buy))));
-}
+const renderShop = () => Boutique.afficher($("#shop-list"), $("#shop-inv"));
 
 /* ---------------------------------------------------------------------- */
 /* Notifications                                                          */
 /* ---------------------------------------------------------------------- */
-function askNotifications() {
-  return new Promise((done) =>
-    modal(`<div class="modal-icon">${ICONS.bell}</div><h2>On te prévient ?</h2>
-      <p>Reçois un petit rappel quand tes <b>vies sont rechargées</b> et quand ton <b>cadeau du jour</b> t'attend. Jamais la nuit, promis.</p>
-      <button class="btn big" data-act="yes">Oui, avec plaisir</button>
-      <button class="btn ghost" data-act="no">Plus tard</button>`, async (act) => {
-      save.notif = act === "yes" ? await Notify.request() : false;
-      persist();
-      done();
-    }));
-}
+const askNotifications = () => proposerRappels(save, persist);
 function scheduleNotifications() {
   refreshLives();
-  Notify.schedule({
-    enabled: save.notif === true,
-    livesFullAt: save.lives < MAX_LIVES ? save.livesTs + (MAX_LIVES - save.lives) * LIFE_REGEN_MS : null,
-    giftOpenedToday: save.lastGift === today(),
-  });
+  Notify.schedule(rappelsStandard({ livesFullAt: vies.pleinesA(), giftOpenedToday: !cadeau.pret }, {
+    vies: { titre: "Tes vies sont rechargées ❤️", texte: "Les notes t'attendent : reviens jouer à Mélo Pop !" },
+    retour: { titre: "Une nouvelle mélodie t'attend 🎵", texte: "Reviens terminer ton prochain niveau !" },
+  }), { enabled: save.notif === true });
 }
 
 /* ====================================================================== */
@@ -1772,8 +1595,7 @@ function fillIcons() {
 }
 
 async function boot() {
-  Sound.sfx = save.sound; Sound.haptics = save.haptics;
-  Sound.music = save.music;
+  appliquerReglages(save);
   refreshLives();
   fillIcons();
   renderHelp();
@@ -1809,9 +1631,8 @@ async function boot() {
   // Écran de chargement : on attend les polices, avec une durée minimale pour l'animation.
   const t0 = performance.now();
   try { await Promise.race([document.fonts.ready, sleep(2500)]); } catch (e) { /* ok */ }
-  Ads.setRemoveAds(save.noAds);
   Ads.init();
-  Store.init((noAds) => { if (noAds && !save.noAds) { save.noAds = true; persist(); } Ads.setRemoveAds(true); });
+  Store.init(Boutique.surSansPub);
   await sleep(Math.max(0, 1600 - (performance.now() - t0)));
   openHome();
 }

@@ -1,0 +1,161 @@
+/* Kit — styles de base des éléments du kit : écrans, boutons, fenêtres, interrupteurs, boutique,
+   tutoriel, pubs et paiements simulés. Toutes les classes commencent par « kit- » pour ne pas gêner
+   les styles du jeu. Le jeu donne sa couleur en redéfinissant les variables ci-dessous dans son :root
+   (les valeurs par défaut sont celles de Mélo Pop). Thème sombre uniquement, comme tous nos jeux. */
+:root {
+  --kit-texte: #fff7ec;
+  --kit-texte-doux: rgba(255, 247, 236, .72);
+  --kit-fond: #1b0f2e;
+  --kit-panneau: rgba(30, 14, 52, .72);
+  --kit-bord: rgba(255, 214, 120, .28);
+  --kit-accent: #ffcf4a;
+  --kit-accent-clair: #ffe58a;
+  --kit-accent-fonce: #c98a14;
+  --kit-accent-texte: #4a2500;
+  --kit-vif: #ff5fa2;          /* rose : badges, notifications, élément armé */
+  --kit-succes: #45e0a0;       /* vert : vidéo récompensée, acheté, activé */
+  --kit-succes-fonce: #0b7a45;
+  --kit-succes-texte: #04361e;
+  --kit-danger: #ff9aa8;
+  --kit-danger-fond: #e0365a;
+  --kit-fenetre-fond: linear-gradient(180deg, #5c2c8c 0%, #3b1a62 100%);
+  --kit-voile: rgba(12, 4, 24, .62);
+  --kit-bulle-fond: #fff7ec;
+  --kit-bulle-texte: #3b1a62;
+  --kit-bulle-fort: #c2185b;
+  --kit-police: inherit;
+  --kit-safe-t: env(safe-area-inset-top, 0px); --kit-safe-b: env(safe-area-inset-bottom, 0px);
+  --kit-safe-l: env(safe-area-inset-left, 0px); --kit-safe-r: env(safe-area-inset-right, 0px);
+  --kit-banniere-h: 0px;
+}
+/* Place réservée à la bannière (réelle ou simulée) en bas de l'écran. */
+body.kit-banniere, body.kit-banniere-simulee { --kit-banniere-h: 60px; }
+
+/* ---------- Écrans plein écran, avec transition ---------- */
+.kit-ecran {
+  position: fixed; inset: 0; z-index: 1; display: none; flex-direction: column;
+  padding: calc(var(--kit-safe-t) + 10px) max(16px, var(--kit-safe-r)) calc(var(--kit-safe-b) + var(--kit-banniere-h) + 10px) max(16px, var(--kit-safe-l));
+  transition: opacity .35s ease, transform .35s cubic-bezier(.2, .8, .3, 1.1);
+}
+.kit-ecran.active { display: flex; }
+.kit-ecran.entering { opacity: 0; transform: scale(.96); }
+.kit-ecran.leaving { opacity: 0; transform: scale(1.03); transition-duration: .26s; }
+
+/* ---------- Boutons ---------- */
+.kit-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; cursor: pointer;
+  width: 100%; max-width: 320px; margin: 7px auto; padding: 12px 20px; border-radius: 999px;
+  font: inherit; font-family: var(--kit-police); color: var(--kit-texte);
+  background: rgba(255, 255, 255, .12); font-weight: 600; font-size: 17px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .14), 0 4px 0 rgba(0, 0, 0, .3);
+  transition: transform .12s, box-shadow .12s, filter .2s;
+}
+.kit-btn:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .14), 0 1px 0 rgba(0, 0, 0, .3); }
+.kit-btn:focus-visible { outline: 3px solid var(--kit-accent); outline-offset: 3px; }
+.kit-btn.big {
+  background: linear-gradient(180deg, var(--kit-accent-clair) 0%, var(--kit-accent) 45%, color-mix(in srgb, var(--kit-accent) 70%, var(--kit-accent-fonce)) 100%);
+  color: var(--kit-accent-texte); font-size: 21px; font-weight: 700; padding: 14px 26px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .7), inset 0 -3px 0 rgba(0, 0, 0, .15), 0 5px 0 var(--kit-accent-fonce), 0 10px 24px color-mix(in srgb, var(--kit-accent) 30%, transparent);
+}
+.kit-btn.big:active { box-shadow: inset 0 2px 0 rgba(255, 255, 255, .7), 0 2px 0 var(--kit-accent-fonce); }
+.kit-btn.reward {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--kit-succes) 55%, #fff), var(--kit-succes) 50%, color-mix(in srgb, var(--kit-succes) 70%, var(--kit-succes-fonce)));
+  color: var(--kit-succes-texte);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .6), 0 5px 0 var(--kit-succes-fonce), 0 10px 24px color-mix(in srgb, var(--kit-succes) 25%, transparent);
+}
+.kit-btn.ghost { background: transparent; box-shadow: none; color: var(--kit-texte-doux); }
+.kit-btn.danger { color: var(--kit-danger); }
+.kit-btn.danger-fill { background: var(--kit-danger-fond); box-shadow: 0 4px 0 color-mix(in srgb, var(--kit-danger-fond) 60%, #000); }
+.kit-btn.petit { font-size: 17px; padding: 10px 22px; margin: 12px auto 0; width: auto; }
+.kit-btn:disabled { filter: grayscale(.6); opacity: .7; cursor: default; }
+.kit-btn svg { display: inline-block; vertical-align: -0.14em; }
+.kit-rang { display: flex; gap: 10px; width: 100%; max-width: 340px; margin: 0 auto; }
+.kit-rang .kit-btn { margin: 8px 0; }
+.kit-doux { color: var(--kit-texte-doux); }
+.kit-surtitre { display: block; text-transform: uppercase; letter-spacing: .14em; font-size: 12px; color: var(--kit-accent); margin-bottom: 4px; }
+
+/* ---------- Fenêtres ---------- */
+#kit-fenetre { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center;
+  padding: calc(var(--kit-safe-t) + 16px) max(16px, var(--kit-safe-r)) calc(var(--kit-safe-b) + 16px) max(16px, var(--kit-safe-l));
+  background: var(--kit-voile); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  font-family: var(--kit-police); color: var(--kit-texte); }
+#kit-fenetre.open { display: flex; animation: kit-fondu .25s; }
+#kit-fenetre.closing { animation: kit-fondu-sortie .22s forwards; }
+#kit-fenetre-boite {
+  position: relative; width: 100%; max-width: 380px; max-height: 100%; overflow-y: auto; border-radius: 28px; padding: 26px 20px 18px; text-align: center;
+  background: var(--kit-fenetre-fond);
+  box-shadow: 0 0 0 3px var(--kit-accent), 0 0 0 7px rgba(0, 0, 0, .25), 0 20px 60px rgba(0, 0, 0, .6);
+  animation: kit-fenetre-entree .45s cubic-bezier(.3, 1.5, .5, 1);
+}
+#kit-fenetre.closing #kit-fenetre-boite { animation: kit-fenetre-sortie .22s forwards; }
+#kit-fenetre-boite h2 { margin: 0 0 10px; font-size: 30px; text-wrap: balance; }
+#kit-fenetre-boite p { line-height: 1.55; margin: 8px 0; text-wrap: balance; }
+.kit-fenetre-icone { font-size: 54px; color: var(--kit-accent); margin-bottom: 6px; }
+
+/* ---------- Réglages ---------- */
+.kit-interrupteurs { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 14px; }
+.kit-interrupteur { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: 0; border-radius: 16px;
+  background: rgba(0, 0, 0, .2); text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.kit-int-icone { font-size: 22px; color: var(--kit-accent); display: grid; }
+.kit-int-label { flex: 1; font-size: 17px; }
+.kit-switch { width: 50px; height: 28px; border-radius: 14px; background: rgba(255, 255, 255, .2); position: relative; transition: background .2s; flex: none; }
+.kit-switch span { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .25s cubic-bezier(.3, 1.5, .5, 1); box-shadow: 0 2px 4px rgba(0, 0, 0, .3); }
+.kit-interrupteur[aria-pressed="true"] .kit-switch { background: var(--kit-succes); }
+.kit-interrupteur[aria-pressed="true"] .kit-switch span { transform: translateX(22px); }
+.kit-version { font-size: 12px; color: var(--kit-texte-doux); margin: 10px 0 0 !important; }
+
+/* ---------- Boutique ---------- */
+.kit-carte-produit { position: relative; display: grid; grid-template-columns: 74px 1fr; grid-template-areas: "art text" "art buy"; gap: 4px 14px; align-items: center;
+  padding: 16px; border-radius: 22px; background: var(--kit-panneau); box-shadow: inset 0 0 0 2px var(--kit-bord); }
+.kit-carte-produit.vedette { background: linear-gradient(160deg, color-mix(in srgb, var(--kit-vif) 35%, transparent), rgba(60, 20, 100, .8));
+  box-shadow: inset 0 0 0 3px var(--kit-accent), 0 10px 30px color-mix(in srgb, var(--kit-vif) 25%, transparent); }
+.kit-carte-art { grid-area: art; }
+.kit-carte-texte { grid-area: text; min-width: 0; }
+.kit-carte-texte h3 { margin: 0 0 2px; font-size: 19px; color: var(--kit-accent); }
+.kit-carte-texte p { margin: 0; color: var(--kit-texte-doux); font-size: 14px; line-height: 1.4; }
+.kit-carte-produit .kit-acheter { grid-area: buy; margin: 8px 0 0; max-width: 170px; padding: 9px 18px; font-size: 18px; justify-self: start; }
+.kit-carte-produit .kit-acheter:disabled { background: color-mix(in srgb, var(--kit-succes) 25%, transparent); color: var(--kit-succes);
+  box-shadow: inset 0 0 0 2px var(--kit-succes); filter: none; opacity: 1; }
+.kit-badge { position: absolute; top: -10px; right: 14px; padding: 3px 10px; border-radius: 999px; background: var(--kit-vif); color: #fff; font-size: 12px; font-weight: 700;
+  letter-spacing: .04em; box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.kit-note { text-align: center; }
+
+/* ---------- Tutoriel ---------- */
+#kit-tuto { position: fixed; inset: 0; z-index: 25; pointer-events: none; font-family: var(--kit-police); }
+#kit-tuto[hidden], #kit-tuto [hidden] { display: none; }
+#kit-tuto-projecteur { position: fixed; border-radius: 16px; box-shadow: 0 0 0 9999px rgba(8, 2, 18, .62), 0 0 0 3px var(--kit-accent), 0 0 24px 6px color-mix(in srgb, var(--kit-accent) 50%, transparent);
+  transition: all .45s cubic-bezier(.3, .8, .3, 1); }
+#kit-tuto-projecteur.rond { border-radius: 50%; }
+#kit-tuto-main { position: fixed; width: 0; height: 0; animation: kit-main 1.8s ease-in-out infinite; }
+.kit-doigt { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .9);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, .35), 0 6px 14px rgba(0, 0, 0, .5); }
+.kit-doigt::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 3px solid #fff; animation: kit-onde 1.8s ease-out infinite; }
+#kit-tuto-bulle { position: fixed; left: 50%; width: min(92vw, 380px); transform: translateX(-50%); pointer-events: auto; padding: 16px 18px; border-radius: 22px; text-align: center;
+  background: var(--kit-bulle-fond); color: var(--kit-bulle-texte); font-size: 18px; line-height: 1.45; box-shadow: 0 0 0 3px var(--kit-accent), 0 14px 40px rgba(0, 0, 0, .55); }
+#kit-tuto-bulle.in { animation: kit-bulle .5s cubic-bezier(.3, 1.6, .5, 1); }
+#kit-tuto-bulle b { color: var(--kit-bulle-fort); }
+.kit-tuto-texte { line-height: 1.75; }
+
+/* ---------- Pubs et paiements simulés (navigateur uniquement) ---------- */
+#kit-banniere-simulee { display: none; position: fixed; left: 0; right: 0; bottom: 0; height: calc(60px + var(--kit-safe-b)); z-index: 15;
+  background: #e9e6ee; color: #555; align-items: center; justify-content: center; font: 13px system-ui, sans-serif; padding-bottom: var(--kit-safe-b); }
+body.kit-banniere-simulee #kit-banniere-simulee { display: flex; }
+.kit-pub { position: fixed; inset: 0; z-index: 60; background: #111; display: flex; align-items: center; justify-content: center; padding: 16px; font-family: var(--kit-police); }
+.kit-pub-boite { background: #fff; color: #222; border-radius: 16px; padding: 24px; text-align: center; width: 100%; max-width: 340px; }
+.kit-pub-compte { font-size: 48px; font-weight: 700; margin: 12px 0; }
+.kit-pub .kit-btn { background: #222; color: #fff; }
+.kit-pub .kit-btn.ghost { background: transparent; color: #555; }
+.kit-paiement p { color: #555; }
+
+/* ---------- Animations ---------- */
+@keyframes kit-fondu { from { opacity: 0; } }
+@keyframes kit-fondu-sortie { to { opacity: 0; } }
+@keyframes kit-fenetre-entree { from { opacity: 0; transform: scale(.7) translateY(30px); } }
+@keyframes kit-fenetre-sortie { to { opacity: 0; transform: scale(.85) translateY(20px); } }
+@keyframes kit-main { 0%, 15% { transform: translate(0, 0) scale(1); opacity: 0; } 25% { opacity: 1; transform: translate(0, 0) scale(.85); } 70% { transform: translate(var(--dx), var(--dy)) scale(.85); opacity: 1; } 85%, 100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } }
+@keyframes kit-onde { 0% { transform: scale(.4); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+@keyframes kit-bulle { from { opacity: 0; transform: translateX(-50%) scale(.6); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .kit-ecran, #kit-fenetre, #kit-fenetre-boite, #kit-tuto-main, #kit-tuto-bulle, .kit-doigt::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

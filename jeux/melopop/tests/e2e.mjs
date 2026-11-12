@@ -19,7 +19,7 @@ try { ({ chromium } = createRequire(import.meta.url)("playwright")); } catch {
   process.exit(2);
 }
 
-const WWW = resolve(dirname(fileURLToPath(import.meta.url)), "..", "www");
+const WWW = resolve(dirname(fileURLToPath(import.meta.url)), "..", "www"); // construit avec le kit par « npm run build »
 const CLE = "melopop.v1";
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css",
   ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".woff2": "font/woff2", ".svg": "image/svg+xml" };
@@ -49,10 +49,10 @@ async function clic(page, sel) { await page.waitForSelector(sel, { state: "visib
 /* ---------- aides ---------- */
 const lireSauvegarde = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) || "{}"), CLE);
 const accueil = (page) => page.waitForSelector("#home.active", { timeout: 8000 });
-const fenetre = (page) => page.waitForSelector("#modal.open:not(.closing)");
+const fenetre = (page) => page.waitForSelector("#kit-fenetre.open:not(.closing)");
 async function bouton(page, act) {
   await fenetre(page);
-  await clic(page, `#modal-box [data-act="${act}"]`);
+  await clic(page, `#kit-fenetre-boite [data-act="${act}"]`);
   await page.waitForTimeout(300);
 }
 /** Fait glisser une note de la case a vers la case b, à la souris. */
@@ -116,16 +116,16 @@ const TESTS = [
       verifier((await page.textContent("#play-label")).includes("Commencer"), "le bouton devrait dire « Commencer »");
       await clic(page, "#play");
       await page.waitForSelector("#game.active");
-      const suite = async () => { await page.waitForSelector("#tut-ok", { state: "visible", timeout: 8000 }); await clic(page, "#tut-ok"); await page.waitForTimeout(250); };
+      const suite = async () => { await page.waitForSelector("#kit-tuto-ok", { state: "visible", timeout: 8000 }); await clic(page, "#kit-tuto-ok"); await page.waitForTimeout(250); };
       await suite(); await suite(); // objectif, coups
-      await page.waitForSelector("#tut-hand:not([hidden])", { state: "attached" });
+      await page.waitForSelector("#kit-tuto-main:not([hidden])", { state: "attached" });
       await glisser(page, [5, 2], [6, 2]);
       await suite(); // barre de score
       await glisser(page, [2, 6], [3, 6]);
       await suite(); // note rayée
       await glisser(page, [5, 5], [5, 6]);
       await suite(); await suite(); // objectifs, astuces
-      await page.waitForFunction(() => document.getElementById("tut").hidden);
+      await page.waitForFunction(() => document.getElementById("kit-tuto").hidden);
       const s = await lireSauvegarde(page);
       verifier(s.tutorialDone === true, "tutorialDone devrait être enregistré");
       const st = await page.evaluate(() => window.__melopop.state);
@@ -138,15 +138,15 @@ const TESTS = [
     save: DEJA_JOUE,
     async run(page) {
       await accueil(page);
-      verifier(!(await page.evaluate(() => document.body.classList.contains("has-fake-banner"))), "pas de bannière sur l'accueil");
+      verifier(!(await page.evaluate(() => document.body.classList.contains("kit-banniere-simulee"))), "pas de bannière sur l'accueil");
       await clic(page, "#play");
       await page.waitForSelector("#map.active");
       await page.waitForTimeout(200);
-      verifier(await page.evaluate(() => document.body.classList.contains("has-fake-banner")), "la bannière devrait être affichée sur la carte");
+      verifier(await page.evaluate(() => document.body.classList.contains("kit-banniere-simulee")), "la bannière devrait être affichée sur la carte");
       await clic(page, '.node[data-level="0"]');
       await bouton(page, "play");
       await page.waitForSelector("#game.active");
-      verifier(!(await page.evaluate(() => document.body.classList.contains("has-fake-banner"))), "la bannière ne doit pas être affichée pendant la partie");
+      verifier(!(await page.evaluate(() => document.body.classList.contains("kit-banniere-simulee"))), "la bannière ne doit pas être affichée pendant la partie");
       return "carte : oui, partie : non";
     },
   },
@@ -190,10 +190,10 @@ const TESTS = [
       await page.waitForSelector("#map.active");
       await clic(page, '.node[data-level="0"]');
       await bouton(page, "reward");
-      await page.waitForSelector(".fake-ad");
-      await page.waitForSelector(".fake-ad button:not([disabled])");
-      await page.waitForFunction(() => document.querySelector(".fake-ad-count")?.textContent === "✓", null, { timeout: 8000 });
-      await clic(page, ".fake-ad button");
+      await page.waitForSelector(".kit-pub");
+      await page.waitForSelector(".kit-pub button:not([disabled])");
+      await page.waitForFunction(() => document.querySelector(".kit-pub-compte")?.textContent === "✓", null, { timeout: 8000 });
+      await clic(page, ".kit-pub button");
       await page.waitForSelector("#game.active");
       const s = await lireSauvegarde(page);
       verifier(s.lives === 1, `1 vie attendue, pas ${s.lives}`);
@@ -209,14 +209,14 @@ const TESTS = [
       await clic(page, "#gift-btn");
       await bouton(page, "open");
       await fenetre(page);
-      const gain = await page.textContent("#modal-box h2");
+      const gain = await page.textContent("#kit-fenetre-boite h2");
       await bouton(page, "close");
       const s = await lireSauvegarde(page);
-      const auj = new Date().toISOString().slice(0, 10);
+      const auj = await page.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; });
       verifier(s.lastGift === auj, "la date du cadeau devrait être enregistrée");
       await clic(page, "#gift-btn");
       await fenetre(page);
-      verifier((await page.textContent("#modal-box")).includes("déjà ouvert"), "le second cadeau devrait être refusé");
+      verifier((await page.textContent("#kit-fenetre-boite")).includes("déjà ouvert"), "le second cadeau devrait être refusé");
       return `gagné : ${gain.trim()}`;
     },
   },
@@ -227,15 +227,15 @@ const TESTS = [
       await accueil(page);
       await clic(page, "#home-shop");
       await page.waitForSelector("#shop.active");
-      const prix = await page.$$eval("#shop-list .buy", (b) => b.map((x) => x.textContent.trim()));
+      const prix = await page.$$eval("#shop-list .kit-acheter", (b) => b.map((x) => x.textContent.trim()));
       const avant = (await lireSauvegarde(page)).boosters?.hammer ?? 3;
       await clic(page, '[data-buy="melopop_pack_s"]');
-      await clic(page, '.fake-ad [data-r="ok"]');
+      await clic(page, '.kit-pub [data-r="ok"]');
       await bouton(page, "close");
       const s1 = await lireSauvegarde(page);
       verifier(s1.boosters.hammer === avant + 2, `marteaux : ${avant} + 2 attendus, ${s1.boosters.hammer} obtenus`);
       await clic(page, '[data-buy="melopop_noads"]');
-      await clic(page, '.fake-ad [data-r="ok"]');
+      await clic(page, '.kit-pub [data-r="ok"]');
       await bouton(page, "close");
       const s2 = await lireSauvegarde(page);
       verifier(s2.noAds === true, "noAds devrait être enregistré");
@@ -244,7 +244,7 @@ const TESTS = [
       await clic(page, "#play");
       await page.waitForSelector("#map.active");
       await page.waitForTimeout(200);
-      verifier(!(await page.evaluate(() => document.body.classList.contains("has-fake-banner"))), "plus de bannière après « Sans pub »");
+      verifier(!(await page.evaluate(() => document.body.classList.contains("kit-banniere-simulee"))), "plus de bannière après « Sans pub »");
       return `prix affichés : ${prix.join(", ")}`;
     },
   },

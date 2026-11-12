@@ -6,7 +6,7 @@
 //
 // Code de sortie 1 si une étape échoue.
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { listerJeux } from "./verifier-jeux.mjs";
@@ -26,7 +26,10 @@ function lancer(titre, cmd, args, cwd) {
 const demandes = process.argv.slice(2);
 const jeux = demandes.length ? demandes : listerJeux();
 
-if (existsSync(join(RACINE, "kit", "tests"))) lancer("Kit", process.execPath, ["--test", "kit/tests/"], RACINE);
+const testsKit = existsSync(join(RACINE, "kit", "tests"))
+  ? readdirSync(join(RACINE, "kit", "tests")).filter((f) => f.endsWith(".test.mjs")).map((f) => join("kit", "tests", f))
+  : [];
+if (testsKit.length) lancer("Kit", process.execPath, ["--test", ...testsKit], RACINE);
 lancer("Conventions", process.execPath, ["outils/verifier-jeux.mjs", ...jeux], RACINE);
 for (const n of jeux) {
   const d = join(RACINE, "jeux", n);

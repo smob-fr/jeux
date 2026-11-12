@@ -5,6 +5,7 @@ publicité et d'achats (`kit/`), mêmes conventions.
 
 | Jeu | Dossier | Genre | État |
 |---|---|---|---|
+| Mélo Pop | `jeux/melopop` | match-3 musical, 60 niveaux | complet, pubs et achats en mode test |
 
 - Notes pour le développement avec Claude Code : `CLAUDE.md`, puis `jeux/<nom>/CLAUDE.md`.
 - Monétisation : `docs/monetisation.md`. Publication : `docs/publication.md`. Idées : `docs/idees.md`.

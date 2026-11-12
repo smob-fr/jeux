@@ -1,10 +1,15 @@
-// Ajoute la configuration AdMob aux projets natifs générés par Capacitor.
-// Usage : node scripts/configure-admob.mjs   (après `npx cap add android` / `npx cap add ios`)
-// Remplace les identifiants d'APPLICATION de test par les tiens avant publication.
+#!/usr/bin/env node
+// Ajoute la configuration AdMob aux projets natifs générés par Capacitor (android/ et ios/ du jeu).
+// À lancer depuis le dossier du jeu, après `npx cap add android` / `npx cap add ios` :
+//   node ../../kit/outils/configure-admob.mjs        (ou : npm run admob:config)
+// Les identifiants d'APPLICATION AdMob viennent de jeu.json › admob.android.appli et admob.ios.appli.
+// Le message ATT d'iOS est écrit à partir du nom du jeu.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
-const ANDROID_APP_ID = process.env.ADMOB_ANDROID_APP_ID || "ca-app-pub-3940256099942544~3347511713"; // test
-const IOS_APP_ID = process.env.ADMOB_IOS_APP_ID || "ca-app-pub-3940256099942544~1458002511";         // test
+const jeu = JSON.parse(readFileSync("jeu.json", "utf8"));
+const ANDROID_APP_ID = process.env.ADMOB_ANDROID_APP_ID || jeu.admob?.android?.appli;
+const IOS_APP_ID = process.env.ADMOB_IOS_APP_ID || jeu.admob?.ios?.appli;
+if (!ANDROID_APP_ID || !IOS_APP_ID) { console.error("jeu.json › admob.android.appli et admob.ios.appli sont nécessaires"); process.exit(1); }
 
 // ---------- Android ----------
 const manifest = "android/app/src/main/AndroidManifest.xml";
@@ -36,7 +41,7 @@ if (existsSync(plist)) {
     x = x.replace(/(<key>GADApplicationIdentifier<\/key>\s*<string>)[^<]*/, `$1${IOS_APP_ID}`);
   } else add("GADApplicationIdentifier", `<string>${IOS_APP_ID}</string>`);
   add("NSUserTrackingUsageDescription",
-    "<string>Ton identifiant sert uniquement à afficher des publicités plus pertinentes dans Mélo Pop.</string>");
+    `<string>Ton identifiant sert uniquement à afficher des publicités plus pertinentes dans ${jeu.nom}.</string>`);
   // Réseaux publicitaires SKAdNetwork (Google). Liste complète : https://developers.google.com/admob/ios/3p-skadnetworks
   add("SKAdNetworkItems", `<array>
 \t\t<dict><key>SKAdNetworkIdentifier</key><string>cstr6suwn9.skadnetwork</string></dict>
@@ -44,3 +49,4 @@ if (existsSync(plist)) {
   writeFileSync(plist, x);
   console.log("✓ iOS : Info.plist configuré");
 }
+if (!existsSync(manifest) && !existsSync(plist)) console.log("Aucun projet natif : lance d'abord npm run add:android ou npm run add:ios.");

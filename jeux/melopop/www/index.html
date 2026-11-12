@@ -15,14 +15,15 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <meta property="og:title" content="Mélo Pop">
   <meta property="og:description" content="Aligne les notes, compose ta mélodie !">
-  <meta property="og:image" content="https://smob-fr.github.io/melopop/www/icons/icon-512.png">
+  <meta property="og:image" content="https://smob-fr.github.io/jeux/melopop/icons/icon-512.png">
+  <link rel="stylesheet" href="kit/styles/base.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <canvas id="bg" aria-hidden="true"></canvas>
 
   <!-- Chargement -->
-  <section id="loading" class="screen active">
+  <section id="loading" class="kit-ecran active">
     <div class="center">
       <div class="logo-gems">
         <div class="gem c0"><i>♪&#xFE0E;</i></div><div class="gem c2"><i>♩&#xFE0E;</i></div><div class="gem c4"><i>♭&#xFE0E;</i></div>
@@ -34,7 +35,7 @@
   </section>
 
   <!-- Accueil -->
-  <section id="home" class="screen">
+  <section id="home" class="kit-ecran">
     <header class="bar">
       <button class="pill lives-btn" data-icon="heart"><span class="lives">5</span><small class="lives-timer"></small></button>
       <div class="pill star-pill" data-icon="star"><span class="total-stars">0</span></div>
@@ -46,7 +47,7 @@
       </div>
       <h1 class="title big"><span>Mélo</span><span class="pop">Pop</span></h1>
       <p class="tagline">Aligne les notes, compose ta mélodie</p>
-      <button id="play" class="btn big play-btn" data-icon="play"><span id="play-label">Commencer</span></button>
+      <button id="play" class="kit-btn big play-btn" data-icon="play"><span id="play-label">Commencer</span></button>
       <div class="home-row">
         <button id="gift-btn" class="round-btn" data-icon="gift"><span>Cadeau</span></button>
         <button id="home-shop" class="round-btn" data-icon="cart"><span>Boutique</span></button>
@@ -57,7 +58,7 @@
   </section>
 
   <!-- Carte -->
-  <section id="map" class="screen">
+  <section id="map" class="kit-ecran">
     <header class="bar">
       <button id="map-back" class="icon-btn" data-icon="back" aria-label="Accueil"></button>
       <button class="pill lives-btn" data-icon="heart"><span class="lives">5</span><small class="lives-timer"></small></button>
@@ -69,7 +70,7 @@
   </section>
 
   <!-- Partie -->
-  <section id="game" class="screen">
+  <section id="game" class="kit-ecran">
     <header class="hud">
       <button id="pause" class="icon-btn" data-icon="pause" aria-label="Pause"></button>
       <div id="moves-badge" class="moves-badge"><b id="moves">0</b><small>coups</small></div>
@@ -96,7 +97,7 @@
   </section>
 
   <!-- Comment jouer -->
-  <section id="help" class="screen">
+  <section id="help" class="kit-ecran">
     <header class="bar">
       <button id="help-back" class="icon-btn" data-icon="back" aria-label="Retour"></button>
       <h2 class="bar-title">Comment jouer</h2>
@@ -106,7 +107,7 @@
   </section>
 
   <!-- Boutique -->
-  <section id="shop" class="screen">
+  <section id="shop" class="kit-ecran">
     <header class="bar">
       <button id="shop-back" class="icon-btn" data-icon="back" aria-label="Retour"></button>
       <h2 class="bar-title">Boutique</h2>
@@ -116,17 +117,10 @@
     <div id="shop-list"></div>
   </section>
 
-  <!-- Tutoriel -->
-  <div id="tut" hidden>
-    <div id="tut-spot" hidden></div>
-    <div id="tut-run" hidden><b>3</b></div>
-    <div id="tut-hand" hidden><span class="finger"></span></div>
-    <div id="tut-bubble" hidden></div>
-  </div>
+  <!-- Tutoriel : le calque (projecteur, main, bulle) est créé par le kit ; ce cadre d'alignement y est ajouté. -->
+  <div id="tut-run" hidden><b>3</b></div>
 
   <canvas id="fx" aria-hidden="true"></canvas>
-  <div id="modal"><div id="modal-box"></div></div>
-  <div id="fake-banner">Bannière publicitaire (simulation)</div>
 
   <script type="module" src="js/game.js"></script>
 </body>

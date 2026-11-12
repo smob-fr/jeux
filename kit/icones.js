@@ -1,5 +1,6 @@
-// Icônes SVG (traits arrondis, couleur héritée du texte).
-const svg = (body, vb = "0 0 24 24") =>
+// Kit — icônes SVG (traits arrondis, couleur héritée du texte). Un jeu ajoute les siennes :
+//   const ICONS = { ...KIT_ICONS, monIcone: svg("…") };
+export const svg = (body, vb = "0 0 24 24") =>
   `<svg viewBox="${vb}" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
 
 export const ICONS = {

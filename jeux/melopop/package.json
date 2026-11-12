@@ -4,13 +4,15 @@
   "private": true,
   "description": "Mélo Pop — jeu de match-3 musical (Capacitor + AdMob)",
   "scripts": {
-    "serve": "npx --yes http-server www -p 8080 -c-1",
-    "add:android": "npx cap add android && node scripts/configure-admob.mjs",
-    "add:ios": "npx cap add ios && node scripts/configure-admob.mjs",
-    "admob:config": "node scripts/configure-admob.mjs",
-    "sync": "npx cap sync",
-    "android": "npx cap sync android && npx cap open android",
-    "ios": "npx cap sync ios && npx cap open ios",
+    "build": "node ../../kit/outils/installer.mjs . www/kit",
+    "serve": "npm run build && npx --yes http-server www -p 8080 -c-1",
+    "test": "npm run build && node tests/e2e.mjs",
+    "add:android": "npm run build && npx cap add android && npm run admob:config",
+    "add:ios": "npm run build && npx cap add ios && npm run admob:config",
+    "admob:config": "node ../../kit/outils/configure-admob.mjs",
+    "sync": "npm run build && npx cap sync",
+    "android": "npm run build && npx cap sync android && npx cap open android",
+    "ios": "npm run build && npx cap sync ios && npx cap open ios",
     "assets": "npx capacitor-assets generate --iconBackgroundColor '#3a1d5c' --splashBackgroundColor '#2a1846'"
   },
   "dependencies": {
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",
-    "@capacitor/assets": "^3.0.5"
+    "@capacitor/assets": "^3.0.5",
+    "playwright": "^1.48.0"
   }
 }
