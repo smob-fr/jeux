@@ -1,23 +1,23 @@
 # Ça Roule
 
 Puzzle de parking pour mobile : faites sortir les voitures du parking.
-- **Course** : 1000 niveaux générés, cœurs, chrono, pièges.
+- **Course** « sorties limitées » : 75 niveaux en 3 villes, portes de couleur, barrières, niveaux géants.
 - **Casse-tête** : 50 énigmes à solution optimale vérifiée.
 - **Défi du jour** : un casse-tête expert (30 à 50 coups) par jour, avec série de jours et rappels.
-- Garage de skins (étoiles ou vidéos), sons et musique synthétisés, tutoriel animé.
+- Garage de styles de voitures (étoiles ou vidéos), coups de pouce 👍, coffres et missions, sons et
+  musique synthétisés, tutoriel animé.
+- Pubs et boutique (« Sans pub », lots de 👍) avec le kit commun du dépôt : simulées dans le navigateur.
 
 ## Version de test pour téléphones
-Le site est publié automatiquement sur GitHub Pages à chaque envoi sur `main`
-(workflow `.github/workflows/pages.yml` : vérifie les niveaux et les défis, construit `site/`, publie).
-Sur le téléphone : ouvrir le lien, puis « Ajouter à l'écran d'accueil » pour l'avoir comme une appli (plein écran, hors ligne).
+Publiée sur https://smob-fr.github.io/jeux/ca-roule/ à chaque envoi sur `main` (workflow `pages.yml` à
+la racine du dépôt : tests, construction, publication). Sur le téléphone : ouvrir le lien, puis
+« Ajouter à l'écran d'accueil » (plein écran, hors ligne).
 
 ## Démarrage
 ```
-npm install
-npm run build        # génère dist/index.html (fichier unique) et site/ (version web installable)
-open dist/index.html # ou : npx serve dist
-npm run verify       # contrôle des 1000 niveaux
+cd jeux/ca-roule
+npm run build        # dist/index.html (fichier unique) et site/ (version web installable)
+open dist/index.html
+npm test             # vérifie tous les niveaux et lance les tests de bout en bout
 ```
-Pour reprendre le développement avec Claude Code : ouvrir ce dossier, lancer `claude`, il lira `CLAUDE.md`.
-
-Version en ligne (prototype) : https://claude.ai/artifact/ReqeEBtr3sy8zHt2ZAVLX8
+Notes de développement : `CLAUDE.md`. Appli native et publication : `docs/publication.md` à la racine.

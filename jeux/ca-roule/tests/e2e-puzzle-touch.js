@@ -1,5 +1,6 @@
 const {chromium}=require('playwright');
 const E=require('../src/engine.js');const PZ=require('../data/puzzles.json');
+const ok=(c,m)=>{if(!c){console.error('ÉCHEC : '+m);process.exitCode=1;}}; /* une vérification ratée fait échouer le test (code de sortie 1) */
 (async()=>{
  const b=await chromium.launch();
  const p=await b.newPage({viewport:{width:390,height:780},hasTouch:true,isMobile:true});
@@ -16,6 +17,6 @@ const E=require('../src/engine.js');const PZ=require('../data/puzzles.json');
  await t('touchStart',box.x,box.y);
  for(let i=1;i<=8;i++){await t('touchMove',box.x+(h?d*i/8:0),box.y+(h?0:d*i/8));await p.waitForTimeout(16);}
  await t('touchEnd');await p.waitForTimeout(300);
- console.log('moves',await p.textContent('#pz-n'),errs);
+ const mv=await p.textContent('#pz-n');console.log('moves',mv,errs);ok(mv.trim()==='1','un glissement au doigt doit compter 1 coup');ok(!errs.length,'erreurs : '+errs);
  await b.close();
-})();
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -6,6 +6,16 @@ t = t.replace('/*ENGINE*/', () => fs.readFileSync(path.join(root, 'src/engine.js
 t = t.replace('/*PUZZLES*/[]', () => fs.readFileSync(path.join(root, 'data/puzzles.json'), 'utf8'));
 t = t.replace('/*DAILY*/[]', () => fs.readFileSync(path.join(root, 'data/daily.json'), 'utf8'));
 t = t.replace('/*COURSE*/[]', () => fs.readFileSync(path.join(root, 'data/course.json'), 'utf8'));
+/* kit commun du dépôt (kit/), format global : window.Kit, configuré avec jeu.json, et ses styles */
+{
+  const os = require('os');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'caroule-kit-'));
+  require('child_process').execFileSync(process.execPath, [path.join(root, '../../kit/outils/installer.mjs'), root, tmp, '--global'], { stdio: 'ignore' });
+  const kitJs = fs.readFileSync(path.join(tmp, 'kit.js'), 'utf8'), kitCss = fs.readFileSync(path.join(tmp, 'kit.css'), 'utf8');
+  fs.rmSync(tmp, { recursive: true, force: true });
+  if (!t.includes('/*KIT*/') || !t.includes('/*KIT_CSS*/')) { console.error('Marqueurs /*KIT*/ ou /*KIT_CSS*/ absents du template'); process.exit(1); }
+  t = t.replace('/*KIT*/', () => kitJs).replace('/*KIT_CSS*/', () => kitCss);
+}
 /* clé publique PostHog (phc_…) : variable d'environnement POSTHOG_KEY, sinon stats.config.json ; vide = statistiques désactivées */
 let statsKey = process.env.POSTHOG_KEY || '';
 try { if (!statsKey) statsKey = JSON.parse(fs.readFileSync(path.join(root, 'stats.config.json'), 'utf8')).posthogKey || ''; } catch (e) { /* pas de configuration */ }

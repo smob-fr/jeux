@@ -1,10 +1,186 @@
 <title>Ça Roule</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap">
+<style>/* Copie générée par kit/outils/installer.mjs : ne pas modifier. */
+/* Kit — styles de base des éléments du kit : écrans, boutons, fenêtres, interrupteurs, boutique,
+   tutoriel, pubs et paiements simulés. Toutes les classes commencent par « kit- » pour ne pas gêner
+   les styles du jeu. Le jeu donne sa couleur en redéfinissant les variables ci-dessous dans son :root
+   (les valeurs par défaut sont celles de Mélo Pop). Thème sombre uniquement, comme tous nos jeux. */
+:root {
+  --kit-texte: #fff7ec;
+  --kit-texte-doux: rgba(255, 247, 236, .72);
+  --kit-fond: #1b0f2e;
+  --kit-panneau: rgba(30, 14, 52, .72);
+  --kit-bord: rgba(255, 214, 120, .28);
+  --kit-accent: #ffcf4a;
+  --kit-accent-clair: #ffe58a;
+  --kit-accent-fonce: #c98a14;
+  --kit-accent-texte: #4a2500;
+  --kit-vif: #ff5fa2;          /* rose : badges, notifications, élément armé */
+  --kit-succes: #45e0a0;       /* vert : vidéo récompensée, acheté, activé */
+  --kit-succes-fonce: #0b7a45;
+  --kit-succes-texte: #04361e;
+  --kit-danger: #ff9aa8;
+  --kit-danger-fond: #e0365a;
+  --kit-fenetre-fond: linear-gradient(180deg, #5c2c8c 0%, #3b1a62 100%);
+  --kit-voile: rgba(12, 4, 24, .62);
+  --kit-bulle-fond: #fff7ec;
+  --kit-bulle-texte: #3b1a62;
+  --kit-bulle-fort: #c2185b;
+  --kit-police: inherit;
+  --kit-safe-t: env(safe-area-inset-top, 0px); --kit-safe-b: env(safe-area-inset-bottom, 0px);
+  --kit-safe-l: env(safe-area-inset-left, 0px); --kit-safe-r: env(safe-area-inset-right, 0px);
+  --kit-banniere-h: 0px;
+}
+/* Place réservée à la bannière (réelle ou simulée) en bas de l'écran. */
+body.kit-banniere, body.kit-banniere-simulee { --kit-banniere-h: 60px; }
+
+/* ---------- Écrans plein écran, avec transition ---------- */
+.kit-ecran {
+  position: fixed; inset: 0; z-index: 1; display: none; flex-direction: column;
+  padding: calc(var(--kit-safe-t) + 10px) max(16px, var(--kit-safe-r)) calc(var(--kit-safe-b) + var(--kit-banniere-h) + 10px) max(16px, var(--kit-safe-l));
+  transition: opacity .35s ease, transform .35s cubic-bezier(.2, .8, .3, 1.1);
+}
+.kit-ecran.active { display: flex; }
+.kit-ecran.entering { opacity: 0; transform: scale(.96); }
+.kit-ecran.leaving { opacity: 0; transform: scale(1.03); transition-duration: .26s; }
+
+/* ---------- Boutons ---------- */
+.kit-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; cursor: pointer;
+  width: 100%; max-width: 320px; margin: 7px auto; padding: 12px 20px; border-radius: 999px;
+  font: inherit; font-family: var(--kit-police); color: var(--kit-texte);
+  background: rgba(255, 255, 255, .12); font-weight: 600; font-size: 17px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .14), 0 4px 0 rgba(0, 0, 0, .3);
+  transition: transform .12s, box-shadow .12s, filter .2s;
+}
+.kit-btn:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .14), 0 1px 0 rgba(0, 0, 0, .3); }
+.kit-btn:focus-visible { outline: 3px solid var(--kit-accent); outline-offset: 3px; }
+.kit-btn.big {
+  background: linear-gradient(180deg, var(--kit-accent-clair) 0%, var(--kit-accent) 45%, color-mix(in srgb, var(--kit-accent) 70%, var(--kit-accent-fonce)) 100%);
+  color: var(--kit-accent-texte); font-size: 21px; font-weight: 700; padding: 14px 26px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .7), inset 0 -3px 0 rgba(0, 0, 0, .15), 0 5px 0 var(--kit-accent-fonce), 0 10px 24px color-mix(in srgb, var(--kit-accent) 30%, transparent);
+}
+.kit-btn.big:active { box-shadow: inset 0 2px 0 rgba(255, 255, 255, .7), 0 2px 0 var(--kit-accent-fonce); }
+.kit-btn.reward {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--kit-succes) 55%, #fff), var(--kit-succes) 50%, color-mix(in srgb, var(--kit-succes) 70%, var(--kit-succes-fonce)));
+  color: var(--kit-succes-texte);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, .6), 0 5px 0 var(--kit-succes-fonce), 0 10px 24px color-mix(in srgb, var(--kit-succes) 25%, transparent);
+}
+.kit-btn.ghost { background: transparent; box-shadow: none; color: var(--kit-texte-doux); }
+.kit-btn.danger { color: var(--kit-danger); }
+.kit-btn.danger-fill { background: var(--kit-danger-fond); box-shadow: 0 4px 0 color-mix(in srgb, var(--kit-danger-fond) 60%, #000); }
+.kit-btn.petit { font-size: 17px; padding: 10px 22px; margin: 12px auto 0; width: auto; }
+.kit-btn:disabled { filter: grayscale(.6); opacity: .7; cursor: default; }
+.kit-btn svg { display: inline-block; vertical-align: -0.14em; }
+.kit-rang { display: flex; gap: 10px; width: 100%; max-width: 340px; margin: 0 auto; }
+.kit-rang .kit-btn { margin: 8px 0; }
+.kit-doux { color: var(--kit-texte-doux); }
+.kit-surtitre { display: block; text-transform: uppercase; letter-spacing: .14em; font-size: 12px; color: var(--kit-accent); margin-bottom: 4px; }
+
+/* ---------- Fenêtres ---------- */
+#kit-fenetre { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center;
+  padding: calc(var(--kit-safe-t) + 16px) max(16px, var(--kit-safe-r)) calc(var(--kit-safe-b) + 16px) max(16px, var(--kit-safe-l));
+  background: var(--kit-voile); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  font-family: var(--kit-police); color: var(--kit-texte); }
+#kit-fenetre.open { display: flex; animation: kit-fondu .25s; }
+#kit-fenetre.closing { animation: kit-fondu-sortie .22s forwards; }
+#kit-fenetre-boite {
+  position: relative; width: 100%; max-width: 380px; max-height: 100%; overflow-y: auto; border-radius: 28px; padding: 26px 20px 18px; text-align: center;
+  background: var(--kit-fenetre-fond);
+  box-shadow: 0 0 0 3px var(--kit-accent), 0 0 0 7px rgba(0, 0, 0, .25), 0 20px 60px rgba(0, 0, 0, .6);
+  animation: kit-fenetre-entree .45s cubic-bezier(.3, 1.5, .5, 1);
+}
+#kit-fenetre.closing #kit-fenetre-boite { animation: kit-fenetre-sortie .22s forwards; }
+#kit-fenetre-boite h2 { margin: 0 0 10px; font-size: 30px; text-wrap: balance; }
+#kit-fenetre-boite p { line-height: 1.55; margin: 8px 0; text-wrap: balance; }
+.kit-fenetre-icone { font-size: 54px; color: var(--kit-accent); margin-bottom: 6px; }
+
+/* ---------- Réglages ---------- */
+.kit-interrupteurs { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 14px; }
+.kit-interrupteur { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: 0; border-radius: 16px;
+  background: rgba(0, 0, 0, .2); text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.kit-int-icone { font-size: 22px; color: var(--kit-accent); display: grid; }
+.kit-int-label { flex: 1; font-size: 17px; }
+.kit-switch { width: 50px; height: 28px; border-radius: 14px; background: rgba(255, 255, 255, .2); position: relative; transition: background .2s; flex: none; }
+.kit-switch span { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .25s cubic-bezier(.3, 1.5, .5, 1); box-shadow: 0 2px 4px rgba(0, 0, 0, .3); }
+.kit-interrupteur[aria-pressed="true"] .kit-switch { background: var(--kit-succes); }
+.kit-interrupteur[aria-pressed="true"] .kit-switch span { transform: translateX(22px); }
+.kit-version { font-size: 12px; color: var(--kit-texte-doux); margin: 10px 0 0 !important; }
+
+/* ---------- Boutique ---------- */
+.kit-carte-produit { position: relative; display: grid; grid-template-columns: 74px 1fr; grid-template-areas: "art text" "art buy"; gap: 4px 14px; align-items: center;
+  padding: 16px; border-radius: 22px; background: var(--kit-panneau); box-shadow: inset 0 0 0 2px var(--kit-bord); }
+.kit-carte-produit.vedette { background: linear-gradient(160deg, color-mix(in srgb, var(--kit-vif) 35%, transparent), rgba(60, 20, 100, .8));
+  box-shadow: inset 0 0 0 3px var(--kit-accent), 0 10px 30px color-mix(in srgb, var(--kit-vif) 25%, transparent); }
+.kit-carte-art { grid-area: art; }
+.kit-carte-texte { grid-area: text; min-width: 0; }
+.kit-carte-texte h3 { margin: 0 0 2px; font-size: 19px; color: var(--kit-accent); }
+.kit-carte-texte p { margin: 0; color: var(--kit-texte-doux); font-size: 14px; line-height: 1.4; }
+.kit-carte-produit .kit-acheter { grid-area: buy; margin: 8px 0 0; max-width: 170px; padding: 9px 18px; font-size: 18px; justify-self: start; }
+.kit-carte-produit .kit-acheter:disabled { background: color-mix(in srgb, var(--kit-succes) 25%, transparent); color: var(--kit-succes);
+  box-shadow: inset 0 0 0 2px var(--kit-succes); filter: none; opacity: 1; }
+.kit-badge { position: absolute; top: -10px; right: 14px; padding: 3px 10px; border-radius: 999px; background: var(--kit-vif); color: #fff; font-size: 12px; font-weight: 700;
+  letter-spacing: .04em; box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.kit-note { text-align: center; }
+
+/* ---------- Tutoriel ---------- */
+#kit-tuto { position: fixed; inset: 0; z-index: 25; pointer-events: none; font-family: var(--kit-police); }
+#kit-tuto[hidden], #kit-tuto [hidden] { display: none; }
+#kit-tuto-projecteur { position: fixed; border-radius: 16px; box-shadow: 0 0 0 9999px rgba(8, 2, 18, .62), 0 0 0 3px var(--kit-accent), 0 0 24px 6px color-mix(in srgb, var(--kit-accent) 50%, transparent);
+  transition: all .45s cubic-bezier(.3, .8, .3, 1); }
+#kit-tuto-projecteur.rond { border-radius: 50%; }
+#kit-tuto-main { position: fixed; width: 0; height: 0; animation: kit-main 1.8s ease-in-out infinite; }
+.kit-doigt { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .9);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, .35), 0 6px 14px rgba(0, 0, 0, .5); }
+.kit-doigt::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 3px solid #fff; animation: kit-onde 1.8s ease-out infinite; }
+#kit-tuto-bulle { position: fixed; left: 50%; width: min(92vw, 380px); transform: translateX(-50%); pointer-events: auto; padding: 16px 18px; border-radius: 22px; text-align: center;
+  background: var(--kit-bulle-fond); color: var(--kit-bulle-texte); font-size: 18px; line-height: 1.45; box-shadow: 0 0 0 3px var(--kit-accent), 0 14px 40px rgba(0, 0, 0, .55); }
+#kit-tuto-bulle.in { animation: kit-bulle .5s cubic-bezier(.3, 1.6, .5, 1); }
+#kit-tuto-bulle b { color: var(--kit-bulle-fort); }
+.kit-tuto-texte { line-height: 1.75; }
+
+/* ---------- Pubs et paiements simulés (navigateur uniquement) ---------- */
+#kit-banniere-simulee { display: none; position: fixed; left: 0; right: 0; bottom: 0; height: calc(60px + var(--kit-safe-b)); z-index: 15;
+  background: #e9e6ee; color: #555; align-items: center; justify-content: center; font: 13px system-ui, sans-serif; padding-bottom: var(--kit-safe-b); }
+body.kit-banniere-simulee #kit-banniere-simulee { display: flex; }
+.kit-pub { position: fixed; inset: 0; z-index: 60; background: #111; display: flex; align-items: center; justify-content: center; padding: 16px; font-family: var(--kit-police); }
+.kit-pub-boite { background: #fff; color: #222; border-radius: 16px; padding: 24px; text-align: center; width: 100%; max-width: 340px; }
+.kit-pub-compte { font-size: 48px; font-weight: 700; margin: 12px 0; }
+.kit-pub .kit-btn { background: #222; color: #fff; }
+.kit-pub .kit-btn.ghost { background: transparent; color: #555; }
+.kit-paiement p { color: #555; }
+
+/* ---------- Animations ---------- */
+@keyframes kit-fondu { from { opacity: 0; } }
+@keyframes kit-fondu-sortie { to { opacity: 0; } }
+@keyframes kit-fenetre-entree { from { opacity: 0; transform: scale(.7) translateY(30px); } }
+@keyframes kit-fenetre-sortie { to { opacity: 0; transform: scale(.85) translateY(20px); } }
+@keyframes kit-main { 0%, 15% { transform: translate(0, 0) scale(1); opacity: 0; } 25% { opacity: 1; transform: translate(0, 0) scale(.85); } 70% { transform: translate(var(--dx), var(--dy)) scale(.85); opacity: 1; } 85%, 100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } }
+@keyframes kit-onde { 0% { transform: scale(.4); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+@keyframes kit-bulle { from { opacity: 0; transform: translateX(-50%) scale(.6); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .kit-ecran, #kit-fenetre, #kit-fenetre-boite, #kit-tuto-main, #kit-tuto-bulle, .kit-doigt::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
 <style>
 /* Parking de nuit vu du dessus : look « jeu mobile » moderne (dégradés doux, verre, relief léger).
    Un seul thème sombre voulu. Accent jaune panneau (--sign) pour la Course, bleu (--psign) pour le Casse-tête. */
 :root {
+  /* Thème des éléments du kit commun (fenêtres, boutique, pubs simulées) aux couleurs de Ça Roule. */
+  --kit-texte: #ffffff;
+  --kit-texte-doux: rgba(222, 226, 255, 0.72);
+  --kit-panneau: rgba(255, 255, 255, 0.09);
+  --kit-bord: rgba(255, 255, 255, 0.14);
+  --kit-accent: #ffc933;
+  --kit-accent-clair: #ffe27a;
+  --kit-accent-fonce: #f29a00;
+  --kit-accent-texte: #4a2a00;
+  --kit-succes: #34d58a;
+  --kit-fenetre-fond: linear-gradient(180deg, #262a6a, #1b1e4e);
+  --kit-voile: rgba(10, 12, 40, 0.66);
+  --kit-police: 'Fredoka', 'Nunito', system-ui, sans-serif;
   --bg-1: #3b3f98;
   --bg-2: #1f2259;
   --bg-3: #0f1130;
@@ -450,19 +626,19 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
 }
-.banner {
-  flex: none;
-  height: 50px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.22);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-  display: grid;
-  place-items: center;
-  color: rgba(222, 226, 255, 0.45);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
+/* bannière publicitaire (kit) : seulement sur l'accueil et la carte, jamais pendant le jeu */
+body .home, body .cmap { bottom: var(--kit-banniere-h, 0px); } /* plus précis que .home { inset: 0 } plus bas */
+/* boutique */
+.shop-card { max-height: min(88vh, 720px); }
+.shop-list { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; padding: 12px 2px 4px; }
+.shop-ico { width: 74px; height: 74px; border-radius: 20px; display: grid; place-items: center; font-size: 38px; margin: 0 auto;
+  background: radial-gradient(circle at 40% 30%, rgba(255, 226, 122, 0.35), rgba(0, 0, 0, 0.25)); box-shadow: inset 0 0 0 2px rgba(255, 201, 51, 0.35); }
+.shop-ico.noads { color: #fff; font-size: 40px; background: radial-gradient(circle at 40% 30%, #7cc0ff, #3d8bff 60%, #2457e6); }
+.shop-ico small { font-size: 15px; font-family: var(--font-display); margin-left: -4px; }
+#kit-fenetre-boite .shop-ico { margin: 6px auto 10px; }
+.shop-foot { display: flex; gap: 8px; }
+.shop-card .shop-foot .btn { flex: 1; width: auto; min-width: 0; }
+.shop-list .kit-carte-texte { text-align: left; }
 
 /* ---------- fenêtres ---------- */
 .scrim {
@@ -1536,7 +1712,9 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
 .cmap-lock b { font-family: var(--font-display); font-size: 18px; color: #fff; }
 .cmap-play { flex: none; }
 /* ---------- coffres, missions, bandeau ---------- */
-.home-extra { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home-extra { flex: none; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.home-extra .mini-btn { padding: 6px 8px; gap: 6px; }
+.home-extra .mini-btn b { font-size: 13px; }
 .mini-btn { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 6px 10px; border: 0; border-radius: 18px; cursor: pointer; text-align: left; color: #fff; background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
 .mini-btn .ico { font-size: 22px; }
 .mini-btn b { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 600; line-height: 1.1; }
@@ -1653,7 +1831,6 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   </button>
 </nav>
 
-<div class="banner" id="banner">PUB · BANNIÈRE 320×50 (exemple)</div>
 
 <!-- Accueil -->
 <section class="home" id="home" aria-labelledby="home-title">
@@ -1706,6 +1883,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
     <span class="star-chip" id="home-stars"></span>
   </button>
   <div class="home-extra">
+    <button class="mini-btn" id="home-shop" type="button"><span class="ico">🛒</span><span><b>Boutique</b><small>👍 et sans pub</small></span></button>
     <button class="mini-btn" id="home-missions" type="button"><span class="ico">📋</span><span><b>Missions du jour</b><small>0 / 3</small></span></button>
     <button class="mini-btn" id="home-chest" type="button"><span class="ico">🎁</span><span><b>Coffre à étoiles</b><small>0 / 20 ★</small></span></button>
   </div>
@@ -1780,6 +1958,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
       <button class="btn secondary" id="pause-switch" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-4-4"/><path d="M20 16H7l4 4"/></svg><span id="pause-switch-lbl">Casse-tête</span></button>
       <button class="btn secondary" id="pause-levels" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>Niveaux</button>
       <button class="btn secondary" id="pause-garage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16V11l2-5h10l2 5v5"/><path d="M3.5 16h17v3h-17z" fill="currentColor"/><circle cx="7.5" cy="13" r="1" fill="currentColor"/><circle cx="16.5" cy="13" r="1" fill="currentColor"/></svg>Garage</button>
+      <button class="btn secondary" id="pause-shop" type="button"><span class="ico" aria-hidden="true">🛒</span><span>Boutique</span></button>
     </div>
     <div class="notif-row stats-row"><span>Statistiques anonymes<small>Aident à régler la difficulté. Aucune donnée personnelle.</small></span><button class="switch" id="stats-switch" type="button" role="switch" aria-checked="true" aria-label="Statistiques anonymes"></button></div>
     <div class="pause-snd">
@@ -1822,6 +2001,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
       <button class="aid-opt video" id="aid-video" type="button"><span class="aid-ico">🎬</span><span class="aid-txt"><b>3 coups d'avance</b><span>Gratuit contre une vidéo</span></span><span class="aid-cost badge">VIDÉO</span></button>
     </div>
     <p class="aid-note">Gagnez des 👍 en finissant les énigmes à l'objectif, et le double sans Annuler ni aide.</p>
+    <button class="btn secondary" id="aid-shop" type="button">🛒 Plus de 👍 dans la boutique</button>
     <button class="btn secondary" id="aid-close" type="button">Fermer</button>
   </div>
 </div>
@@ -1884,6 +2064,18 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
 </div>
 
 <!-- Pub simulée : à remplacer par un vrai SDK (AdMob, AppLovin…) -->
+<!-- Boutique (kit commun : catalogue de jeu.json) -->
+<div class="scrim sheet" id="shop" hidden>
+  <div class="card sheet-card shop-card" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+    <div class="sheet-head"><h2 id="shop-title">Boutique</h2><span class="star-chip" id="shop-boost"></span></div>
+    <div class="shop-list" id="shop-list"></div>
+    <div class="shop-foot">
+      <button class="btn secondary" id="shop-restore" type="button">Restaurer mes achats</button>
+      <button class="btn primary" id="shop-close" type="button">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <div class="scrim over" id="ad" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="ad-title">
     <p class="eyebrow" id="ad-kind"></p>
@@ -2256,10 +2448,1240 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
 })(typeof window !== 'undefined' ? window : this);
 
 </script>
+<script>// Copie générée par kit/outils/installer.mjs : ne pas modifier (modifier kit/ puis reconstruire).
+// Kit commun, format global : window.Kit. Jeu : Ça Roule 0.1.0.
+(function () {
+"use strict";
+/* ---- config.js ---- */
+const { configurer, config } = (() => {
+// Kit — configuration du jeu (contenu de jeux/<nom>/jeu.json).
+// Le jeu appelle configurer(jeu) une fois, au démarrage, avant d'initialiser les pubs ou la boutique.
+
+let jeu = { id: "jeu", nom: "Jeu", version: "0", admob: { test: true }, revenuecat: {}, produits: [] };
+
+function configurer(cfg) {
+  jeu = { ...jeu, ...cfg };
+  return jeu;
+}
+
+/** La configuration courante (lecture seule par convention). */
+function config() {
+  return jeu;
+}
+
+return { configurer, config };
+})();
+
+/* ---- plateforme.js ---- */
+const { estNatif, plateforme, plugin } = (() => {
+// Kit — plateforme d'exécution : appli native (Capacitor) ou navigateur.
+// Lu à chaque appel (et non au chargement du module) pour que les tests puissent simuler l'appli.
+
+const capa = () => globalThis.Capacitor;
+
+/** Vrai dans l'appli Android ou iOS, faux dans un navigateur. */
+function estNatif() {
+  const C = capa();
+  return !!(C && C.isNativePlatform && C.isNativePlatform());
+}
+
+/** "android", "ios" ou "web". */
+function plateforme() {
+  return estNatif() ? capa().getPlatform() : "web";
+}
+
+/** Un plugin Capacitor (ex. "AdMob"), ou null dans le navigateur. */
+function plugin(nom) {
+  return estNatif() ? capa().Plugins?.[nom] ?? null : null;
+}
+
+return { estNatif, plateforme, plugin };
+})();
+
+/* ---- ads.js ---- */
+const { REGLES_INTERSTITIELLE, Ads } = (() => {
+// Kit — publicités.
+// • Dans l'appli native (Capacitor) : Google AdMob via @capacitor-community/admob, avec le formulaire
+//   de consentement RGPD (UMP) de Google et la demande ATT sur iOS.
+// • Dans un navigateur : publicités simulées, pour tester le parcours.
+//
+// Identifiants et réglages : jeu.json › admob et jeu.json › interstitielle (voir docs/monetisation.md).
+// Règles communes (CLAUDE.md) : bannière jamais pendant le jeu, interstitielle plafonnée,
+// vidéos récompensées toujours au choix du joueur.
+
+
+/** Règles de fréquence par défaut des interstitielles. Un jeu peut seulement les rendre plus douces. */
+const REGLES_INTERSTITIELLE = { toutesLes: 3, delaiMin: 120, aPartirDuNiveau: 4 };
+
+let ready = false;
+let canRequestAds = false;
+let privacyRequired = false;
+let gamesSinceAd = 0;
+let lastAdAt = 0;
+let removeAds = false;
+let bannerWanted = false;
+
+const regles = () => ({ ...REGLES_INTERSTITIELLE, ...(config().interstitielle || {}) });
+const testing = () => config().admob?.test !== false;
+const ids = () => {
+  const a = config().admob || {};
+  return a[plateforme()] || a.android || {};
+};
+const AdMob = () => plugin("AdMob");
+
+async function preload() {
+  if (!estNatif() || !canRequestAds) return;
+  try { await AdMob().prepareInterstitial({ adId: ids().interstitielle, isTesting: testing() }); } catch (e) { /* réessayé plus tard */ }
+  try { await AdMob().prepareRewardVideoAd({ adId: ids().recompensee, isTesting: testing() }); } catch (e) { /* idem */ }
+}
+
+/* ---------- Simulation navigateur ---------- */
+function fakeAd({ title, seconds, closable }) {
+  return new Promise((resolve) => {
+    const el = document.createElement("div");
+    el.className = "kit-pub";
+    el.innerHTML = `<div class="kit-pub-boite"><small>Publicité (simulation)</small><h3>${title}</h3>
+      <div class="kit-pub-compte">${seconds}</div><button class="kit-btn" disabled>Fermer</button></div>`;
+    document.body.appendChild(el);
+    const btn = el.querySelector("button");
+    const count = el.querySelector(".kit-pub-compte");
+    let s = seconds;
+    const timer = setInterval(() => {
+      s--;
+      count.textContent = s > 0 ? s : "✓";
+      if (s <= 0) { clearInterval(timer); btn.disabled = false; }
+    }, 1000);
+    if (closable) btn.disabled = false;
+    btn.onclick = () => {
+      clearInterval(timer);
+      el.remove();
+      resolve(s <= 0);
+    };
+  });
+}
+function fakeBanner(show) {
+  let el = document.getElementById("kit-banniere-simulee");
+  if (show && !el) {
+    el = document.createElement("div");
+    el.id = "kit-banniere-simulee";
+    el.textContent = "Bannière publicitaire (simulation)";
+    document.body.appendChild(el);
+  }
+  document.body.classList.toggle("kit-banniere-simulee", show);
+}
+
+const Ads = {
+  get native() { return estNatif(); },
+
+  /**
+   * Simulation utilisée dans le navigateur. Remplaçable (tests, ou jeu qui veut son propre écran de pub) :
+   * pub({ title, seconds, closable }) → Promise<boolean vue jusqu'au bout>, banniere(visible).
+   */
+  simulateur: { pub: fakeAd, banniere: fakeBanner },
+
+  /** Vrai entre showBanner() et hideBanner() (utile aux tests et au débogage). */
+  get bannerShown() { return bannerWanted; },
+
+  async init() {
+    if (!estNatif()) {
+      ready = true; canRequestAds = true;
+      if (bannerWanted) this.showBanner(); // bannière demandée avant l'initialisation
+      return;
+    }
+    const A = AdMob();
+    if (!A) { console.warn("AdMob : plugin absent"); return; }
+    try {
+      await A.initialize({ initializeForTesting: testing() });
+      // Consentement RGPD (formulaire Google UMP, à configurer dans la console AdMob).
+      let info = await A.requestConsentInfo();
+      if (info.isConsentFormAvailable && info.status === "REQUIRED") {
+        info = await A.showConsentForm();
+      }
+      canRequestAds = info.canRequestAds !== false;
+      privacyRequired = info.privacyOptionsRequirementStatus === "REQUIRED";
+      // iOS : App Tracking Transparency (le message vient de Info.plist, écrit par configure-admob.mjs).
+      if (plateforme() === "ios") {
+        try {
+          const st = await A.trackingAuthorizationStatus();
+          if (st.status === "notDetermined") await A.requestTrackingAuthorization();
+        } catch (e) { /* iOS < 14 */ }
+      }
+      ready = true;
+      preload();
+      if (bannerWanted) this.showBanner();
+    } catch (e) {
+      console.warn("AdMob indisponible", e);
+    }
+  },
+
+  /** Achat « Sans pub » : coupe bannières et interstitielles (les vidéos récompensées restent). */
+  setRemoveAds(v) {
+    removeAds = !!v;
+    if (removeAds) this.hideBanner();
+  },
+  get removeAds() { return removeAds; },
+
+  /** Faut-il afficher un bouton « Confidentialité et publicité » dans les réglages ? */
+  get privacyOptionsRequired() { return privacyRequired; },
+
+  async showPrivacyOptions() {
+    if (estNatif()) { try { await AdMob().showPrivacyOptionsForm(); } catch (e) { console.warn(e); } }
+  },
+
+  /** Bannière en bas de l'écran. À n'appeler que sur un écran hors jeu (menus, carte). */
+  async showBanner() {
+    bannerWanted = true;
+    if (removeAds || !ready) return;
+    if (!estNatif()) { this.simulateur.banniere(true); return; }
+    if (!canRequestAds) return;
+    try {
+      await AdMob().showBanner({
+        adId: ids().banniere, adSize: "ADAPTIVE_BANNER", position: "BOTTOM_CENTER", margin: 0, isTesting: testing(),
+      });
+      if (bannerWanted && !removeAds) document.body.classList.add("kit-banniere");
+      else await AdMob().hideBanner();
+    } catch (e) { console.warn(e); }
+  },
+
+  async hideBanner() {
+    bannerWanted = false;
+    if (globalThis.document) document.body.classList.remove("kit-banniere");
+    if (!estNatif()) { if (globalThis.document) this.simulateur.banniere(false); return; }
+    try { await AdMob().hideBanner(); } catch (e) { /* pas de bannière */ }
+  },
+
+  /**
+   * À appeler à la fin de chaque partie (gagnée ou perdue), quand le joueur quitte l'écran de fin.
+   * N'affiche une pub que si les règles le permettent. Résout true si une pub a été montrée.
+   */
+  async maybeInterstitial(levelNumber) {
+    const r = regles();
+    if (removeAds || !ready || levelNumber < r.aPartirDuNiveau) return false;
+    gamesSinceAd++;
+    if (gamesSinceAd < r.toutesLes || Date.now() - lastAdAt < r.delaiMin * 1000) return false;
+    gamesSinceAd = 0;
+    lastAdAt = Date.now();
+    if (!estNatif()) { await this.simulateur.pub({ title: "Pub interstitielle", seconds: 3, closable: false }); return true; }
+    if (!canRequestAds) return false;
+    try { await AdMob().showInterstitial(); } catch (e) { /* pas encore chargée */ }
+    preload();
+    return true;
+  },
+
+  /** Pub récompensée. Résout `true` si le joueur l'a regardée jusqu'au bout. */
+  async rewarded() {
+    if (!ready) return false;
+    let ok = false;
+    if (!estNatif()) ok = await this.simulateur.pub({ title: "Pub récompensée", seconds: 5, closable: true });
+    else if (canRequestAds) {
+      try { ok = !!(await AdMob().showRewardVideoAd()); } catch (e) { ok = false; }
+      preload();
+    }
+    lastAdAt = Date.now(); // évite d'enchaîner avec une interstitielle
+    return ok;
+  },
+
+  /** Remet les compteurs à zéro (tests). */
+  _reinitialiser() { ready = false; canRequestAds = false; privacyRequired = false; gamesSinceAd = 0; lastAdAt = 0; removeAds = false; bannerWanted = false; },
+};
+
+return { REGLES_INTERSTITIELLE, Ads };
+})();
+
+/* ---- bonus.js ---- */
+const { creerInventaire } = (() => {
+// Kit — inventaire de bonus.
+// Convention (CLAUDE.md) : quelques bonus offerts au départ, un bonus ne coûte jamais de coup, il est
+// expliqué la première fois qu'on l'utilise. On en gagne en jouant : +1 la première fois qu'un niveau
+// est fini avec 3 étoiles, +2 (coffre) la première fois qu'un niveau multiple de 5 est fini.
+
+/**
+ * creerInventaire(data, { depart: { hammer: 3, … }, enregistrer, champ, champVus })
+ * Les quantités sont rangées dans data[champ] (« boosters » par défaut), et les bonus déjà présentés
+ * dans data[champVus] (« boosterSeen »).
+ */
+function creerInventaire(data, { depart, enregistrer = () => {}, champ = "boosters", champVus = "boosterSeen", hasard = Math.random } = {}) {
+  const sortes = Object.keys(depart);
+  const completer = () => {
+    data[champ] = { ...depart, ...(data[champ] || {}) };
+    data[champVus] = data[champVus] || {};
+  };
+  completer();
+
+  const inv = {
+    sortes,
+    completer,
+    n(k) { return data[champ][k] || 0; },
+    ajouter(k, n = 1) { data[champ][k] = inv.n(k) + n; enregistrer(); },
+    /** Retire un bonus. Résout false s'il n'en reste plus. */
+    utiliser(k) {
+      if (inv.n(k) <= 0) return false;
+      data[champ][k]--;
+      enregistrer();
+      return true;
+    },
+    /** Ajoute le contenu d'un lot ({ hammer: 2, … } ; les clés inconnues sont ignorées). */
+    ajouterContenu(contenu = {}) {
+      for (const k of sortes) if (contenu[k]) data[champ][k] = inv.n(k) + contenu[k];
+      enregistrer();
+    },
+    /** Ajoute n bonus tirés au hasard. Renvoie la liste des sortes gagnées. */
+    auHasard(n) {
+      const gains = [];
+      for (let i = 0; i < n; i++) {
+        const k = sortes[Math.floor(hasard() * sortes.length)];
+        data[champ][k] = inv.n(k) + 1;
+        gains.push(k);
+      }
+      enregistrer();
+      return gains;
+    },
+    /** Bonus gagnés à la fin d'un niveau (convention commune). Renvoie la liste des sortes gagnées. */
+    recompensesNiveau({ numero, etoilesAvant, etoiles }) {
+      let n = 0;
+      if (etoiles === 3 && etoilesAvant < 3) n += 1;
+      if (numero % 5 === 0 && etoilesAvant === 0) n += 2;
+      return n ? inv.auHasard(n) : [];
+    },
+    dejaVu(k) { return !!data[champVus][k]; },
+    marquerVu(k) { data[champVus][k] = true; enregistrer(); },
+  };
+  return inv;
+}
+
+return { creerInventaire };
+})();
+
+/* ---- store.js ---- */
+const { Store } = (() => {
+// Kit — achats intégrés.
+// • Dans l'appli native : RevenueCat (@revenuecat/purchases-capacitor), qui gère Google Play et
+//   l'App Store avec le même code.
+// • Dans un navigateur : achats simulés, pour tester le parcours sans payer.
+//
+// Clés publiques et catalogue : jeu.json › revenuecat et jeu.json › produits (voir docs/monetisation.md).
+// Un produit : { id, type: "noads" | "once" | "consumable", titre, prix, description, contenu, badge?, art? }.
+// `prix` n'est qu'une valeur de repli : dans l'appli, c'est le prix du store (devise du joueur) qui s'affiche.
+
+
+let ready = false;
+let storeProducts = {}; // id → produit renvoyé par le store
+let onNoAds = () => {};
+
+const droitSansPub = () => config().revenuecat?.droitSansPub || "no_ads";
+function hasNoAds(customerInfo) {
+  return !!customerInfo?.entitlements?.active?.[droitSansPub()];
+}
+
+/* ---------- Simulation navigateur : fausse fenêtre de paiement ---------- */
+function fakePurchase(p) {
+  return new Promise((resolve) => {
+    const el = document.createElement("div");
+    el.className = "kit-pub";
+    el.innerHTML = `<div class="kit-pub-boite kit-paiement">
+      <small>Paiement (simulation, aucun débit)</small>
+      <h3>${p.titre}</h3><p>${p.description}</p><div class="kit-pub-compte">${p.prix}</div>
+      <button class="kit-btn" data-r="ok">Confirmer l'achat</button>
+      <button class="kit-btn ghost" data-r="no">Annuler</button></div>`;
+    document.body.appendChild(el);
+    el.onclick = (e) => {
+      const b = e.target.closest("[data-r]");
+      if (!b) return;
+      el.remove();
+      resolve(b.dataset.r === "ok");
+    };
+  });
+}
+
+const Store = {
+  get native() { return estNatif(); },
+
+  /** Simulation utilisée dans le navigateur, remplaçable : paiement(produit) → Promise<boolean confirmé>. */
+  simulateur: { paiement: fakePurchase },
+
+  /** Le catalogue du jeu (jeu.json › produits). */
+  get products() { return config().produits || []; },
+  product(id) { return this.products.find((p) => p.id === id) || null; },
+
+  /** Vrai quand les achats sont utilisables (toujours vrai dans le navigateur, en simulation). */
+  get available() { return ready; },
+
+  /** `noAdsCallback(true)` est appelé dès qu'on sait que le joueur a acheté « Sans pub ». */
+  async init(noAdsCallback) {
+    onNoAds = noAdsCallback || onNoAds;
+    if (!estNatif()) { ready = true; return; }
+    const apiKey = config().revenuecat?.[plateforme()];
+    const Purchases = plugin("Purchases");
+    if (!apiKey || !Purchases) { console.warn("Boutique : clé RevenueCat manquante"); return; }
+    try {
+      await Purchases.configure({ apiKey });
+      ready = true;
+      const { customerInfo } = await Purchases.getCustomerInfo();
+      if (hasNoAds(customerInfo)) onNoAds(true);
+      const { products } = await Purchases.getProducts({
+        productIdentifiers: this.products.map((p) => p.id),
+        type: "NON_SUBSCRIPTION",
+      });
+      for (const sp of products) storeProducts[sp.identifier] = sp;
+    } catch (e) {
+      console.warn("Boutique indisponible", e);
+    }
+  },
+
+  priceOf(p) {
+    return storeProducts[p.id]?.priceString || p.prix;
+  },
+
+  /**
+   * Lance l'achat. Résout { ok: true } si payé, { ok: false, cancelled, error } sinon.
+   * C'est à l'appelant d'accorder ce qui a été acheté (voir boutique.js).
+   */
+  async buy(p) {
+    if (!ready) return { ok: false, error: "La boutique n'est pas disponible pour le moment." };
+    if (!estNatif()) {
+      const ok = await this.simulateur.paiement({ ...p, prix: this.priceOf(p) });
+      if (ok && p.type === "noads") onNoAds(true);
+      return { ok, cancelled: !ok };
+    }
+    const product = storeProducts[p.id];
+    if (!product) return { ok: false, error: "Ce produit n'est pas disponible pour le moment." };
+    try {
+      const res = await plugin("Purchases").purchaseStoreProduct({ product });
+      if (p.type === "noads" && hasNoAds(res.customerInfo)) onNoAds(true);
+      return { ok: true };
+    } catch (e) {
+      const cancelled = e?.userCancelled || e?.code === "1" || e?.code === 1;
+      return { ok: false, cancelled, error: cancelled ? null : "L'achat n'a pas abouti. Aucun montant n'a été débité." };
+    }
+  },
+
+  /** Restaure « Sans pub » (obligatoire pour l'App Store, utile après un changement de téléphone). */
+  async restore() {
+    if (!estNatif()) return { ok: true, noAds: false };
+    if (!ready) return { ok: false };
+    try {
+      const { customerInfo } = await plugin("Purchases").restorePurchases();
+      const noAds = hasNoAds(customerInfo);
+      if (noAds) onNoAds(true);
+      return { ok: true, noAds };
+    } catch (e) {
+      return { ok: false };
+    }
+  },
+
+  _reinitialiser() { ready = false; storeProducts = {}; onNoAds = () => {}; },
+};
+
+return { Store };
+})();
+
+/* ---- sound.js ---- */
+const { SCALE, tone, bell, vibrate, Sound } = (() => {
+// Kit — sons, musique d'ambiance et vibrations, tout synthétisé avec Web Audio (aucun fichier audio).
+// Le kit fournit le moteur et les sons d'interface communs (tap, gift, win, lose…).
+// Chaque jeu ajoute ses propres sons avec tone() et bell(), et peut changer la musique avec setMusic().
+
+// Gamme pentatonique de do majeur : les sons « réussite » montent d'une note à chaque étape.
+const SCALE = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51, 1567.98, 1760.0];
+
+let ctx = null, master = null, sfxBus = null, musicBus = null;
+let sfxOn = true, musicOn = true, hapticsOn = true;
+
+function ac() {
+  if (!ctx) {
+    const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
+    if (!AC) return null;
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+    // Petite réverbération (écho filtré) pour donner de l'espace.
+    const delay = ctx.createDelay(); delay.delayTime.value = 0.18;
+    const fb = ctx.createGain(); fb.gain.value = 0.25;
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2200;
+    delay.connect(lp).connect(fb).connect(delay);
+    lp.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.connect(master); sfxBus.connect(delay);
+    musicBus = ctx.createGain(); musicBus.gain.value = musicOn ? 0.5 : 0; musicBus.connect(master); musicBus.connect(delay);
+  }
+  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+
+/** Une note synthétisée. bus : "sfx" (coupé par le réglage des effets) ou "music". */
+function tone(freq, { at = 0, dur = 0.25, type = "triangle", vol = 0.16, bus = "sfx", attack = 0.01 } = {}) {
+  if (bus === "sfx" && !sfxOn) return;
+  const a = ac();
+  if (!a) return;
+  const t = a.currentTime + at;
+  const o = a.createOscillator();
+  const g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(bus === "sfx" ? sfxBus : musicBus);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+/** Son de « cloche » : fondamentale + harmonique, comme un petit carillon. */
+function bell(freq, opts = {}) {
+  tone(freq, { type: "sine", dur: 0.6, vol: 0.14, ...opts });
+  tone(freq * 2.01, { type: "sine", dur: 0.3, vol: 0.05, ...opts });
+}
+
+/** Vibration courte (Haptics dans l'appli, navigator.vibrate dans le navigateur). */
+function vibrate(ms) {
+  if (!hapticsOn) return;
+  const C = globalThis.Capacitor;
+  const H = C?.Plugins?.Haptics;
+  if (H && C.isNativePlatform?.()) {
+    H.impact({ style: ms > 30 ? "MEDIUM" : "LIGHT" }).catch(() => {});
+  } else if (globalThis.navigator?.vibrate) {
+    try { navigator.vibrate(ms); } catch (e) { /* non pris en charge */ }
+  }
+}
+
+/* ---------- Musique d'ambiance : accords arpégés en boucle ---------- */
+// Par défaut, progression I–vi–IV–V en arpèges doux (celle de Mélo Pop).
+let music = {
+  chords: [
+    [261.63, 329.63, 392.0, 523.25],  // do
+    [220.0, 261.63, 329.63, 440.0],   // la mineur
+    [174.61, 220.0, 261.63, 349.23],  // fa
+    [196.0, 246.94, 293.66, 392.0],   // sol
+  ],
+  pattern: [0, 1, 2, 3, 2, 1, 2, 1],
+  step: 0.36, // secondes par note : tempo calme
+};
+let musicTimer = 0, step = 0, nextAt = 0, playing = false;
+
+function scheduleMusic() {
+  const a = ctx;
+  const len = music.pattern.length;
+  while (nextAt < a.currentTime + 0.6) {
+    const chord = music.chords[Math.floor(step / len) % music.chords.length];
+    const at = nextAt - a.currentTime;
+    tone(chord[music.pattern[step % len]], { at, dur: 0.9, type: "sine", vol: 0.07, bus: "music", attack: 0.03 });
+    if (step % len === 0) tone(chord[0] / 2, { at, dur: music.step * len, type: "triangle", vol: 0.05, bus: "music", attack: 0.2 });
+    step++;
+    nextAt += music.step;
+  }
+}
+
+const Sound = {
+  get sfx() { return sfxOn; }, set sfx(v) { sfxOn = !!v; },
+  get music() { return musicOn; },
+  set music(v) {
+    musicOn = !!v;
+    if (musicBus) musicBus.gain.setTargetAtTime(musicOn ? 0.5 : 0, ctx.currentTime, 0.3);
+    if (musicOn) { if (ctx) this.startMusic(); } else this.stopMusic();
+  },
+  get haptics() { return hapticsOn; }, set haptics(v) { hapticsOn = !!v; },
+
+  /** Change la musique d'ambiance : { chords: [[fréquences]], pattern: [indices], step: secondes }. */
+  setMusic(m) { music = { ...music, ...m }; step = 0; },
+
+  /** À appeler au premier geste du joueur (les navigateurs bloquent le son avant). */
+  unlock() { ac(); if (musicOn) this.startMusic(); },
+  startMusic() {
+    if (playing || !musicOn || !ac()) return;
+    playing = true;
+    nextAt = ctx.currentTime + 0.1;
+    musicTimer = setInterval(scheduleMusic, 150);
+  },
+  stopMusic() { playing = false; clearInterval(musicTimer); },
+  /** Appli en arrière-plan : on coupe tout. */
+  suspend() { this.stopMusic(); if (ctx) ctx.suspend(); },
+  resume() { if (ctx) ctx.resume(); if (musicOn) this.startMusic(); },
+
+  // Sons d'interface communs.
+  tap() { tone(880, { dur: 0.06, type: "sine", vol: 0.06 }); },
+  bad() { tone(220, { dur: 0.14, type: "square", vol: 0.04 }); tone(185, { at: 0.1, dur: 0.18, type: "square", vol: 0.04 }); vibrate(20); },
+  star() { bell(1567.98); bell(2093, { at: 0.08 }); },
+  win() { [0, 2, 4, 5, 7, 9].forEach((n, k) => bell(SCALE[n], { at: k * 0.14 })); vibrate(80); },
+  lose() { [4, 3, 1, 0].forEach((n, k) => tone(SCALE[n] / 2, { at: k * 0.2, dur: 0.4, type: "sine", vol: 0.12 })); },
+  gift() { [0, 4, 7, 9].forEach((n, k) => bell(SCALE[n] * 1.5, { at: k * 0.1 })); },
+};
+
+return { SCALE, tone, bell, vibrate, Sound };
+})();
+
+/* ---- fenetres.js ---- */
+const { fenetre, demander, informer, Ecrans } = (() => {
+// Kit — fenêtres (modales) et écrans.
+//
+// fenetre(html, onAction) : affiche une fenêtre ; chaque bouton [data-act="…"] la ferme et appelle
+// onAction(act, bouton). Les éléments #kit-fenetre et #kit-fenetre-boite sont créés au besoin.
+//
+// Ecrans : bascule entre des sections plein écran (classe kit-ecran) avec une transition, et applique
+// la règle de la bannière : elle n'est montrée que sur les écrans déclarés dans `banniere`, et elle
+// est masquée AVANT la transition vers un autre écran (jamais visible sur un écran de jeu).
+
+
+const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function elementsFenetre() {
+  let m = document.getElementById("kit-fenetre");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "kit-fenetre";
+    m.innerHTML = `<div id="kit-fenetre-boite" role="dialog" aria-modal="true"></div>`;
+    document.body.appendChild(m);
+  }
+  return [m, document.getElementById("kit-fenetre-boite")];
+}
+
+/** Affiche une fenêtre. Les boutons [data-act] la ferment et appellent onAction(act, bouton). */
+function fenetre(html, onAction) {
+  const [m, box] = elementsFenetre();
+  box.innerHTML = html;
+  m.classList.remove("closing");
+  m.classList.add("open");
+  box.onclick = (e) => {
+    const btn = e.target.closest("[data-act]");
+    if (!btn) return;
+    Sound.tap();
+    m.classList.add("closing");
+    setTimeout(() => {
+      m.classList.remove("open", "closing");
+      onAction && onAction(btn.dataset.act, btn);
+    }, 220);
+  };
+  return box;
+}
+
+/** Comme fenetre(), mais résout l'action choisie. */
+function demander(html) {
+  return new Promise((resolve) => fenetre(html, (act) => resolve(act)));
+}
+
+/** Petite fenêtre d'information avec un seul bouton. */
+function informer(titre, texte, bouton = "OK") {
+  return demander(`<h2>${titre}</h2><p>${texte}</p><button class="kit-btn big" data-act="close">${bouton}</button>`);
+}
+
+const Ecrans = {
+  actuel: null,
+  banniere: new Set(),
+
+  /** banniere : identifiants des écrans où la bannière est permise (menus, carte), jamais un écran de jeu. */
+  configurer({ initial, banniere = [] } = {}) {
+    if (initial) this.actuel = initial;
+    this.banniere = new Set(banniere);
+  },
+
+  /** Affiche l'écran `id`. `avant()` est appelé juste avant qu'il apparaisse (pour le remplir). */
+  async afficher(id, avant) {
+    const permise = this.banniere.has(id);
+    if (!permise) Ads.hideBanner(); // avant la transition : jamais de bannière sur un écran de jeu
+    if (id === this.actuel) {
+      avant && avant();
+      if (permise) Ads.showBanner();
+      return;
+    }
+    const from = this.actuel ? document.getElementById(this.actuel) : null;
+    const to = document.getElementById(id);
+    this.actuel = id;
+    from?.classList.add("leaving");
+    await attendre(260);
+    from?.classList.remove("active", "leaving");
+    to.classList.add("active", "entering");
+    // La bannière avant de remplir l'écran : sa hauteur compte dans la mise en page (défilement de la carte…).
+    if (permise && this.actuel === id) Ads.showBanner();
+    avant && avant();
+    void to.offsetWidth;
+    to.classList.remove("entering");
+    await attendre(350);
+  },
+};
+
+return { fenetre, demander, informer, Ecrans };
+})();
+
+/* ---- boutique.js ---- */
+const { Boutique } = (() => {
+// Kit — boutique : liste des produits, achat, remerciement, restauration.
+// Le catalogue vient de jeu.json (Store.products). Le jeu fournit :
+//   accorder(produit)   ce que le jeu donne (bonus, vies…) ; « Sans pub » et « une seule fois » sont gérés ici
+//   art(produit)        illustration HTML de la carte (selon produit.art)
+//   inventaire()        HTML de la ligne d'inventaire en haut de la boutique (facultatif)
+//   apres()             appelé après chaque achat (mettre l'interface à jour, facultatif)
+//   effet()             petite fête après un achat (confettis, facultatif)
+// La sauvegarde garde data.noAds (booléen) et data.bought ({ id: true } des offres uniques).
+
+
+
+
+
+let opts = null;
+let affichage = null; // { liste, inventaire } : éléments de la boutique affichée, pour la rafraîchir
+
+const Boutique = {
+  /** Configure la boutique du jeu (à appeler au démarrage, avant Store.init). */
+  configurer({ data, enregistrer, accorder = () => {}, art = () => "", inventaire = () => "", apres = () => {}, effet = () => {} }) {
+    data.noAds = !!data.noAds;
+    data.bought = data.bought || {};
+    opts = { data, enregistrer, accorder, art, inventaire, apres, effet };
+    Ads.setRemoveAds(data.noAds);
+  },
+
+  /** À passer à Store.init : enregistre « Sans pub » dès que le store le confirme. */
+  surSansPub(v) {
+    if (!v || !opts) return;
+    if (!opts.data.noAds) { opts.data.noAds = true; opts.enregistrer(); }
+    Ads.setRemoveAds(true);
+    Boutique.rafraichir();
+  },
+
+  /** Produits à proposer (les offres uniques déjà achetées sont retirées). */
+  produits() {
+    return Store.products.filter((p) => !(p.type === "once" && opts.data.bought[p.id]));
+  },
+
+  /** Accorde un produit acheté. */
+  accorder(p) {
+    if (p.type === "noads") { opts.data.noAds = true; Ads.setRemoveAds(true); }
+    if (p.type === "once") opts.data.bought[p.id] = true;
+    opts.accorder(p);
+    opts.enregistrer();
+    opts.apres(p);
+  },
+
+  /** Achète un produit, l'accorde et affiche le résultat. Résout true si l'achat a réussi. */
+  async acheter(p) {
+    Sound.tap();
+    const res = await Store.buy(p);
+    if (!res.ok) {
+      if (res.error) await demander(`<h2>Achat impossible</h2><p>${res.error}</p><button class="kit-btn big" data-act="close">OK</button>`);
+      return false;
+    }
+    Boutique.accorder(p);
+    Sound.gift();
+    opts.effet(p);
+    await demander(`<small class="kit-surtitre">Merci !</small>${opts.art(p)}<h2>${p.titre}</h2>
+      <p>${p.type === "noads" ? `Les publicités sont supprimées. Merci de soutenir ${config().nom} !` : "C'est ajouté à ton inventaire."}</p>
+      <button class="kit-btn big" data-act="close">Super !</button>`);
+    Boutique.rafraichir();
+    return true;
+  },
+
+  /** Restaure « Sans pub » (bouton des réglages, obligatoire pour Apple). */
+  async restaurer() {
+    const res = await Store.restore();
+    const msg = !res.ok ? "La restauration n'a pas abouti. Vérifie ta connexion et réessaie."
+      : res.noAds || opts.data.noAds ? "Ton achat « Sans pub » est bien actif sur cet appareil."
+      : "Aucun achat à restaurer pour ce compte.";
+    fenetre(`<h2>Restaurer mes achats</h2><p>${msg}</p><button class="kit-btn big" data-act="close">OK</button>`);
+    Boutique.rafraichir();
+  },
+
+  /** Affiche les cartes des produits dans `liste` (et l'inventaire dans `inventaire`, facultatif). */
+  afficher(liste, inventaire) {
+    affichage = { liste, inventaire };
+    if (inventaire) inventaire.innerHTML = opts.inventaire();
+    liste.innerHTML = Boutique.produits().map((p) => {
+      const owned = p.type === "noads" && opts.data.noAds;
+      return `<article class="kit-carte-produit ${p.type === "noads" ? "vedette" : ""}">
+        ${p.badge && !owned ? `<span class="kit-badge">${p.badge}</span>` : ""}
+        <div class="kit-carte-art">${opts.art(p)}</div>
+        <div class="kit-carte-texte"><h3>${p.titre}</h3><p>${p.description}</p></div>
+        <button class="kit-btn big kit-acheter" data-buy="${p.id}" ${owned ? "disabled" : ""}>${owned ? "Acheté ✓" : Store.priceOf(p)}</button>
+      </article>`;
+    }).join("") + (Store.available ? "" : `<p class="kit-doux kit-note">La boutique n'est pas disponible pour le moment.</p>`);
+    liste.querySelectorAll("[data-buy]").forEach((b) => (b.onclick = () => Boutique.acheter(Store.product(b.dataset.buy))));
+  },
+
+  /** Réaffiche la boutique si elle est à l'écran. */
+  rafraichir() {
+    if (affichage && affichage.liste.isConnected && affichage.liste.offsetParent !== null) Boutique.afficher(affichage.liste, affichage.inventaire);
+  },
+};
+
+return { Boutique };
+})();
+
+/* ---- cadeau.js ---- */
+const { aujourdhui, creerCadeau } = (() => {
+// Kit — cadeau du jour.
+// Convention (CLAUDE.md) : un cadeau par jour (date locale du téléphone), à ouvrir depuis l'accueil
+// ou la carte, avec un indicateur quand il est prêt.
+
+/** Date locale du jour, « AAAA-MM-JJ ». */
+function aujourdhui(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * creerCadeau(data, { tirages: [{ … }], enregistrer, champ, hasard })
+ * La date du dernier cadeau ouvert est rangée dans data[champ] (« lastGift » par défaut).
+ * Le jeu décide de ce que contient un tirage et l'accorde lui-même.
+ */
+function creerCadeau(data, { tirages, enregistrer = () => {}, champ = "lastGift", hasard = Math.random, jour = aujourdhui } = {}) {
+  if (typeof data[champ] !== "string") data[champ] = "";
+  return {
+    get pret() { return data[champ] !== jour(); },
+    /** Tire le cadeau du jour et le marque comme ouvert. Renvoie null s'il est déjà ouvert. */
+    ouvrir() {
+      if (data[champ] === jour()) return null;
+      const t = tirages[Math.floor(hasard() * tirages.length)];
+      data[champ] = jour();
+      enregistrer();
+      return t;
+    },
+  };
+}
+
+return { aujourdhui, creerCadeau };
+})();
+
+/* ---- icones.js ---- */
+const { svg, ICONS } = (() => {
+// Kit — icônes SVG (traits arrondis, couleur héritée du texte). Un jeu ajoute les siennes :
+//   const ICONS = { ...KIT_ICONS, monIcone: svg("…") };
+const svg = (body, vb = "0 0 24 24") =>
+  `<svg viewBox="${vb}" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+
+const ICONS = {
+  heart: svg('<path fill="currentColor" stroke="none" d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.7 1.2 5.4 3.2 1.7-2 3.3-3.2 5.4-3.2 3.6 0 5.7 3.7 4.2 7.2C19.5 16.4 12 21 12 21z"/>'),
+  star: svg('<path fill="currentColor" stroke="none" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17.1l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/>'),
+  gear: svg('<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3L5.5 5.5"/>'),
+  pause: svg('<path d="M8 5v14M16 5v14" stroke-width="3.4"/>'),
+  back: svg('<path d="M15 5l-7 7 7 7" stroke-width="3"/>'),
+  lock: svg('<rect x="5" y="10.5" width="14" height="10" rx="2.5" fill="currentColor" stroke="none"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>'),
+  play: svg('<path fill="currentColor" stroke="none" d="M7 4.5v15l12.5-7.5z"/>'),
+  hammer: svg('<path d="M13.5 6.5l4 4"/><path fill="currentColor" d="M11 4l5-1.5 4 4L18.5 11.5l-4-4z"/><path d="M14.5 9.5L4.5 19.5" stroke-width="3"/>'),
+  shuffle: svg('<path d="M3 7h3.5c4 0 6.5 10 11 10H21M3 17h3.5c1.8 0 3.2-2 4.4-4.3M13.6 9.2C14.8 7.6 16 7 17.5 7H21"/><path d="M18.5 4.5L21 7l-2.5 2.5M18.5 14.5L21 17l-2.5 2.5"/>'),
+  gift: svg('<rect x="3.5" y="9" width="17" height="11.5" rx="2"/><path d="M2.5 9h19M12 9v11.5M12 9c-1-3.5-5.5-5-6-2.5S9.5 9 12 9zm0 0c1-3.5 5.5-5 6-2.5S14.5 9 12 9z"/>'),
+  help: svg('<circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 2-2.7 2.3-2.7 4"/><circle cx="12" cy="17.6" r=".6" fill="currentColor"/>'),
+  video: svg('<rect x="2.5" y="5.5" width="13" height="13" rx="2.5"/><path d="M15.5 10l6-3.5v11l-6-3.5"/>'),
+  close: svg('<path d="M6 6l12 12M18 6L6 18" stroke-width="3"/>'),
+  music: svg('<path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.6" fill="currentColor"/><circle cx="17.5" cy="16" r="2.6" fill="currentColor"/>'),
+  sound: svg('<path fill="currentColor" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6M18.3 6.3a8.4 8.4 0 0 1 0 11.4"/>'),
+  vibrate: svg('<rect x="7.5" y="3.5" width="9" height="17" rx="2"/><path d="M4 8.5v7M20 8.5v7"/>'),
+  cart: svg('<path d="M3 4h2.5l2.2 11h10.6l2.2-8H7"/><circle cx="9.5" cy="19.5" r="1.6" fill="currentColor"/><circle cx="17" cy="19.5" r="1.6" fill="currentColor"/>'),
+  bell: svg('<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21h4"/>'),
+  noads: svg('<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M8.5 15l1.8-6h.4l1.8 6M9 13.2h2.8M14.5 9h1.6a2.2 2.2 0 0 1 0 6h-1.6z"/><path d="M3.5 3.5l17 17" stroke-width="2.6"/>'),
+  chest: svg('<path d="M3.5 10.5h17v9a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5z" fill="currentColor" fill-opacity=".25"/><path d="M3.5 10.5V8a4 4 0 0 1 4-4h9a4 4 0 0 1 4 4v2.5z"/><rect x="10" y="9" width="4" height="4.5" rx="1" fill="currentColor"/><path d="M3.5 10.5h17"/>'),
+  bomb: svg('<circle cx="10.5" cy="14" r="7" fill="currentColor" fill-opacity=".3"/><path d="M15.5 9l2.5-2.5"/><path d="M18 4.5v-1M20.5 6.5h1M19.8 4.7l.8-.8"/><circle cx="8" cy="11.5" r="1.3" fill="currentColor"/>'),
+  wand: svg('<path d="M4 20L15 9" stroke-width="2.8"/><path fill="currentColor" stroke="none" d="M17 2.5l1.2 2.6 2.8.4-2 2 .5 2.8L17 9l-2.5 1.3.5-2.8-2-2 2.8-.4z"/><path d="M20.5 13v2M19.5 14h2M7 4v2M6 5h2"/>'),
+  clock: svg('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/>'),
+  map: svg('<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>'),
+};
+
+return { svg, ICONS };
+})();
+
+/* ---- notify.js ---- */
+const { HEURES_CALMES, CANAL, horsHeuresCalmes, rappelsStandard, Notify } = (() => {
+// Kit — notifications locales (programmées sur le téléphone, sans serveur).
+// Convention (CLAUDE.md) : proposées après une explication, jamais entre 21 h et 9 h, reprogrammées
+// quand le joueur quitte le jeu et annulées à son retour. Dans un navigateur, elles ne sont pas
+// disponibles : Notify.supported vaut false et le réglage n'est pas affiché.
+
+
+const HEURES_CALMES = [21, 9]; // jamais entre 21 h et 9 h
+const CANAL = "rappels";
+
+/** Décale une date hors des heures calmes (au matin, 9 h 30). Modifie et renvoie la date. */
+function horsHeuresCalmes(d, [debut, fin] = HEURES_CALMES) {
+  const h = d.getHours();
+  if (h >= debut) { d.setDate(d.getDate() + 1); d.setHours(fin, 30, 0, 0); }
+  else if (h < fin) d.setHours(fin, 30, 0, 0);
+  return d;
+}
+
+/**
+ * Rappels habituels d'un jeu à vies et cadeau du jour, prêts pour Notify.schedule :
+ * vies rechargées (101), cadeau du jour à 18 h (102), retour après 3 jours (103).
+ * etat = { livesFullAt (ms ou null), giftOpenedToday }, textes = remplacements { vies, cadeau, retour }.
+ */
+function rappelsStandard(etat, textes = {}, maintenant = Date.now()) {
+  const nom = config().nom;
+  const T = {
+    vies: { titre: "Tes vies sont rechargées ❤️", texte: `Reviens jouer à ${nom} !` },
+    cadeau: { titre: "Ton cadeau du jour est prêt 🎁", texte: "Ouvre-le pour gagner un bonus gratuit." },
+    retour: { titre: `${nom} t'attend`, texte: "Reviens terminer ton prochain niveau !" },
+    ...textes,
+  };
+  const liste = [];
+  if (etat.livesFullAt && etat.livesFullAt > maintenant + 60e3) {
+    liste.push({ id: 101, ...T.vies, quand: new Date(etat.livesFullAt) });
+  }
+  const gift = new Date(maintenant);
+  gift.setHours(18, 0, 0, 0);
+  if (etat.giftOpenedToday || gift.getTime() < maintenant + 60e3) gift.setDate(gift.getDate() + 1);
+  liste.push({ id: 102, ...T.cadeau, quand: gift });
+  liste.push({ id: 103, ...T.retour, quand: new Date(maintenant + 3 * 864e5) });
+  return liste;
+}
+
+const LN = () => plugin("LocalNotifications");
+
+const Notify = {
+  get supported() { return !!LN(); },
+
+  async permission() {
+    if (!this.supported) return "unsupported";
+    try { return (await LN().checkPermissions()).display; } catch (e) { return "denied"; }
+  },
+
+  /** Demande l'autorisation au système. Résout true si elle est accordée. */
+  async request() {
+    if (!this.supported) return false;
+    try {
+      const st = await LN().requestPermissions();
+      if (st.display === "granted") {
+        try {
+          await LN().createChannel({ id: CANAL, name: "Rappels", description: `Rappels de ${config().nom}`, importance: 3 });
+        } catch (e) { /* iOS : pas de canaux */ }
+        return true;
+      }
+    } catch (e) { /* refusé */ }
+    return false;
+  },
+
+  /** Annule tous les rappels en attente du jeu. */
+  async cancelAll() {
+    if (!this.supported) return;
+    try {
+      const { notifications } = await LN().getPending();
+      if (notifications?.length) await LN().cancel({ notifications: notifications.map((n) => ({ id: n.id })) });
+    } catch (e) { /* rien à annuler */ }
+  },
+
+  /**
+   * Remplace les rappels en attente par `liste` : [{ id, titre, texte, quand: Date|ms, calme?: true, extra? }].
+   * Les rappels passés (ou dans moins d'une minute) sont ignorés ; ceux qui tombent la nuit sont
+   * décalés au matin, sauf `calme: false`. Résout la liste réellement programmée.
+   */
+  async schedule(liste, { enabled = true } = {}) {
+    if (!this.supported) return [];
+    await this.cancelAll();
+    if (!enabled || (await this.permission()) !== "granted") return [];
+    const now = Date.now();
+    const notifications = [];
+    for (const n of liste) {
+      let at = new Date(n.quand);
+      if (n.calme !== false) at = horsHeuresCalmes(at);
+      if (at.getTime() < now + 60e3) continue;
+      notifications.push({ id: n.id, title: n.titre, body: n.texte, channelId: CANAL, extra: n.extra,
+        schedule: { at, allowWhileIdle: true } });
+    }
+    if (!notifications.length) return [];
+    try { await LN().schedule({ notifications }); } catch (e) { console.warn("Notifications", e); return []; }
+    return notifications;
+  },
+};
+
+return { HEURES_CALMES, CANAL, horsHeuresCalmes, rappelsStandard, Notify };
+})();
+
+/* ---- reglages.js ---- */
+const { appliquerReglages, ouvrirReglages, proposerRappels } = (() => {
+// Kit — fenêtre des réglages, commune à tous les jeux.
+// Convention (CLAUDE.md) : effets sonores, musique, vibrations, rappels, comment jouer, revoir le
+// tutoriel, restaurer mes achats, confidentialité et publicité (si exigé), effacer ma progression
+// (avec confirmation), numéro de version.
+//
+// La sauvegarde garde data.sound, data.music, data.haptics (booléens) et data.notif
+// (true, false, ou null tant que les rappels n'ont pas été proposés).
+
+
+
+
+
+
+
+/** Applique les réglages enregistrés au moteur de son (au démarrage). */
+function appliquerReglages(data) {
+  Sound.sfx = data.sound !== false;
+  Sound.haptics = data.haptics !== false;
+  Sound.music = data.music !== false;
+}
+
+function interrupteur(id, label, icon, on) {
+  return `<button class="kit-interrupteur" data-act="${id}" aria-pressed="${on}"><span class="kit-int-icone">${ICONS[icon]}</span><span class="kit-int-label">${label}</span><span class="kit-switch"><span></span></span></button>`;
+}
+
+/**
+ * ouvrirReglages({ data, enregistrer, enJeu, actions: { tutoriel, aide, effacer, fermer } })
+ * enJeu : ouvert depuis la pause (sans « revoir le tutoriel », « restaurer », « effacer »).
+ * actions.effacer() n'est appelé qu'après confirmation. actions.fermer() au bouton Fermer.
+ */
+function ouvrirReglages(o) {
+  const { data, enregistrer, enJeu = false, actions = {} } = o;
+  const rouvrir = () => ouvrirReglages(o);
+  fenetre(`<h2>Réglages</h2>
+    <div class="kit-interrupteurs">
+      ${interrupteur("sfx", "Effets sonores", "sound", Sound.sfx)}
+      ${interrupteur("music", "Musique", "music", Sound.music)}
+      ${interrupteur("haptics", "Vibrations", "vibrate", Sound.haptics)}
+      ${Notify.supported ? interrupteur("notif", "Rappels", "bell", data.notif === true) : ""}
+    </div>
+    ${enJeu || !actions.tutoriel ? "" : `<button class="kit-btn" data-act="tuto">Revoir le tutoriel</button>`}
+    ${enJeu ? "" : `<button class="kit-btn" data-act="restore">Restaurer mes achats</button>`}
+    ${actions.aide ? `<button class="kit-btn" data-act="help">Comment jouer</button>` : ""}
+    ${Ads.privacyOptionsRequired ? `<button class="kit-btn" data-act="privacy">Confidentialité et publicité</button>` : ""}
+    ${enJeu || !actions.effacer ? "" : `<button class="kit-btn ghost danger" data-act="reset">Effacer ma progression</button>`}
+    <button class="kit-btn big" data-act="close">Fermer</button>
+    <p class="kit-version">${config().nom} ${config().version}</p>`, (act) => {
+    if (act === "sfx") { Sound.sfx = !Sound.sfx; data.sound = Sound.sfx; enregistrer(); rouvrir(); }
+    if (act === "music") { Sound.music = !Sound.music; data.music = Sound.music; enregistrer(); rouvrir(); }
+    if (act === "haptics") { Sound.haptics = !Sound.haptics; data.haptics = Sound.haptics; enregistrer(); rouvrir(); }
+    if (act === "notif") {
+      (async () => {
+        if (data.notif === true) data.notif = false;
+        else data.notif = await Notify.request();
+        enregistrer();
+        if (!data.notif && (await Notify.permission()) === "denied") {
+          fenetre(`<h2>Rappels bloqués</h2><p>Les notifications sont désactivées pour ${config().nom} dans les réglages de ton téléphone. Active-les là-bas, puis reviens ici.</p>
+            <button class="kit-btn big" data-act="close">OK</button>`, rouvrir);
+        } else rouvrir();
+      })();
+    }
+    if (act === "tuto") actions.tutoriel();
+    if (act === "restore") Boutique.restaurer();
+    if (act === "help") actions.aide();
+    if (act === "privacy") Ads.showPrivacyOptions();
+    if (act === "reset") confirmerEffacement(actions.effacer);
+    if (act === "close") actions.fermer?.();
+  });
+}
+
+function confirmerEffacement(effacer) {
+  fenetre(`<h2>Tout effacer ?</h2><p>Tes niveaux, étoiles et bonus seront perdus. Cette action est définitive.</p>
+    <div class="kit-rang"><button class="kit-btn ghost" data-act="close">Annuler</button><button class="kit-btn danger-fill" data-act="yes">Effacer</button></div>`, (act) => {
+    if (act === "yes") effacer();
+  });
+}
+
+/**
+ * Propose les rappels après une explication (convention : au bon moment, jamais au lancement).
+ * Résout true si le joueur les a acceptés et que le système les autorise.
+ */
+function proposerRappels(data, enregistrer, texte) {
+  return new Promise((done) =>
+    fenetre(`<div class="kit-fenetre-icone">${ICONS.bell}</div><h2>On te prévient ?</h2>
+      <p>${texte || "Reçois un petit rappel quand tes <b>vies sont rechargées</b> et quand ton <b>cadeau du jour</b> t'attend. Jamais la nuit, promis."}</p>
+      <button class="kit-btn big" data-act="yes">Oui, avec plaisir</button>
+      <button class="kit-btn ghost" data-act="no">Plus tard</button>`, async (act) => {
+      data.notif = act === "yes" ? await Notify.request() : false;
+      enregistrer();
+      done(data.notif);
+    }));
+}
+
+return { appliquerReglages, ouvrirReglages, proposerRappels };
+})();
+
+/* ---- sauvegarde.js ---- */
+const { creerSauvegarde } = (() => {
+// Kit — sauvegarde locale (localStorage), une clé par jeu.
+// Convention : toujours compatible avec les anciennes sauvegardes. On ajoute des champs avec une valeur
+// par défaut (dans `defauts` ou `completer`), on ne renomme ni ne supprime jamais un champ existant.
+// Une sauvegarde illisible repart des valeurs par défaut sans planter.
+
+const stockage = () => { try { return globalThis.localStorage || null; } catch (e) { return null; } };
+
+/**
+ * creerSauvegarde({ cle: "melopop.v1", defauts: () => ({…}), completer: (d) => {…} })
+ * → { data, enregistrer(), reinitialiser() }
+ * `data` est l'objet sauvegardé, à lire et modifier directement, puis enregistrer().
+ * `completer(d)` est appelé après lecture : y compléter les sous-objets des anciennes sauvegardes.
+ */
+function creerSauvegarde({ cle, defauts, completer }) {
+  const data = defauts();
+  try {
+    const brut = stockage()?.getItem(cle);
+    const lu = brut ? JSON.parse(brut) : null;
+    if (lu && typeof lu === "object" && !Array.isArray(lu)) Object.assign(data, lu);
+  } catch (e) { /* sauvegarde illisible : valeurs par défaut */ }
+  completer?.(data);
+  return {
+    cle,
+    data,
+    enregistrer() {
+      try { stockage()?.setItem(cle, JSON.stringify(data)); } catch (e) { /* stockage plein ou indisponible */ }
+    },
+    /** Efface la progression : remet les valeurs par défaut, en gardant le même objet `data`. */
+    reinitialiser() {
+      for (const k of Object.keys(data)) delete data[k];
+      Object.assign(data, defauts());
+      completer?.(data);
+      this.enregistrer();
+    },
+  };
+}
+
+return { creerSauvegarde };
+})();
+
+/* ---- tutoriel.js ---- */
+const { Tutoriel } = (() => {
+// Kit — briques du tutoriel guidé (convention : une main montre le geste, la zone à jouer est mise
+// en lumière, une bulle explique, le joueur fait lui-même les premiers coups).
+// Le déroulé (quelles étapes, quels coups) appartient au jeu ; le kit fournit l'affichage.
+//
+// Calque #kit-tuto créé au besoin, avec #kit-tuto-projecteur, #kit-tuto-main et #kit-tuto-bulle.
+// Toutes les positions sont en pixels de la fenêtre (getBoundingClientRect()).
+
+const $ = (id) => document.getElementById(id);
+
+function calque() {
+  let c = $("kit-tuto");
+  if (!c) {
+    c = document.createElement("div");
+    c.id = "kit-tuto";
+    c.hidden = true;
+    c.innerHTML = `<div id="kit-tuto-projecteur" hidden></div><div id="kit-tuto-main" hidden><span class="kit-doigt"></span></div><div id="kit-tuto-bulle" hidden></div>`;
+    document.body.appendChild(c);
+  }
+  return c;
+}
+
+const Tutoriel = {
+  /** L'élément du calque, pour y ajouter des repères propres au jeu. */
+  get calque() { return calque(); },
+
+  /** Montre le calque du tutoriel (bloque les gestes, sauf sur la bulle). */
+  ouvrir() { calque().hidden = false; },
+
+  /** Cache tout. */
+  fermer() {
+    const c = calque();
+    c.hidden = true;
+    for (const id of ["kit-tuto-projecteur", "kit-tuto-main", "kit-tuto-bulle"]) $(id).hidden = true;
+  },
+
+  /** Met en lumière un rectangle { left, top, width, height } (null pour l'enlever). */
+  projecteur(rect, rond = false) {
+    calque();
+    const s = $("kit-tuto-projecteur");
+    if (!rect) { s.hidden = true; return; }
+    s.hidden = false;
+    const pad = 6;
+    Object.assign(s.style, {
+      left: rect.left - pad + "px", top: rect.top - pad + "px",
+      width: rect.width + pad * 2 + "px", height: rect.height + pad * 2 + "px",
+    });
+    s.classList.toggle("rond", rond);
+  },
+
+  /** Main animée qui glisse de { x, y } vers { x, y } (même point : un appui). null pour la cacher. */
+  main(de, vers = de) {
+    calque();
+    const h = $("kit-tuto-main");
+    if (!de) { h.hidden = true; return; }
+    h.hidden = false;
+    h.style.left = de.x + "px"; h.style.top = de.y + "px";
+    h.style.setProperty("--dx", vers.x - de.x + "px");
+    h.style.setProperty("--dy", vers.y - de.y + "px");
+  },
+
+  /**
+   * Bulle d'explication, placée au-dessus ou en dessous de `pres` (un rectangle).
+   * Avec `bouton`, résout quand le joueur appuie dessus ; sinon résout tout de suite.
+   */
+  bulle(html, { pres, bouton } = {}) {
+    calque();
+    const bb = $("kit-tuto-bulle");
+    bb.innerHTML = `<div class="kit-tuto-texte">${html}</div>${bouton ? `<button class="kit-btn big petit" id="kit-tuto-ok">${bouton}</button>` : ""}`;
+    bb.hidden = false;
+    const H = innerHeight;
+    if (pres && pres.top > H * 0.45) { bb.style.top = ""; bb.style.bottom = H - pres.top + 18 + "px"; }
+    else { bb.style.bottom = ""; bb.style.top = (pres ? pres.top + pres.height : H * 0.3) + 18 + "px"; }
+    bb.classList.remove("in"); void bb.offsetWidth; bb.classList.add("in");
+    if (!bouton) return Promise.resolve();
+    return new Promise((res) => { $("kit-tuto-ok").onclick = () => { Sound.tap(); res(); }; });
+  },
+
+  /** Cache la bulle. */
+  cacherBulle() { calque(); $("kit-tuto-bulle").hidden = true; },
+};
+
+return { Tutoriel };
+})();
+
+/* ---- vies.js ---- */
+const { VIES_MAX, RECHARGE_MS, creerVies } = (() => {
+// Kit — vies qui se rechargent avec le temps.
+// Convention (CLAUDE.md) : 5 vies au maximum, 1 qui revient toutes les 20 minutes, un niveau perdu
+// ou abandonné en coûte une. Le cadeau du jour peut dépasser le maximum de 1.
+
+const VIES_MAX = 5;
+const RECHARGE_MS = 20 * 60e3;
+
+/**
+ * creerVies(data, { enregistrer, max, recharge, champs })
+ * `data` est l'objet de sauvegarde ; les vies y sont rangées dans data.lives et data.livesTs
+ * (date de référence de la recharge), noms modifiables avec `champs: { vies, date }`.
+ */
+function creerVies(data, { enregistrer = () => {}, max = VIES_MAX, recharge = RECHARGE_MS, champs = {}, maintenant = Date.now } = {}) {
+  const V = champs.vies || "lives", D = champs.date || "livesTs";
+  if (typeof data[V] !== "number") data[V] = max;
+  if (typeof data[D] !== "number") data[D] = maintenant();
+
+  const vies = {
+    max,
+    recharge,
+    get n() { return data[V]; },
+    get pleines() { return data[V] >= max; },
+
+    /** Ajoute les vies revenues depuis la dernière fois. */
+    rafraichir() {
+      if (data[V] >= max) { data[D] = maintenant(); return; }
+      const gagnees = Math.floor((maintenant() - data[D]) / recharge);
+      if (gagnees > 0) {
+        data[V] = Math.min(max, data[V] + gagnees);
+        data[D] += gagnees * recharge;
+        enregistrer();
+      }
+    },
+    /** Retire une vie (niveau perdu ou abandonné). */
+    perdre() {
+      vies.rafraichir();
+      if (data[V] >= max) data[D] = maintenant();
+      data[V] = Math.max(0, data[V] - 1);
+      enregistrer();
+    },
+    /** Ajoute n vies, sans dépasser le maximum (ou le maximum + 1 avec depasser: true). */
+    gagner(n = 1, { depasser = false } = {}) {
+      vies.rafraichir();
+      data[V] = Math.min(max + (depasser ? 1 : 0), data[V] + n);
+      enregistrer();
+    },
+    /** Toutes les vies, tout de suite (achat, lot). */
+    remplir() {
+      data[V] = Math.max(data[V], max);
+      data[D] = maintenant();
+      enregistrer();
+    },
+    /** Millisecondes avant la prochaine vie. */
+    prochaineMs() { return Math.max(0, recharge - (maintenant() - data[D])); },
+    /** « m:ss » avant la prochaine vie. */
+    prochaineDans() {
+      const ms = vies.prochaineMs();
+      return `${Math.floor(ms / 60e3)}:${String(Math.floor((ms % 60e3) / 1e3)).padStart(2, "0")}`;
+    },
+    /** Date (ms) à laquelle toutes les vies seront revenues, ou null si elles le sont déjà. */
+    pleinesA() { return data[V] < max ? data[D] + (max - data[V]) * recharge : null; },
+  };
+  return vies;
+}
+
+return { VIES_MAX, RECHARGE_MS, creerVies };
+})();
+
+configurer({"id":"caroule","nom":"Ça Roule","version":"0.1.0","description":"Le casse-tête du parking : 75 niveaux de Course, 50 énigmes et un défi expert chaque jour.","admob":{"test":true,"android":{"appli":"ca-app-pub-3940256099942544~3347511713","banniere":"ca-app-pub-3940256099942544/9214589741","interstitielle":"ca-app-pub-3940256099942544/1033173712","recompensee":"ca-app-pub-3940256099942544/5224354917"},"ios":{"appli":"ca-app-pub-3940256099942544~1458002511","banniere":"ca-app-pub-3940256099942544/2435281174","interstitielle":"ca-app-pub-3940256099942544/4411468910","recompensee":"ca-app-pub-3940256099942544/1712485313"}},"interstitielle":{"toutesLes":3,"delaiMin":120,"aPartirDuNiveau":4},"revenuecat":{"android":"","ios":"","droitSansPub":"no_ads"},"produits":[{"id":"caroule_noads","type":"noads","titre":"Sans pub","prix":"3,99 €","art":"noads","badge":"Le plus demandé","description":"Fini la bannière et les pubs entre les niveaux. Les vidéos restent disponibles pour gagner des 👍 et des styles exclusifs."},{"id":"caroule_pouces_s","type":"consumable","titre":"Poignée de 👍","prix":"0,99 €","art":"s","description":"10 coups de pouce pour les aides du Casse-tête et de la Course.","contenu":{"boost":10}},{"id":"caroule_decouverte","type":"once","titre":"Pack découverte","prix":"1,99 €","art":"m","badge":"Offre unique","description":"30 coups de pouce, 2 « +3 coups » et 2 « Marche arrière » en réserve.","contenu":{"boost":30,"fuel":2,"reverse":2}},{"id":"caroule_pouces_l","type":"consumable","titre":"Coffre de 👍","prix":"4,99 €","art":"l","badge":"Meilleure affaire","description":"100 coups de pouce : de quoi finir toutes les énigmes en douceur.","contenu":{"boost":100}}]});
+window.Kit = Object.freeze({ configurer, config, estNatif, plateforme, plugin, REGLES_INTERSTITIELLE, Ads, creerInventaire, Store, SCALE, tone, bell, vibrate, Sound, fenetre, demander, informer, Ecrans, Boutique, aujourdhui, creerCadeau, svg, ICONS, HEURES_CALMES, CANAL, horsHeuresCalmes, rappelsStandard, Notify, appliquerReglages, ouvrirReglages, proposerRappels, creerSauvegarde, Tutoriel, VIES_MAX, RECHARGE_MS, creerVies });
+})();
+</script>
 <script>
 (function () {
   'use strict';
   const E = window.CarEngine;
+  /* Kit commun (window.Kit) : pubs, boutique. Voir kit/README.md à la racine du dépôt. */
+  const Kit = window.Kit;
   /* Niveaux casse-tête : { opt: coups minimum, ways: nombre de solutions de cette longueur, cars: [[horizontale, ligne/colonne, case, longueur]] } */
   const PUZZLES = [{"opt":4,"ways":1,"cars":[[1,2,0,2],[0,0,0,2],[0,5,2,3],[1,5,4,2],[1,0,3,2],[1,5,1,2],[1,3,0,2],[0,3,4,2]]},{"opt":5,"ways":1,"cars":[[1,2,0,2],[1,1,0,3],[0,2,4,2],[1,4,3,2],[1,3,4,2],[0,3,0,3],[0,2,2,2],[1,4,0,2]]},{"opt":5,"ways":1,"cars":[[1,2,2,2],[0,5,1,2],[0,5,3,2],[0,0,0,3],[1,1,2,2],[1,0,1,3],[0,0,4,2],[1,0,4,2]]},{"opt":6,"ways":1,"cars":[[1,2,1,2],[0,5,0,3],[1,4,3,3],[1,1,2,2],[1,4,1,2],[1,1,0,2],[0,3,2,2],[1,0,0,2]]},{"opt":6,"ways":1,"cars":[[1,2,0,2],[1,1,4,2],[1,4,3,2],[0,0,3,2],[0,2,3,2],[0,5,4,2],[0,3,0,3],[1,1,0,3]]},{"opt":7,"ways":1,"cars":[[1,2,0,2],[1,1,0,3],[0,2,4,2],[0,3,0,3],[0,2,2,2],[1,0,0,2],[1,5,3,3],[0,1,3,2]]},{"opt":7,"ways":1,"cars":[[1,2,1,2],[0,5,3,2],[1,4,0,2],[1,4,3,2],[1,0,1,3],[0,3,1,3],[1,0,4,2],[0,0,0,3]]},{"opt":8,"ways":1,"cars":[[1,2,0,2],[0,3,2,3],[0,4,1,2],[1,0,4,2],[0,2,0,2],[0,4,4,2],[0,1,0,2],[1,3,0,3]]},{"opt":8,"ways":1,"cars":[[1,2,0,2],[0,3,3,3],[0,4,1,2],[1,0,4,2],[0,2,0,2],[0,4,4,2],[0,1,0,2],[1,3,0,3]]},{"opt":9,"ways":1,"cars":[[1,2,1,2],[0,3,2,3],[0,4,2,2],[1,0,3,2],[0,1,0,2],[1,3,1,2],[0,1,4,2],[0,0,0,3],[1,5,2,3]]},{"opt":9,"ways":1,"cars":[[1,2,0,2],[0,2,1,3],[0,4,4,2],[1,3,4,2],[0,5,0,2],[0,4,1,2],[1,5,0,3],[1,0,0,2],[1,0,2,2]]},{"opt":10,"ways":1,"cars":[[1,2,0,2],[0,2,2,3],[0,4,4,2],[1,3,4,2],[0,5,0,2],[0,4,0,2],[1,1,0,2],[1,5,0,3],[1,0,0,2],[1,0,2,2]]},{"opt":10,"ways":1,"cars":[[1,2,0,2],[0,2,1,3],[0,4,4,2],[1,3,4,2],[0,5,0,2],[0,4,0,2],[1,5,0,3],[1,0,0,2],[1,0,2,2],[1,4,0,2]]},{"opt":11,"ways":1,"cars":[[1,2,2,2],[1,0,1,2],[1,3,4,2],[0,4,1,2],[1,5,2,2],[1,4,3,2],[1,0,3,2],[1,4,0,3],[1,3,2,2],[0,0,2,2],[1,5,0,2],[0,0,0,2],[1,1,2,2],[0,5,4,2]]},{"opt":11,"ways":1,"cars":[[1,2,2,2],[0,5,1,3],[1,5,4,2],[1,5,1,3],[1,0,0,2],[1,4,2,2],[1,1,3,2],[1,0,2,2],[0,0,2,2],[1,1,0,3],[0,0,4,2],[1,4,4,2],[0,1,2,2],[1,3,2,3]]},{"opt":12,"ways":1,"cars":[[1,2,2,2],[0,5,1,3],[1,5,4,2],[1,5,1,3],[1,0,0,3],[1,4,2,2],[1,1,3,2],[1,0,3,2],[0,0,2,2],[1,1,0,3],[0,0,4,2],[1,4,4,2],[0,1,3,2],[1,3,2,2]]},{"opt":12,"ways":1,"cars":[[1,2,2,2],[0,5,1,3],[0,0,4,2],[1,5,1,3],[1,0,0,2],[1,1,0,2],[1,5,4,2],[1,1,2,3],[0,0,2,2],[1,0,2,2],[0,1,2,3],[1,4,3,3],[0,2,3,2],[1,0,4,2]]},{"opt":13,"ways":1,"cars":[[1,2,1,2],[0,3,1,3],[0,5,2,2],[1,0,3,2],[0,2,0,2],[1,3,1,2],[0,1,4,2],[1,5,2,3],[0,5,0,2],[0,1,0,2],[0,4,3,2],[0,0,0,2]]},{"opt":13,"ways":1,"cars":[[1,2,2,2],[0,0,3,2],[0,5,2,2],[1,0,3,3],[0,5,4,2],[1,0,1,2],[0,0,0,3],[1,5,3,2],[1,5,0,2],[0,2,4,2],[0,3,3,2],[0,1,1,2],[1,3,1,2],[1,1,2,2]]},{"opt":14,"ways":1,"cars":[[1,2,2,2],[0,0,3,2],[0,5,2,2],[1,0,3,3],[0,5,4,2],[1,0,1,2],[0,0,0,3],[1,5,3,2],[1,5,0,2],[0,2,4,2],[0,3,3,2],[1,1,4,2],[1,3,1,2],[1,1,1,2]]},{"opt":15,"ways":1,"cars":[[1,2,2,2],[0,0,3,2],[0,5,2,2],[1,0,3,3],[0,5,4,2],[1,0,1,2],[0,0,0,3],[1,5,3,2],[1,5,0,2],[0,2,4,2],[0,3,3,2],[1,1,4,2],[1,3,1,2],[1,1,2,2]]},{"opt":16,"ways":1,"cars":[[1,2,1,2],[0,1,0,2],[0,0,0,2],[1,0,4,2],[0,3,1,2],[1,0,2,2],[1,3,3,3],[0,0,3,2],[1,5,2,2],[0,4,4,2],[0,2,3,2],[1,5,0,2]]},{"opt":17,"ways":1,"cars":[[1,2,2,2],[0,5,2,2],[1,4,3,3],[1,5,2,3],[1,1,2,3],[0,5,0,2],[0,1,2,2],[0,2,3,2],[0,4,2,2],[0,1,0,2],[1,5,0,2],[0,0,3,2],[0,0,0,2]]},{"opt":17,"ways":1,"cars":[[1,2,2,2],[0,5,2,2],[1,4,3,3],[1,5,2,3],[1,1,2,3],[0,5,0,2],[0,1,2,2],[0,2,3,2],[0,4,2,2],[0,1,0,2],[1,5,0,2],[0,0,3,2],[1,0,3,2]]},{"opt":18,"ways":2,"cars":[[1,2,2,2],[0,5,2,2],[1,4,3,3],[1,5,2,3],[1,1,2,3],[0,5,0,2],[0,1,2,2],[0,2,3,2],[0,4,2,2],[0,1,0,2],[1,5,0,2],[0,0,2,2],[1,0,3,2],[0,0,0,2]]},{"opt":19,"ways":4,"cars":[[1,2,2,2],[0,5,2,2],[1,4,3,3],[1,5,2,3],[1,1,2,3],[0,5,0,2],[0,1,2,2],[0,2,3,2],[0,4,2,2],[0,1,0,2],[1,5,0,2],[0,0,3,2],[0,0,0,2],[1,0,2,3]]},{"opt":20,"ways":1,"cars":[[1,2,1,2],[0,3,1,2],[1,3,3,2],[1,5,4,2],[0,5,1,3],[1,0,4,2],[1,0,0,3],[1,3,1,2],[0,3,4,2],[0,0,4,2],[0,0,1,3],[0,4,1,2],[1,4,1,2],[1,1,1,2]]},{"opt":20,"ways":3,"cars":[[1,2,0,2],[0,5,0,2],[1,0,2,3],[1,3,0,2],[0,2,2,2],[0,5,2,3],[1,4,1,3],[0,3,2,2],[0,0,4,2],[1,1,2,2],[1,5,3,3],[1,5,1,2],[0,4,1,2],[0,1,0,2]]},{"opt":21,"ways":1,"cars":[[1,2,1,2],[0,3,1,2],[1,3,3,2],[1,5,4,2],[0,5,1,3],[1,0,4,2],[1,0,1,3],[1,3,1,2],[0,3,4,2],[0,0,4,2],[0,0,1,3],[0,4,1,2],[1,4,1,2],[1,1,1,2]]},{"opt":21,"ways":1,"cars":[[1,2,1,2],[0,3,1,2],[1,3,3,2],[1,5,4,2],[0,5,1,3],[1,0,4,2],[1,0,1,3],[1,3,1,2],[0,3,4,2],[0,0,4,2],[0,0,1,3],[0,4,1,2]]},{"opt":22,"ways":1,"cars":[[1,2,1,2],[0,3,1,2],[1,3,3,2],[1,5,4,2],[0,5,2,3],[1,0,4,2],[1,0,1,3],[1,3,1,2],[0,3,4,2],[0,0,4,2],[0,0,0,3],[0,4,1,2],[1,1,1,2],[1,4,1,2]]},{"opt":22,"ways":1,"cars":[[1,2,1,2],[0,3,1,2],[1,3,3,2],[1,5,4,2],[0,5,1,3],[1,0,4,2],[1,0,1,3],[1,3,1,2],[0,3,4,2],[0,0,4,2],[0,0,0,3],[0,4,1,2],[1,4,1,2],[1,1,1,2]]},{"opt":23,"ways":1,"cars":[[1,2,1,2],[0,3,1,2],[1,3,3,2],[1,5,4,2],[0,5,2,3],[1,0,4,2],[1,0,1,3],[1,3,0,2],[0,3,4,2],[0,0,4,2],[0,0,0,3],[0,4,1,2],[1,4,1,2]]},{"opt":23,"ways":1,"cars":[[1,2,1,2],[0,3,1,2],[1,3,3,2],[1,5,4,2],[0,5,2,3],[1,0,4,2],[1,0,1,3],[1,3,0,2],[0,3,4,2],[0,0,4,2],[0,0,0,3],[0,4,1,2],[1,1,1,2],[1,4,1,2]]},{"opt":24,"ways":504,"cars":[[1,2,0,2],[0,3,1,2],[0,2,1,2],[0,5,3,2],[0,5,0,2],[0,2,4,2],[1,4,3,2],[1,5,3,3],[1,3,2,3],[1,0,2,2],[0,0,0,2],[0,0,4,2],[0,1,0,2]]},{"opt":25,"ways":272,"cars":[[1,2,0,2],[0,3,0,2],[0,4,2,2],[0,2,1,2],[0,0,3,3],[1,0,1,2],[0,1,4,2],[0,4,4,2],[0,3,2,2],[0,5,3,2],[1,3,1,2],[1,5,2,2],[0,0,0,2]]},{"opt":26,"ways":816,"cars":[[1,2,0,2],[0,3,0,2],[0,5,4,2],[0,4,2,2],[0,2,1,2],[0,0,3,3],[1,0,1,2],[0,1,4,2],[0,4,4,2],[0,3,2,2],[1,3,1,2],[1,5,2,2],[0,0,0,2]]},{"opt":27,"ways":448,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[1,4,4,2],[0,2,3,2],[0,5,0,3],[1,0,0,3],[0,1,4,2],[0,4,0,3],[0,0,4,2]]},{"opt":28,"ways":4896,"cars":[[1,2,0,2],[0,3,0,2],[0,5,4,2],[0,4,2,2],[0,2,1,2],[0,0,3,3],[1,0,1,2],[0,1,4,2],[0,4,4,2],[0,3,2,2],[0,5,2,2],[1,3,1,2],[1,5,2,2],[0,0,0,2]]},{"opt":28,"ways":3136,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[1,4,4,2],[0,2,3,2],[0,5,1,3],[1,0,0,3],[0,1,4,2],[0,4,0,3],[0,0,4,2]]},{"opt":29,"ways":37632,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[1,4,3,2],[0,2,3,2],[0,5,1,3],[1,0,0,3],[0,1,4,2],[0,4,0,3],[0,0,4,2]]},{"opt":29,"ways":37632,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[1,4,3,2],[0,2,3,2],[0,5,0,3],[1,0,0,3],[0,1,4,2],[0,4,1,3],[0,0,4,2]]},{"opt":30,"ways":213248,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[1,4,3,2],[0,2,3,2],[0,5,2,3],[1,0,0,3],[0,1,4,2],[0,4,1,3],[0,0,4,2]]},{"opt":33,"ways":5234112,"cars":[[1,2,0,2],[1,3,2,2],[1,5,3,2],[0,3,0,2],[0,5,2,2],[1,0,4,2],[0,4,2,3],[0,0,0,2],[1,5,0,2],[1,1,4,2],[1,0,1,2],[0,2,1,2],[1,4,1,3],[0,5,4,2]]},{"opt":34,"ways":76822128,"cars":[[1,2,0,2],[1,3,2,2],[1,5,3,2],[0,3,0,2],[0,5,2,2],[1,0,4,2],[0,4,2,3],[0,0,0,2],[1,5,1,2],[1,1,4,2],[1,0,1,2],[0,2,1,2],[1,4,0,3],[0,5,4,2]]},{"opt":37,"ways":28532736,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[0,2,3,2],[0,5,2,3],[1,0,0,3],[0,1,4,2],[0,4,1,3],[1,1,1,2]]},{"opt":38,"ways":120877056,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[0,2,3,2],[0,5,0,3],[1,0,0,3],[0,1,4,2],[0,4,0,3],[1,1,1,2]]},{"opt":46,"ways":702520320,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[1,4,3,2],[0,2,3,2],[0,5,1,2],[1,0,0,3],[0,1,4,2],[0,4,1,3],[1,1,1,2]]},{"opt":48,"ways":1247395840,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[1,4,3,2],[0,2,3,2],[0,5,1,3],[1,0,0,3],[0,1,4,2],[0,4,0,3],[1,1,1,2]]},{"opt":49,"ways":9638248448,"cars":[[1,2,2,2],[0,0,1,2],[0,3,0,2],[1,3,0,2],[1,5,2,2],[1,5,4,2],[1,4,4,2],[0,2,3,2],[0,5,0,3],[1,0,0,3],[0,1,4,2],[0,4,0,3],[1,1,1,2]]}];
   /* Défis du jour : casse-tête experts (30 coups et plus), un par jour, même grille pour tout le monde. */
@@ -2268,8 +3690,8 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   const COURSE = [{"city":1,"W":5,"H":6,"opt":3,"naive":100,"gates":[["R",1,"any"],["B",3,"any"],["B",4,"any"]],"bars":[],"buttons":[],"cars":[[0,4,3,3,1,"green"],[0,3,1,2,1,"red"],[0,4,0,2,1,"blue"]]},{"city":1,"W":5,"H":6,"opt":4,"naive":100,"gates":[["B",2,"any"],["T",1,"any"],["L",5,"any"]],"bars":[],"buttons":[],"cars":[[1,5,2,3,-1,"orange"],[0,2,0,2,1,"yellow"],[0,1,0,2,-1,"purple"],[0,1,4,2,-1,"red"]]},{"city":1,"W":5,"H":6,"opt":6,"naive":77,"gates":[["L",5,"any"],["R",2,"any"],["T",0,"any"],["B",3,"any"]],"bars":[],"buttons":[],"cars":[[1,2,0,2,1,"red"],[0,3,2,2,1,"blue"],[0,3,0,2,1,"yellow"],[0,0,4,2,-1,"purple"],[1,5,2,3,-1,"purple"]]},{"city":1,"W":5,"H":6,"opt":6,"naive":67,"gates":[["R",2,"any"],["T",0,"any"],["L",4,"any"],["B",3,"any"]],"bars":[],"buttons":[],"cars":[[1,4,3,2,-1,"green"],[0,3,1,3,1,"blue"],[0,0,0,2,-1,"yellow"],[1,2,0,2,1,"yellow"],[0,0,4,2,-1,"yellow"]]},{"city":1,"hard":true,"W":6,"H":7,"opt":8,"naive":22,"gates":[["B",0,"any"],["R",3,"any"],["T",5,"any"],["L",1,"any"]],"bars":[],"buttons":[],"cars":[[0,0,0,2,1,"purple"],[1,1,2,2,-1,"purple"],[0,5,2,3,-1,"green"],[1,1,4,2,-1,"red"],[1,3,0,2,1,"orange"],[1,3,2,2,1,"purple"]]},{"city":1,"W":6,"H":7,"opt":7,"naive":100,"gates":[["T",5,"any"],["B",2,"any"],["L",4,"any"],["R",5,"any"]],"bars":[],"buttons":[],"cars":[[0,2,3,2,1,"green"],[0,5,5,2,-1,"blue"],[0,2,1,2,1,"green"],[1,4,0,2,-1,"red"],[1,5,1,2,1,"orange"],[1,4,3,3,-1,"yellow"]]},{"city":1,"W":6,"H":7,"opt":7,"naive":100,"gates":[["T",2,"any"],["B",1,"any"],["R",6,"any"],["L",3,"any"]],"bars":[],"buttons":[],"cars":[[0,1,1,2,1,"blue"],[0,2,5,2,-1,"blue"],[1,6,4,2,1,"blue"],[0,1,3,2,1,"green"],[1,3,2,3,-1,"purple"],[1,6,0,2,1,"blue"]]},{"city":1,"W":6,"H":7,"opt":7,"naive":100,"gates":[["B",1,"any"],["T",5,"any"],["R",2,"any"],["L",0,"any"]],"bars":[],"buttons":[],"cars":[[0,1,0,2,1,"red"],[1,2,3,2,1,"orange"],[1,0,4,2,-1,"green"],[0,1,5,2,1,"blue"],[1,2,1,2,1,"red"],[0,5,1,3,-1,"green"]]},{"city":1,"W":6,"H":7,"opt":8,"naive":45,"gates":[["T",0,"any"],["B",3,"any"],["L",5,"any"],["R",3,"any"]],"bars":[],"buttons":[],"cars":[[1,3,0,3,1,"green"],[0,3,1,2,1,"yellow"],[0,3,3,2,1,"purple"],[0,0,5,2,-1,"red"],[1,5,4,2,-1,"red"],[1,5,2,2,-1,"blue"],[0,0,1,2,-1,"purple"]]},{"city":1,"hard":true,"W":6,"H":7,"opt":10,"naive":18,"gates":[["R",6,"any"],["T",0,"any"],["T",2,"any"],["L",0,"any"],["B",0,"any"]],"bars":[],"buttons":[],"cars":[[1,6,0,2,1,"red"],[1,0,1,2,-1,"yellow"],[1,6,3,2,1,"orange"],[0,2,5,2,-1,"green"],[0,0,0,2,1,"purple"],[1,0,4,2,-1,"green"],[0,2,3,2,-1,"purple"],[0,0,2,2,1,"yellow"]]},{"city":1,"W":6,"H":7,"opt":8,"naive":44,"gates":[["B",2,"any"],["L",2,"any"],["R",5,"any"],["T",3,"any"]],"bars":[],"buttons":[],"cars":[[1,2,0,2,-1,"orange"],[0,3,5,2,-1,"blue"],[0,2,0,3,1,"orange"],[1,5,4,2,1,"blue"],[1,2,3,2,-1,"yellow"],[1,5,1,2,1,"purple"],[0,3,0,2,-1,"orange"]]},{"city":1,"W":6,"H":7,"opt":10,"naive":55,"gates":[["T",3,"any"],["B",5,"any"],["L",6,"any"],["B",1,"any"],["R",1,"any"]],"bars":[],"buttons":[],"cars":[[0,5,2,2,1,"blue"],[1,6,4,2,-1,"green"],[0,1,0,3,1,"red"],[1,1,3,2,1,"green"],[0,3,3,2,-1,"orange"],[0,5,0,2,1,"red"],[1,6,0,2,-1,"green"],[0,3,5,2,-1,"green"]]},{"city":1,"W":6,"H":8,"opt":10,"naive":19,"gates":[["B",3,"any"],["R",1,"any"],["L",7,"any"],["R",0,"any"],["T",1,"any"]],"bars":[],"buttons":[],"cars":[[0,1,6,2,-1,"green"],[0,3,2,2,1,"orange"],[1,0,0,3,1,"orange"],[1,7,3,3,-1,"blue"],[1,1,4,2,1,"yellow"],[0,3,0,2,1,"red"],[0,1,4,2,-1,"red"],[1,1,0,2,1,"blue"]]},{"city":1,"W":6,"H":8,"opt":10,"naive":100,"gates":[["R",5,"any"],["R",6,"any"],["T",5,"any"],["B",3,"any"],["L",0,"any"]],"bars":[],"buttons":[],"cars":[[1,0,4,2,-1,"purple"],[0,3,0,2,1,"green"],[1,6,1,2,1,"green"],[0,5,3,2,-1,"green"],[0,3,4,2,1,"red"],[0,3,2,2,1,"yellow"],[1,6,3,2,1,"purple"],[0,5,5,3,-1,"green"]]},{"city":1,"hard":true,"W":6,"H":8,"opt":13,"naive":69,"gates":[["R",2,"any"],["T",2,"any"],["L",7,"any"],["L",5,"any"],["B",5,"any"],["R",4,"any"]],"bars":[],"buttons":[],"cars":[[0,2,5,3,-1,"orange"],[1,4,2,2,1,"purple"],[1,4,0,2,1,"orange"],[0,2,0,2,-1,"red"],[1,5,0,2,-1,"orange"],[0,5,2,3,1,"orange"],[1,2,1,2,1,"green"],[1,5,4,2,-1,"purple"],[1,2,3,2,1,"purple"],[1,7,3,3,-1,"blue"]]},{"city":1,"W":6,"H":8,"opt":11,"naive":11,"gates":[["T",2,"any"],["B",4,"any"],["R",1,"any"],["R",2,"any"],["L",7,"any"]],"bars":[],"buttons":[],"cars":[[1,7,4,2,-1,"green"],[1,1,2,2,1,"blue"],[0,4,0,2,1,"red"],[1,2,0,2,1,"blue"],[1,2,3,3,1,"red"],[0,4,5,2,1,"red"],[0,2,6,2,-1,"yellow"],[0,2,3,3,-1,"blue"],[0,4,3,2,1,"purple"]]},{"city":1,"W":6,"H":8,"opt":11,"naive":48,"gates":[["L",4,"any"],["B",4,"any"],["T",3,"any"],["L",7,"any"],["R",0,"any"]],"bars":[],"buttons":[],"cars":[[1,7,1,2,-1,"yellow"],[0,3,4,2,-1,"green"],[0,4,0,2,1,"red"],[0,4,2,2,1,"yellow"],[0,3,6,2,-1,"red"],[1,4,4,2,-1,"purple"],[1,0,1,3,1,"green"],[1,4,0,2,-1,"red"],[1,7,4,2,-1,"red"]]},{"city":1,"W":6,"H":8,"opt":11,"naive":81,"gates":[["B",5,"any"],["R",2,"any"],["L",7,"any"],["T",2,"any"],["L",5,"any"]],"bars":[],"buttons":[],"cars":[[0,2,6,2,-1,"orange"],[1,7,4,2,-1,"green"],[1,5,0,2,-1,"purple"],[0,5,3,2,1,"orange"],[0,2,4,2,-1,"orange"],[1,2,3,2,1,"orange"],[0,5,1,2,1,"red"],[1,2,1,2,1,"red"],[1,5,3,3,-1,"yellow"]]},{"city":1,"W":6,"H":8,"opt":11,"naive":33,"gates":[["B",2,"any"],["L",7,"any"],["B",3,"any"],["T",0,"any"],["R",4,"any"]],"bars":[],"buttons":[],"cars":[[1,7,1,2,-1,"green"],[1,4,0,2,1,"purple"],[1,7,3,2,-1,"blue"],[0,0,5,3,-1,"blue"],[0,2,3,2,1,"yellow"],[0,3,1,2,1,"yellow"],[0,3,4,2,1,"green"],[1,4,4,2,1,"red"],[0,2,1,2,1,"yellow"]]},{"city":1,"hard":true,"W":6,"H":8,"opt":11,"naive":35,"gates":[["L",1,"any"],["L",5,"any"],["B",1,"any"],["T",5,"any"],["R",3,"any"],["T",2,"any"]],"bars":[],"buttons":[],"cars":[[1,3,3,2,1,"purple"],[0,1,0,2,1,"green"],[1,1,4,2,-1,"yellow"],[1,5,3,2,-1,"blue"],[0,5,6,2,-1,"yellow"],[0,2,3,2,-1,"yellow"],[1,3,0,2,1,"blue"],[0,5,4,2,-1,"orange"],[0,5,2,2,-1,"orange"],[1,5,0,2,-1,"yellow"]]},{"city":1,"W":6,"H":8,"opt":12,"naive":32,"gates":[["B",2,"any"],["T",4,"any"],["B",1,"any"],["L",2,"any"],["R",7,"any"]],"bars":[],"buttons":[],"cars":[[0,4,6,2,-1,"red"],[0,2,2,2,1,"red"],[0,2,0,2,1,"orange"],[1,7,1,2,1,"purple"],[0,2,4,2,1,"blue"],[1,2,3,2,-1,"blue"],[0,4,3,3,-1,"orange"],[0,1,4,2,1,"green"],[0,1,1,2,1,"blue"]]},{"city":1,"W":6,"H":8,"opt":11,"naive":24,"gates":[["L",6,"any"],["R",1,"any"],["T",1,"any"],["R",2,"any"],["B",4,"any"]],"bars":[],"buttons":[],"cars":[[0,4,3,2,1,"green"],[0,4,0,2,1,"blue"],[1,2,1,3,1,"red"],[1,1,0,2,1,"blue"],[0,1,6,2,-1,"purple"],[0,1,4,2,-1,"purple"],[1,6,2,2,-1,"red"],[1,6,4,2,-1,"green"],[1,1,2,2,1,"orange"]]},{"city":1,"W":6,"H":8,"opt":12,"naive":24,"gates":[["R",6,"any"],["B",0,"any"],["L",1,"any"],["R",4,"any"],["T",3,"any"]],"bars":[],"buttons":[],"cars":[[1,1,3,2,-1,"purple"],[1,4,4,2,1,"orange"],[1,6,0,3,1,"purple"],[1,4,0,3,1,"red"],[1,1,1,2,-1,"red"],[0,0,0,2,1,"green"],[0,3,5,3,-1,"blue"],[0,3,3,2,-1,"green"],[0,0,2,2,1,"orange"]]},{"city":1,"W":6,"H":8,"opt":11,"naive":14,"gates":[["R",4,"any"],["R",5,"any"],["B",1,"any"],["T",3,"any"],["L",0,"any"]],"bars":[],"buttons":[],"cars":[[1,5,1,2,1,"orange"],[0,3,2,2,-1,"orange"],[0,1,0,2,1,"yellow"],[1,0,3,3,-1,"blue"],[0,3,5,2,-1,"blue"],[1,5,4,2,1,"green"],[1,4,4,2,1,"green"],[0,1,2,2,1,"purple"],[1,4,0,2,1,"blue"]]},{"city":1,"boss":true,"W":7,"H":9,"opt":14,"naive":27,"gates":[["T",6,"any"],["R",5,"any"],["B",4,"any"],["L",2,"any"],["L",1,"any"],["B",2,"any"],["T",5,"any"]],"bars":[],"buttons":[],"cars":[[1,5,2,3,1,"green"],[0,2,6,3,1,"red"],[0,2,3,2,1,"purple"],[0,6,3,3,-1,"yellow"],[0,5,4,3,-1,"purple"],[1,5,0,2,1,"yellow"],[1,1,3,2,-1,"orange"],[1,2,4,2,-1,"blue"],[0,6,6,3,-1,"yellow"],[1,1,5,2,-1,"red"],[0,2,0,3,1,"yellow"]]},{"city":2,"W":5,"H":6,"opt":6,"naive":50,"gates":[["B",0,"any"],["L",0,"any"],["R",4,"yellow"],["T",2,"red"]],"bars":[],"buttons":[],"cars":[[0,0,0,2,1,"yellow"],[1,0,1,2,-1,"blue"],[0,2,4,2,-1,"red"],[1,4,0,2,1,"yellow"],[0,2,2,2,-1,"red"]]},{"city":2,"W":5,"H":6,"opt":6,"naive":72,"gates":[["B",4,"any"],["R",1,"any"],["T",1,"red"],["L",4,"blue"]],"bars":[],"buttons":[],"cars":[[0,1,4,2,-1,"red"],[1,1,2,2,1,"red"],[1,1,0,2,1,"red"],[1,4,3,2,-1,"blue"],[0,4,0,3,1,"red"]]},{"city":2,"W":5,"H":6,"opt":7,"naive":49,"gates":[["L",2,"any"],["R",4,"any"],["B",1,"yellow"],["T",4,"yellow"]],"bars":[],"buttons":[],"cars":[[1,4,0,3,1,"yellow"],[0,1,0,2,1,"yellow"],[0,4,3,2,-1,"yellow"],[0,1,2,2,1,"yellow"],[1,2,3,2,-1,"blue"],[0,4,0,2,-1,"yellow"]]},{"city":2,"W":5,"H":6,"opt":7,"naive":100,"gates":[["B",1,"any"],["L",1,"any"],["R",5,"blue"],["T",4,"yellow"]],"bars":[],"buttons":[],"cars":[[0,1,1,2,1,"yellow"],[0,1,3,2,1,"yellow"],[1,1,3,2,-1,"blue"],[0,4,2,2,-1,"yellow"],[1,5,0,2,1,"blue"],[0,4,4,2,-1,"yellow"]]},{"city":2,"hard":true,"W":6,"H":7,"opt":9,"naive":15,"gates":[["T",4,"any"],["R",6,"any"],["B",2,"yellow"],["L",1,"blue"]],"bars":[],"buttons":[],"cars":[[1,6,0,2,1,"blue"],[0,2,0,2,1,"yellow"],[0,2,3,2,1,"yellow"],[1,6,2,2,1,"red"],[0,4,3,2,-1,"yellow"],[0,4,5,2,-1,"blue"],[1,1,4,2,-1,"blue"]]},{"city":2,"W":6,"H":7,"opt":9,"naive":100,"gates":[["R",1,"any"],["B",5,"any"],["T",0,"blue"],["L",3,"red"]],"bars":[],"buttons":[],"cars":[[1,3,4,2,-1,"red"],[0,5,1,2,1,"yellow"],[1,1,0,2,1,"blue"],[0,5,4,2,1,"red"],[1,1,2,2,1,"blue"],[1,3,1,3,-1,"red"],[0,0,2,2,-1,"blue"]]},{"city":2,"W":6,"H":7,"opt":9,"naive":47,"gates":[["R",0,"any"],["B",5,"any"],["L",2,"yellow"],["T",0,"red"]],"bars":[],"buttons":[],"cars":[[1,0,2,2,1,"red"],[1,2,4,2,-1,"yellow"],[1,2,2,2,-1,"yellow"],[0,5,0,2,1,"blue"],[1,0,0,2,1,"blue"],[0,0,1,2,-1,"red"],[0,5,4,3,1,"red"]]},{"city":2,"W":6,"H":7,"opt":10,"naive":17,"gates":[["L",1,"any"],["T",5,"any"],["R",6,"red"],["B",0,"yellow"]],"bars":[],"buttons":[],"cars":[[0,0,4,2,1,"yellow"],[1,6,2,2,1,"red"],[0,5,4,3,-1,"red"],[0,5,2,2,-1,"blue"],[1,1,4,2,-1,"red"],[1,6,0,2,1,"red"],[1,1,2,2,-1,"red"],[0,0,0,3,1,"yellow"]]},{"city":2,"W":6,"H":7,"opt":10,"naive":22,"gates":[["B",2,"any"],["T",4,"any"],["R",5,"yellow"],["T",0,"blue"],["L",0,"blue"]],"bars":[],"buttons":[],"cars":[[0,4,5,2,-1,"yellow"],[1,0,0,2,-1,"blue"],[1,5,1,2,1,"yellow"],[0,4,3,2,-1,"red"],[0,2,0,2,1,"yellow"],[0,0,3,3,-1,"blue"],[0,2,2,2,1,"yellow"],[1,0,3,2,-1,"blue"]]},{"city":2,"hard":true,"W":6,"H":7,"opt":11,"naive":45,"gates":[["L",3,"any"],["T",0,"any"],["B",5,"red"],["R",2,"blue"],["B",0,"yellow"]],"bars":[],"buttons":[],"cars":[[1,2,0,2,1,"blue"],[1,2,2,2,1,"blue"],[0,0,5,2,-1,"red"],[1,3,4,2,-1,"blue"],[0,0,3,2,-1,"yellow"],[0,5,1,2,1,"red"],[0,0,0,2,-1,"red"],[1,3,2,2,-1,"red"],[0,5,4,2,1,"red"]]},{"city":2,"W":6,"H":7,"opt":10,"naive":100,"gates":[["R",4,"any"],["T",5,"any"],["R",5,"red"],["L",2,"red"],["B",1,"blue"]],"bars":[],"buttons":[],"cars":[[0,5,0,2,-1,"red"],[0,5,3,2,-1,"red"],[1,2,2,2,-1,"red"],[0,5,5,2,-1,"red"],[1,2,4,2,-1,"red"],[1,4,0,3,1,"red"],[1,5,1,3,1,"red"],[0,1,2,2,1,"blue"]]},{"city":2,"W":6,"H":7,"opt":11,"naive":11,"gates":[["B",3,"any"],["T",0,"any"],["L",5,"red"],["L",3,"blue"],["R",0,"blue"]],"bars":[],"buttons":[],"cars":[[0,3,2,2,1,"yellow"],[0,3,0,2,1,"blue"],[1,3,0,2,-1,"blue"],[1,5,3,3,-1,"red"],[1,0,0,3,1,"blue"],[1,3,4,2,-1,"blue"],[1,0,4,2,1,"blue"],[0,0,1,2,-1,"blue"],[0,0,4,3,-1,"red"]]},{"city":2,"W":6,"H":8,"opt":11,"naive":24,"gates":[["T",3,"any"],["B",2,"any"],["R",6,"yellow"],["R",7,"blue"],["L",1,"yellow"]],"bars":[],"buttons":[],"cars":[[1,1,3,3,-1,"yellow"],[0,3,5,3,-1,"red"],[0,2,0,3,1,"yellow"],[1,6,0,2,1,"yellow"],[1,1,0,2,-1,"yellow"],[1,7,1,2,1,"blue"],[0,2,3,2,1,"yellow"],[1,7,4,2,1,"blue"],[0,3,3,2,-1,"blue"]]},{"city":2,"W":6,"H":8,"opt":10,"naive":100,"gates":[["R",2,"any"],["L",0,"any"],["T",3,"yellow"],["B",2,"yellow"],["R",4,"red"]],"bars":[],"buttons":[],"cars":[[1,0,3,2,-1,"red"],[0,2,0,2,1,"yellow"],[1,0,0,2,-1,"yellow"],[1,2,1,2,1,"blue"],[1,2,4,2,1,"yellow"],[1,4,1,2,1,"red"],[1,4,4,2,1,"red"],[0,3,6,2,-1,"yellow"],[0,3,3,3,-1,"yellow"]]},{"city":2,"hard":true,"W":6,"H":8,"opt":13,"naive":8,"gates":[["T",1,"any"],["T",2,"any"],["B",5,"yellow"],["L",5,"red"],["B",4,"yellow"],["R",0,"yellow"]],"bars":[],"buttons":[],"cars":[[0,5,0,3,1,"yellow"],[1,5,3,3,-1,"red"],[0,2,2,2,-1,"red"],[0,2,4,2,-1,"red"],[0,2,6,2,-1,"blue"],[0,1,4,3,-1,"yellow"],[0,4,1,2,1,"yellow"],[0,5,3,2,1,"yellow"],[1,0,1,3,1,"yellow"],[0,1,1,2,-1,"yellow"]]},{"city":2,"W":6,"H":8,"opt":11,"naive":100,"gates":[["R",0,"any"],["L",0,"any"],["B",4,"blue"],["T",3,"blue"],["L",6,"red"]],"bars":[],"buttons":[],"cars":[[1,0,2,2,1,"yellow"],[0,3,1,2,-1,"blue"],[0,4,0,3,1,"blue"],[0,4,3,2,1,"blue"],[1,6,1,2,-1,"red"],[1,6,4,2,-1,"red"],[0,3,5,2,-1,"blue"],[0,3,3,2,-1,"blue"],[1,0,0,2,1,"blue"]]},{"city":2,"W":6,"H":8,"opt":11,"naive":21,"gates":[["B",1,"any"],["T",3,"any"],["R",6,"yellow"],["L",3,"yellow"],["L",1,"red"]],"bars":[],"buttons":[],"cars":[[1,3,4,2,-1,"yellow"],[1,1,4,2,-1,"red"],[1,1,2,2,-1,"red"],[1,6,4,2,1,"yellow"],[1,6,0,2,1,"yellow"],[0,3,5,3,-1,"blue"],[1,3,2,2,-1,"yellow"],[0,1,3,2,1,"blue"],[0,1,0,2,1,"red"]]},{"city":2,"W":6,"H":8,"opt":11,"naive":43,"gates":[["B",3,"any"],["T",0,"any"],["R",0,"yellow"],["L",5,"red"],["L",2,"red"]],"bars":[],"buttons":[],"cars":[[1,0,0,3,1,"yellow"],[0,3,0,2,1,"red"],[1,5,1,3,-1,"red"],[0,0,2,2,-1,"yellow"],[1,5,4,2,-1,"red"],[0,0,4,2,-1,"blue"],[0,3,2,2,1,"red"],[1,2,1,2,-1,"red"],[1,2,4,2,-1,"red"]]},{"city":2,"W":6,"H":8,"opt":11,"naive":12,"gates":[["T",5,"any"],["B",3,"any"],["R",6,"blue"],["R",4,"blue"],["L",0,"blue"]],"bars":[],"buttons":[],"cars":[[1,0,0,2,-1,"blue"],[1,6,3,2,1,"blue"],[0,3,0,2,1,"yellow"],[1,6,0,2,1,"blue"],[0,5,5,2,-1,"yellow"],[1,0,4,2,-1,"blue"],[0,3,2,2,1,"blue"],[1,4,2,2,1,"blue"],[0,5,3,2,-1,"red"]]},{"city":2,"hard":true,"W":6,"H":8,"opt":12,"naive":100,"gates":[["T",0,"any"],["L",6,"any"],["B",2,"yellow"],["R",0,"yellow"],["L",5,"red"],["R",4,"blue"]],"bars":[],"buttons":[],"cars":[[1,0,0,2,1,"yellow"],[0,2,0,2,1,"yellow"],[0,0,4,2,-1,"blue"],[1,6,0,2,-1,"yellow"],[0,2,2,2,1,"yellow"],[0,2,6,2,1,"yellow"],[1,0,4,2,1,"yellow"],[1,6,3,2,-1,"blue"],[1,5,1,2,-1,"red"],[0,0,1,3,-1,"blue"]]},{"city":2,"W":6,"H":8,"opt":11,"naive":17,"gates":[["T",3,"any"],["R",2,"any"],["L",6,"red"],["B",5,"yellow"],["R",0,"red"]],"bars":[],"buttons":[],"cars":[[1,6,4,2,-1,"red"],[0,3,4,2,-1,"red"],[0,5,2,2,1,"yellow"],[0,3,6,2,-1,"blue"],[1,2,2,2,1,"red"],[1,0,3,2,1,"red"],[1,6,1,2,-1,"red"],[1,0,1,2,1,"red"],[0,5,0,2,1,"yellow"]]},{"city":2,"W":6,"H":8,"opt":10,"naive":52,"gates":[["L",3,"any"],["B",5,"any"],["R",2,"red"],["T",2,"yellow"],["B",3,"red"]],"bars":[],"buttons":[],"cars":[[0,2,0,2,-1,"yellow"],[0,3,1,2,1,"red"],[0,5,5,2,1,"yellow"],[0,3,6,2,1,"red"],[0,5,0,3,1,"blue"],[1,2,0,3,1,"red"],[0,2,3,2,-1,"yellow"],[0,3,4,2,1,"red"],[1,3,4,2,-1,"blue"]]},{"city":2,"W":6,"H":8,"opt":11,"naive":28,"gates":[["R",1,"any"],["B",5,"any"],["L",2,"red"],["B",3,"blue"],["T",0,"yellow"]],"bars":[],"buttons":[],"cars":[[1,1,2,2,1,"blue"],[1,2,3,3,-1,"red"],[0,0,6,2,-1,"yellow"],[1,1,0,2,1,"blue"],[0,5,0,2,1,"yellow"],[1,2,1,2,-1,"red"],[0,5,6,2,1,"blue"],[0,0,2,2,-1,"yellow"],[0,3,5,3,1,"blue"]]},{"city":2,"W":6,"H":8,"opt":11,"naive":100,"gates":[["B",1,"any"],["B",0,"any"],["R",6,"red"],["T",5,"red"],["L",1,"red"]],"bars":[],"buttons":[],"cars":[[1,1,2,2,-1,"red"],[0,0,6,2,1,"blue"],[1,6,3,2,1,"red"],[0,1,0,3,1,"blue"],[0,5,4,2,-1,"red"],[0,5,6,2,-1,"red"],[1,1,4,2,-1,"red"],[1,6,1,2,1,"red"],[0,1,3,3,1,"yellow"]]},{"city":2,"boss":true,"W":7,"H":9,"opt":13,"naive":15,"gates":[["B",1,"any"],["R",6,"any"],["R",5,"blue"],["L",1,"red"],["L",5,"blue"],["T",3,"blue"],["T",0,"blue"]],"bars":[],"buttons":[],"cars":[[0,0,1,2,-1,"blue"],[0,1,1,2,1,"blue"],[1,5,5,2,1,"blue"],[1,6,1,2,1,"yellow"],[1,1,2,2,-1,"red"],[1,5,3,2,-1,"blue"],[1,1,5,2,-1,"red"],[0,3,6,3,-1,"blue"],[0,1,3,2,1,"red"],[0,0,4,3,-1,"blue"],[0,3,2,3,-1,"blue"]]},{"city":3,"W":5,"H":6,"opt":7,"naive":100,"gates":[["T",1,"any"],["B",4,"any"],["L",3,"red"],["R",0,"red"]],"bars":[],"buttons":[],"cars":[[0,4,0,2,1,"red"],[1,3,3,2,-1,"red"],[0,4,4,2,1,"yellow"],[1,0,0,2,1,"red"],[0,1,4,2,-1,"yellow"],[0,1,2,2,-1,"yellow"]]},{"city":3,"W":5,"H":6,"opt":7,"naive":0,"gates":[["L",2,"any"],["R",5,"any"],["B",2,"blue"],["B",0,"blue"]],"bars":[["L",2]],"buttons":[[0,4,0]],"cars":[[1,5,0,3,1,"yellow"],[0,2,2,2,1,"blue"],[1,5,3,2,1,"yellow"],[1,2,3,2,-1,"red"],[0,0,2,2,1,"blue"],[0,2,0,2,1,"blue"]]},{"city":3,"W":5,"H":6,"opt":8,"naive":0,"gates":[["B",4,"any"],["B",1,"any"],["B",0,"yellow"],["T",3,"red"]],"bars":[["B",1]],"buttons":[[4,3,0]],"cars":[[0,4,1,2,1,"red"],[0,4,4,2,1,"red"],[0,3,3,2,-1,"red"],[0,1,3,2,1,"blue"],[0,0,3,2,1,"yellow"],[0,3,1,2,-1,"red"],[0,1,0,3,1,"red"]]},{"city":3,"W":5,"H":6,"opt":8,"naive":0,"gates":[["R",3,"any"],["R",5,"any"],["B",4,"blue"],["R",0,"red"]],"bars":[["R",5]],"buttons":[[2,5,0]],"cars":[[1,0,2,2,1,"red"],[0,4,3,3,1,"blue"],[1,3,2,2,1,"yellow"],[0,4,0,3,1,"blue"],[1,5,0,2,1,"yellow"],[1,0,0,2,1,"red"],[1,3,0,2,1,"yellow"]]},{"city":3,"hard":true,"W":6,"H":7,"opt":11,"naive":0,"gates":[["B",3,"any"],["R",5,"any"],["R",6,"red"],["B",0,"red"],["L",4,"yellow"]],"bars":[["B",3]],"buttons":[[1,4,0]],"cars":[[1,5,4,2,1,"red"],[0,0,0,2,1,"red"],[0,3,4,2,1,"red"],[1,6,0,2,1,"red"],[1,4,4,2,-1,"yellow"],[0,0,2,2,1,"red"],[0,3,0,2,1,"yellow"],[1,6,3,2,1,"red"]]},{"city":3,"W":6,"H":7,"opt":10,"naive":0,"gates":[["R",5,"any"],["B",4,"any"],["T",5,"blue"],["B",3,"red"],["L",0,"blue"]],"bars":[["R",5]],"buttons":[[4,4,0]],"cars":[[0,5,4,2,-1,"blue"],[0,3,3,3,1,"red"],[1,0,2,2,-1,"blue"],[0,4,0,2,1,"red"],[1,0,0,2,-1,"blue"],[0,5,0,2,-1,"blue"],[1,5,0,2,1,"blue"],[0,3,1,2,1,"red"]]},{"city":3,"W":6,"H":7,"opt":10,"naive":0,"gates":[["B",0,"any"],["B",5,"any"],["R",5,"red"],["B",2,"blue"],["R",6,"blue"]],"bars":[["B",2]],"buttons":[[2,4,0]],"cars":[[0,0,1,3,1,"red"],[1,5,3,2,1,"red"],[0,0,4,2,1,"red"],[1,6,0,2,1,"blue"],[1,6,3,2,1,"blue"],[0,5,0,2,1,"blue"],[0,5,4,2,1,"yellow"],[0,2,2,2,1,"blue"]]},{"city":3,"W":6,"H":7,"opt":10,"naive":0,"gates":[["T",4,"any"],["T",3,"any"],["R",2,"red"],["R",6,"blue"],["T",5,"blue"]],"bars":[["R",2]],"buttons":[[5,3,0]],"cars":[[0,4,0,3,-1,"blue"],[1,6,0,2,1,"blue"],[1,2,0,3,1,"red"],[0,3,4,2,-1,"red"],[0,4,5,2,-1,"red"],[0,3,0,2,-1,"yellow"],[0,5,4,2,-1,"blue"],[0,4,3,2,-1,"yellow"]]},{"city":3,"W":6,"H":7,"opt":11,"naive":0,"gates":[["T",2,"any"],["L",3,"any"],["L",6,"red"],["T",4,"yellow"],["B",0,"yellow"]],"bars":[["L",3]],"buttons":[[0,2,0]],"cars":[[1,6,2,2,-1,"red"],[0,4,0,3,-1,"yellow"],[0,2,1,3,-1,"yellow"],[1,6,0,2,-1,"red"],[1,3,4,2,-1,"red"],[0,0,0,2,1,"yellow"],[0,2,4,2,-1,"red"],[1,6,4,2,-1,"red"],[0,4,4,2,-1,"yellow"]]},{"city":3,"hard":true,"W":6,"H":7,"opt":13,"naive":0,"gates":[["B",2,"any"],["T",5,"any"],["B",3,"yellow"],["T",2,"blue"],["R",2,"blue"],["L",4,"blue"]],"bars":[["B",3]],"buttons":[[4,2,0]],"cars":[[0,2,0,3,-1,"blue"],[0,5,4,2,-1,"blue"],[1,4,3,2,-1,"blue"],[0,3,5,2,1,"yellow"],[0,3,1,2,1,"yellow"],[1,4,0,2,-1,"blue"],[0,5,0,2,-1,"yellow"],[1,2,0,2,1,"blue"],[0,2,3,2,-1,"blue"],[0,2,5,2,1,"red"]]},{"city":3,"W":6,"H":7,"opt":11,"naive":0,"gates":[["T",2,"any"],["L",5,"any"],["R",6,"red"],["R",3,"red"],["L",0,"yellow"]],"bars":[["R",3]],"buttons":[[2,1,0]],"cars":[[1,6,2,2,1,"red"],[1,0,3,2,-1,"yellow"],[1,5,0,2,-1,"red"],[1,6,4,2,1,"red"],[1,0,0,2,-1,"yellow"],[0,2,2,3,-1,"red"],[1,3,0,2,1,"red"],[1,5,3,3,-1,"red"],[1,6,0,2,1,"red"]]},{"city":3,"W":6,"H":7,"opt":11,"naive":0,"gates":[["L",2,"any"],["B",3,"any"],["R",1,"blue"],["B",1,"red"],["B",2,"yellow"]],"bars":[["B",2]],"buttons":[[3,1,0]],"cars":[[1,2,1,3,-1,"red"],[1,1,0,2,1,"blue"],[1,2,4,2,-1,"red"],[0,1,4,2,1,"red"],[0,3,5,2,1,"red"],[1,1,4,2,1,"blue"],[0,2,4,2,1,"yellow"],[0,2,0,2,1,"yellow"],[0,3,3,2,1,"yellow"]]},{"city":3,"W":6,"H":8,"opt":11,"naive":0,"gates":[["R",3,"any"],["B",1,"any"],["T",3,"yellow"],["L",4,"yellow"],["T",4,"yellow"]],"bars":[["B",1]],"buttons":[[2,3,0]],"cars":[[0,3,1,2,-1,"yellow"],[0,4,5,3,-1,"yellow"],[0,3,5,2,-1,"yellow"],[0,1,6,2,1,"blue"],[0,1,0,3,1,"red"],[1,4,0,2,-1,"yellow"],[1,4,2,2,-1,"yellow"],[1,4,4,2,-1,"yellow"],[1,3,0,2,1,"blue"]]},{"city":3,"W":6,"H":8,"opt":11,"naive":0,"gates":[["L",0,"any"],["T",4,"any"],["L",2,"yellow"],["R",3,"yellow"],["R",5,"yellow"]],"bars":[["R",3]],"buttons":[[4,5,0]],"cars":[[1,0,2,2,-1,"red"],[1,5,0,2,1,"yellow"],[1,3,2,2,1,"yellow"],[1,3,0,2,1,"yellow"],[0,4,6,2,-1,"red"],[0,4,0,2,-1,"red"],[1,5,2,2,1,"yellow"],[1,2,2,2,-1,"yellow"],[1,2,0,2,-1,"yellow"]]},{"city":3,"hard":true,"W":6,"H":8,"opt":13,"naive":0,"gates":[["B",1,"any"],["B",2,"any"],["R",2,"yellow"],["L",7,"yellow"],["B",3,"yellow"],["R",4,"blue"]],"bars":[["R",2]],"buttons":[[3,6,0]],"cars":[[1,7,0,3,-1,"yellow"],[1,2,3,2,1,"yellow"],[0,2,1,3,1,"blue"],[0,1,4,3,1,"blue"],[1,7,4,2,-1,"yellow"],[1,4,3,2,1,"blue"],[0,2,4,2,1,"red"],[0,1,2,2,1,"yellow"],[0,1,0,2,1,"red"],[0,3,0,2,1,"yellow"]]},{"city":3,"W":6,"H":8,"opt":11,"naive":9,"gates":[["L",7,"any"],["T",0,"any"],["L",0,"yellow"],["L",3,"red"],["T",3,"red"]],"bars":[["L",0]],"buttons":[[3,2,0]],"cars":[[0,3,5,2,-1,"red"],[1,3,2,2,-1,"red"],[1,3,4,2,-1,"red"],[1,0,3,3,-1,"yellow"],[1,7,1,3,-1,"yellow"],[0,0,6,2,-1,"red"],[1,0,0,2,-1,"yellow"],[0,0,1,2,-1,"yellow"],[0,0,3,2,-1,"blue"]]},{"city":3,"W":6,"H":8,"opt":11,"naive":100,"gates":[["R",7,"any"],["L",2,"any"],["L",7,"blue"],["T",4,"red"],["T",5,"yellow"]],"bars":[["T",5]],"buttons":[[5,2,0]],"cars":[[0,5,5,2,-1,"yellow"],[1,7,1,2,-1,"blue"],[0,4,3,2,-1,"red"],[0,5,3,2,-1,"yellow"],[0,4,0,2,-1,"red"],[1,2,2,2,-1,"yellow"],[1,7,3,2,1,"yellow"],[1,2,0,2,-1,"blue"],[0,4,5,2,-1,"red"]]},{"city":3,"W":6,"H":8,"opt":11,"naive":0,"gates":[["T",1,"any"],["R",5,"any"],["B",3,"blue"],["L",6,"yellow"],["B",2,"blue"]],"bars":[["B",3]],"buttons":[[3,4,0]],"cars":[[0,1,3,2,-1,"blue"],[1,6,4,2,-1,"yellow"],[0,2,0,2,1,"blue"],[0,1,6,2,-1,"red"],[1,5,0,2,1,"yellow"],[0,2,5,2,1,"blue"],[0,1,1,2,-1,"red"],[0,3,2,2,1,"blue"],[0,2,2,3,1,"blue"]]},{"city":3,"W":6,"H":8,"opt":12,"naive":0,"gates":[["T",0,"any"],["L",5,"any"],["L",3,"yellow"],["T",2,"red"],["L",0,"yellow"]],"bars":[["T",2]],"buttons":[[1,5,0]],"cars":[[1,3,1,2,-1,"yellow"],[0,2,4,3,-1,"red"],[1,5,3,3,-1,"yellow"],[1,0,1,2,-1,"yellow"],[1,0,3,2,-1,"yellow"],[0,0,5,3,-1,"blue"],[1,3,4,2,-1,"yellow"],[0,0,0,2,-1,"red"],[0,2,1,2,-1,"red"]]},{"city":3,"hard":true,"W":6,"H":8,"opt":13,"naive":0,"gates":[["T",2,"any"],["R",3,"any"],["R",1,"red"],["R",0,"yellow"],["R",6,"blue"],["B",5,"yellow"]],"bars":[["R",3]],"buttons":[[2,2,0]],"cars":[[1,0,4,2,1,"yellow"],[1,6,4,2,1,"blue"],[0,5,2,2,1,"yellow"],[1,0,0,2,1,"yellow"],[0,5,4,2,1,"yellow"],[0,2,6,2,-1,"yellow"],[1,3,0,2,1,"yellow"],[1,3,2,2,1,"red"],[1,6,0,2,1,"blue"],[1,1,4,2,1,"red"]]},{"city":3,"W":6,"H":8,"opt":12,"naive":0,"gates":[["L",0,"any"],["R",6,"any"],["R",4,"red"],["R",1,"red"],["B",3,"blue"]],"bars":[["B",3]],"buttons":[[2,0,0]],"cars":[[0,3,0,2,1,"blue"],[1,4,1,2,1,"red"],[0,3,5,2,1,"blue"],[1,0,0,2,-1,"blue"],[0,3,2,2,1,"blue"],[1,4,3,2,1,"red"],[1,1,0,3,1,"red"],[1,1,4,2,1,"red"],[1,0,4,2,-1,"blue"]]},{"city":3,"W":6,"H":8,"opt":12,"naive":18,"gates":[["B",5,"any"],["T",3,"any"],["L",2,"yellow"],["L",6,"blue"],["R",1,"blue"]],"bars":[["R",1]],"buttons":[[2,1,0]],"cars":[[1,1,3,2,1,"blue"],[1,6,4,2,-1,"blue"],[1,1,0,2,1,"blue"],[1,2,3,3,-1,"yellow"],[0,3,5,2,-1,"yellow"],[0,3,3,2,-1,"yellow"],[0,5,0,2,1,"yellow"],[1,2,0,2,-1,"yellow"],[0,5,3,3,1,"red"]]},{"city":3,"W":6,"H":8,"opt":12,"naive":0,"gates":[["T",2,"any"],["R",7,"any"],["B",0,"blue"],["B",3,"yellow"],["L",1,"blue"]],"bars":[["B",0]],"buttons":[[3,7,0]],"cars":[[1,7,4,2,1,"red"],[0,0,0,2,1,"blue"],[0,3,5,2,1,"yellow"],[1,1,1,2,-1,"blue"],[1,1,4,2,-1,"blue"],[0,2,6,2,-1,"blue"],[1,7,0,2,1,"blue"],[0,0,3,2,1,"blue"],[0,2,4,2,-1,"red"]]},{"city":3,"W":6,"H":8,"opt":12,"naive":0,"gates":[["T",1,"any"],["B",5,"any"],["R",3,"red"],["L",3,"red"],["R",2,"red"]],"bars":[["B",5]],"buttons":[[1,2,0]],"cars":[[1,3,0,2,1,"red"],[0,5,3,2,1,"red"],[1,3,2,2,1,"red"],[1,2,2,2,1,"red"],[1,2,4,2,1,"red"],[0,5,0,2,1,"yellow"],[0,1,0,2,-1,"yellow"],[0,1,5,2,-1,"blue"],[0,5,5,2,1,"yellow"]]},{"city":3,"boss":true,"W":7,"H":9,"opt":14,"naive":0,"gates":[["L",2,"any"],["R",0,"any"],["B",6,"yellow"],["L",5,"red"],["T",3,"blue"],["T",2,"red"],["R",1,"red"]],"bars":[["T",2],["T",3]],"buttons":[[2,2,0],[4,2,1]],"cars":[[1,5,4,3,-1,"red"],[1,5,0,2,-1,"red"],[0,3,6,2,-1,"blue"],[1,5,2,2,-1,"red"],[1,1,1,2,1,"red"],[1,0,0,2,1,"red"],[1,2,5,2,-1,"blue"],[0,6,6,3,1,"yellow"],[1,0,5,2,1,"yellow"],[1,1,5,2,1,"red"],[1,2,0,2,-1,"red"]]}];
   const MAX = COURSE.length;
 
-  /* Réglages des pubs (simulées ici) */
-  const ADS = { interstitialEvery: 3, interstitialSeconds: 3, rewardedSeconds: 5 };
+  /* Durées des pubs simulées dans le navigateur. Fréquence des interstitielles : règles du kit (jeu.json). */
+  const ADS = { interstitialSeconds: 3, rewardedSeconds: 5 };
 
   const PALETTE = ['#ef5b43', '#f4b81d', '#22b8a5', '#4a90f2', '#9a6ee0', '#f27f34', '#62bf5d', '#ee79ac', '#e8e4da'];
   const ROT = { R: 0, D: 90, L: 180, U: 270 };
@@ -2305,13 +3727,14 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
     notif: Object.assign({ on: false, hour: 18, minute: 0, asked: false }, saved.notif),
     uid: saved.uid || '', stats: saved.stats !== false,
     boost: Object.assign({ n: 3, row: 0, got: {} }, saved.boost),
+    noAds: !!saved.noAds, bought: saved.bought || {},
     seen: saved.seen || {}, rockNodes: new Map(), rocks: [], has: {},
     mode: saved.mode === 'puzzle' && PUZZLES.length ? 'puzzle' : 'run',
     pz: Object.assign({ level: 1, max: 1, stars: {} }, saved.pz),
     W: 4, H: 4, cell: 40, cars: [], byId: {}, nodes: new Map(), grid: null,
-    left: 0, hearts: 3, over: false, hintId: null, sinceAd: 0, session: 0
+    left: 0, hearts: 3, over: false, hintId: null, session: 0
   };
-  const save = () => store.write({ crv: 1, legacy: S.legacy, freeAid: S.freeAid, inv: S.inv, chest: S.chest, mis: S.mis, level: S.level, max: S.max, test: S.test, seen: S.seen, mode: S.mode, pz: S.pz, sfx: S.sfx, music: S.music, skin: S.skin, rs: S.rs, ads: S.ads, daily: S.daily, notif: S.notif, uid: S.uid, stats: S.stats, boost: S.boost });
+  const save = () => store.write({ crv: 1, legacy: S.legacy, freeAid: S.freeAid, inv: S.inv, chest: S.chest, mis: S.mis, level: S.level, max: S.max, test: S.test, seen: S.seen, mode: S.mode, pz: S.pz, sfx: S.sfx, music: S.music, skin: S.skin, rs: S.rs, ads: S.ads, daily: S.daily, notif: S.notif, uid: S.uid, stats: S.stats, boost: S.boost, noAds: S.noAds, bought: S.bought });
   const show = el => { el.hidden = false; };
   const hide = el => { el.hidden = true; };
   const vibrate = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* ignoré */ } };
@@ -2563,7 +3986,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
      skin_equip, reminder_set, setting_change, home_choice. Envoi groupé (fetch), et sendBeacon à la fermeture. */
   const STATS_HOST = 'https://eu.i.posthog.com';
   const STATS_KEY = (window.CAROULE_STATS && window.CAROULE_STATS.key) || "phc_tYQQxGun3aD3jRuJY8dvLmE2STkP62vTh5jNDJuQ4kXr";
-  const BUILD = "2026-11-08-5d5ca9b";
+  const BUILD = "2026-11-12-3840a84";
   const Stats = (function () {
     let queue = [], timer = null, A = null;
     if (!S.uid) { S.uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); save(); }
@@ -3427,7 +4850,6 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   }
 
   function pzWin() {
-    S.sinceAd++;
     hide($('win-chest'));
     const stars = starsFor(P.moves, P.opt);
     hide($('win-streak'));
@@ -3811,7 +5233,6 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   }
 
   function win() {
-    S.sinceAd++;
     hide($('win-streak'));
     hide($('win-boost'));
     hide($('win-notif'));
@@ -3858,47 +5279,74 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   /* meilleur coup depuis la position actuelle (indice et tutoriel) */
   function pickHint() { const b = E.crBest(S.L, S.P); return b.car; }
 
-  /* ---------- pubs simulées ---------- */
-  let adTimer = null, adCb = null, adDone = false, adKind = 'reward';
+  /* ---------- pubs : kit commun ----------
+     Dans l'appli : AdMob (Kit.Ads). Dans le navigateur : l'écran #ad simule la pub (Kit.Ads.simulateur).
+     Le kit applique les règles communes : interstitielle à partir du niveau 4, une partie sur 3,
+     2 minutes au moins entre deux, jamais juste après une vidéo récompensée. */
+  let adTimer = null, adResolve = null, adDone = false, adKind = 'reward';
   let adPlace = '', adNext = '';
-  function runAd(kind, seconds, cb, place) {
-    adKind = kind; adCb = cb; adDone = false; adPlace = place || adNext || kind; adNext = '';
-    Stats.track('ad_shown', { kind, place: adPlace });
-    Snd.duck(true);
-    const close = $('ad-close');
-    $('ad-kind').textContent = kind === 'reward' ? 'Vidéo récompensée · exemple' : 'Publicité · exemple';
-    $('ad-slot').innerHTML = kind === 'reward'
-      ? 'Ici : la vidéo du SDK pub<br>(AdMob, AppLovin…)'
-      : 'Ici : la pub plein écran<br>entre deux niveaux';
-    $('ad-fill').style.width = '0%';
-    close.className = 'btn secondary';
-    close.disabled = kind === 'inter';
-    close.textContent = kind === 'reward' ? 'Fermer sans récompense' : 'Fermer dans ' + seconds + ' s';
-    show($('ad'));
-    const t0 = performance.now();
-    clearInterval(adTimer);
-    adTimer = setInterval(() => {
-      const p = Math.min(1, (performance.now() - t0) / (seconds * 1000));
-      $('ad-fill').style.width = p * 100 + '%';
-      if (p < 1) {
-        if (kind === 'inter') close.textContent = 'Fermer dans ' + Math.ceil(seconds * (1 - p)) + ' s';
-        return;
-      }
+  function simAd({ seconds, closable }) {
+    return new Promise(resolve => {
+      const kind = closable ? 'reward' : 'inter';
+      adKind = kind; adResolve = resolve; adDone = false;
+      const close = $('ad-close');
+      $('ad-kind').textContent = kind === 'reward' ? 'Vidéo récompensée · exemple' : 'Publicité · exemple';
+      $('ad-slot').innerHTML = kind === 'reward'
+        ? 'Ici : la vidéo du SDK pub<br>(AdMob, AppLovin…)'
+        : 'Ici : la pub plein écran<br>entre deux niveaux';
+      $('ad-fill').style.width = '0%';
+      close.className = 'btn secondary';
+      close.disabled = kind === 'inter';
+      close.textContent = kind === 'reward' ? 'Fermer sans récompense' : 'Fermer dans ' + seconds + ' s';
+      show($('ad'));
+      const t0 = performance.now();
       clearInterval(adTimer);
-      adDone = true;
-      close.disabled = false;
-      close.className = 'btn primary';
-      close.textContent = kind === 'reward' ? 'Récupérer la récompense' : 'Fermer';
-    }, 100);
+      adTimer = setInterval(() => {
+        const p = Math.min(1, (performance.now() - t0) / (seconds * 1000));
+        $('ad-fill').style.width = p * 100 + '%';
+        if (p < 1) {
+          if (kind === 'inter') close.textContent = 'Fermer dans ' + Math.ceil(seconds * (1 - p)) + ' s';
+          return;
+        }
+        clearInterval(adTimer);
+        adDone = true;
+        close.disabled = false;
+        close.className = 'btn primary';
+        close.textContent = kind === 'reward' ? 'Récupérer la récompense' : 'Fermer';
+      }, 100);
+    });
   }
+  Kit.Ads.simulateur.pub = ({ closable }) => simAd({ seconds: closable ? ADS.rewardedSeconds : ADS.interstitialSeconds, closable });
   function closeAd() {
     clearInterval(adTimer);
-    Stats.track('ad_closed', { kind: adKind, place: adPlace, completed: adDone });
-    Snd.duck(false);
     hide($('ad'));
-    const cb = adCb, done = adDone;
-    adCb = null;
-    if (done && cb) cb();
+    const r = adResolve;
+    adResolve = null;
+    if (r) r(adDone);
+  }
+  /* vidéo récompensée : cb() seulement si elle a été vue jusqu'au bout */
+  function runAd(kind, seconds, cb, place) {
+    adPlace = place || adNext || kind; adNext = '';
+    Stats.track('ad_shown', { kind: 'reward', place: adPlace });
+    Snd.duck(true);
+    Kit.Ads.rewarded().then(ok => {
+      Snd.duck(false);
+      Stats.track('ad_closed', { kind: 'reward', place: adPlace, completed: ok });
+      if (ok && cb) cb();
+    });
+  }
+  /* fin de partie : interstitielle si les règles du kit le permettent, puis go() */
+  async function interstitial(level, go) {
+    Snd.duck(true);
+    const shown = await Kit.Ads.maybeInterstitial(level);
+    Snd.duck(false);
+    if (shown) { Stats.track('ad_shown', { kind: 'inter', place: 'inter' }); Stats.track('ad_closed', { kind: 'inter', place: 'inter', completed: true }); }
+    go();
+  }
+  /* bannière : seulement quand l'accueil ou la carte est affiché (jamais pendant le jeu) */
+  function banner() {
+    if (!home.hidden && !home.classList.contains('leaving') || !$('cmap').hidden) Kit.Ads.showBanner();
+    else Kit.Ads.hideBanner();
   }
 
   /* ---------- choix du niveau ---------- */
@@ -4157,12 +5605,18 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   }
   function leaveHome(pz, daily) {
     homeOpen = false;
+    Kit.Ads.hideBanner(); /* avant que le jeu apparaisse */
     Stats.track('home_choice', { mode: daily ? 'daily' : pz ? 'puzzle' : 'run' });
     home.classList.add('leaving');
     setTimeout(() => { hide(home); home.classList.remove('leaving'); }, reduce ? 0 : 280);
     if (daily) pzStart(0, true); else if (pz) pzStart(S.pz.level); else { setMode('run'); if (!S.L) start(S.level); openMap(); }
   }
   buildHome();
+  if (window.MutationObserver) {
+    const mo = new MutationObserver(banner);
+    mo.observe(home, { attributes: true, attributeFilter: ['hidden', 'class'] });
+    mo.observe($('cmap'), { attributes: true, attributeFilter: ['hidden'] });
+  }
 
   /* ---------- défi du jour et série de jours ---------- */
   const FLAME = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.6 3.2 2.6 4.9 4.3 6.8 1.6 1.8 2.7 3.8 2.7 6.2 0 3.9-3.1 6.5-7 6.5s-7-2.6-7-6.5c0-2.5 1.2-4.4 2.7-5.8.3 1.5 1 2.6 2.1 3.2-.4-3.7 1-7.2 2.2-10.4z" fill="url(#g-flame)"/><path d="M12 12.5c.9 1.7 2.6 2.6 2.6 4.6 0 1.7-1.2 2.9-2.6 2.9s-2.6-1.2-2.6-2.9c0-1.5.9-2.4 1.6-3.2.1.8.4 1.3 1 1.5-.2-1 0-2 0-2.9z" fill="#fff3b0"/></svg>';
@@ -4975,6 +6429,38 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
       Stats.track('boost_earned', { gain: 2, reasons: 'video', total: S.boost.n });
     });
   });
+  /* ---------- boutique : kit commun (catalogue et prix dans jeu.json) ---------- */
+  const SHOP_ART = {
+    noads: () => '<div class="shop-ico noads">' + Kit.ICONS.noads + '</div>',
+    s: () => '<div class="shop-ico">👍<small>×10</small></div>',
+    m: () => '<div class="shop-ico">🎁</div>',
+    l: () => '<div class="shop-ico">👍<small>×100</small></div>'
+  };
+  function shopHud() { $('shop-boost').textContent = S.boost.n + ' 👍'; }
+  Kit.Boutique.configurer({
+    data: S, enregistrer: save,
+    art: p => (SHOP_ART[p.art] || SHOP_ART.s)(),
+    accorder: p => {
+      const g = p.contenu || {};
+      if (g.boost) S.boost.n += g.boost;
+      for (const aid of ['fuel', 'reverse']) if (g[aid]) S.inv[aid] = (S.inv[aid] || 0) + g[aid];
+      Stats.track('purchase', { product: p.id });
+    },
+    apres: () => { shopHud(); garageHud(); },
+    effet: () => celebrate()
+  });
+  function openShop() {
+    shopHud();
+    Kit.Boutique.afficher($('shop-list'));
+    show($('shop'));
+    Stats.track('shop_open', {});
+  }
+  $('home-shop').addEventListener('click', () => { Snd.click(); openShop(); });
+  $('pause-shop').addEventListener('click', () => { hide($('pause')); openShop(); });
+  $('aid-shop').addEventListener('click', () => { hide($('aid')); openShop(); });
+  $('shop-close').addEventListener('click', () => hide($('shop')));
+  $('shop-restore').addEventListener('click', () => Kit.Boutique.restaurer());
+
   function openPause() {
     const pz = S.mode === 'puzzle';
     $('pause-sub').textContent = pz ? (P.daily ? 'Défi du jour · objectif ' + P.opt + ' coups' : 'Casse-tête · Énigme ' + P.n) : 'Course · Niveau ' + S.level;
@@ -5068,10 +6554,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
     if (pz ? P.n >= PUZZLES.length : S.level >= MAX) { if (pz) openLevels(); else openMap(); return; }
     if (!pz && S.level % PER_CITY === 0) { openMap(cityOf(S.level + 1)); return; }
     const go = () => (pz ? pzStart(P.n + 1) : start(S.level + 1));
-    if (S.sinceAd >= ADS.interstitialEvery) {
-      S.sinceAd = 0;
-      runAd('inter', ADS.interstitialSeconds, go);
-    } else go();
+    interstitial(pz ? P.n : S.level, go);
   });
   $('ad-close').addEventListener('click', closeAd);
   document.addEventListener('keydown', e => {
@@ -5079,6 +6562,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
     if (!$('ad').hidden && !$('ad-close').disabled) closeAd();
     else if (!$('levels').hidden) hide($('levels'));
     else if (!$('garage').hidden) hide($('garage'));
+    else if (!$('shop').hidden) hide($('shop'));
     else if (!$('chest').hidden) hide($('chest'));
     else if (!$('missions').hidden) hide($('missions'));
     else if (!$('aid').hidden) hide($('aid'));
@@ -5090,7 +6574,11 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
   else window.addEventListener('resize', layout);
 
+  /* objet de débogage pour les tests automatiques */
+  window.__caroule = { S, Kit, save, start, pzStart, openShop };
   try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ level: S.level })); } catch (e) { /* ignoré */ }
+  Kit.Ads.init();
+  Kit.Store.init(Kit.Boutique.surSansPub);
   const boot = () => {
     Stats.track('session_start', { level: S.level, max: S.max, pz_level: S.pz.max, stars: totalStars(), streak: streakNow(), skin: S.skin, music: S.music, sfx: S.sfx, reminder: S.notif.on, returning: S.max > 1 || S.pz.max > 1 });
     openHome(); if (S.mode === 'puzzle') pzStart(S.pz.level); else start(S.level); Notif.sync();

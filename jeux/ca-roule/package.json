@@ -2,11 +2,11 @@
   "name": "caroule",
   "version": "0.1.0",
   "private": true,
-  "description": "Ça Roule : jeu mobile de puzzle de parking (1000 niveaux Course + 50 énigmes Casse-tête)",
+  "description": "Ça Roule : jeu mobile de puzzle de parking (Course, Casse-tête, défi du jour)",
   "scripts": {
     "build": "node tools/build.js",
     "verify": "node tests/verify-levels.js",
-    "test:e2e": "node tests/e2e-run-touch.js && node tests/e2e-puzzle-touch.js && node tests/e2e-puzzle-mouse.js && node tests/e2e-levels-sheet.js",
+    "test:e2e": "node tests/e2e-run-touch.js && node tests/e2e-puzzle-touch.js && node tests/e2e-puzzle-mouse.js && node tests/e2e-levels-sheet.js && node tests/e2e-kit.js",
     "puzzles:search": "node tools/gen_puzzles.js 1 300 25",
     "puzzles:select": "node tools/select_pz.js",
     "screenshot": "node tools/screenshot.js",
@@ -14,9 +14,29 @@
     "daily:search": "node tools/gen_daily.js 1 1200 30",
     "daily:select": "node tools/select_daily.js",
     "verify:course": "node tests/verify-course.js",
-    "course:gen": "node tools/gen_course.js 1 75 8 && node tools/gen_course.js merge"
+    "course:gen": "node tools/gen_course.js 1 75 8 && node tools/gen_course.js merge",
+    "test": "npm run build && npm run verify:course && npm run verify:daily && npm run verify && npm run test:e2e",
+    "add:android": "npm run build && npx cap add android && npm run admob:config",
+    "add:ios": "npm run build && npx cap add ios && npm run admob:config",
+    "admob:config": "node ../../kit/outils/configure-admob.mjs",
+    "sync": "npm run build && npx cap sync",
+    "android": "npm run build && npx cap sync android && npx cap open android",
+    "ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "assets": "npx capacitor-assets generate --iconBackgroundColor '#1f2259' --splashBackgroundColor '#15173d'"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0",
     "playwright": "^1.48.0"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.3.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@revenuecat/purchases-capacitor": "^14.0.0"
   }
 }

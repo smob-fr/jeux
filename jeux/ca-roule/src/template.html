@@ -1,10 +1,24 @@
 <title>Ça Roule</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap">
+<style>/*KIT_CSS*/</style>
 <style>
 /* Parking de nuit vu du dessus : look « jeu mobile » moderne (dégradés doux, verre, relief léger).
    Un seul thème sombre voulu. Accent jaune panneau (--sign) pour la Course, bleu (--psign) pour le Casse-tête. */
 :root {
+  /* Thème des éléments du kit commun (fenêtres, boutique, pubs simulées) aux couleurs de Ça Roule. */
+  --kit-texte: #ffffff;
+  --kit-texte-doux: rgba(222, 226, 255, 0.72);
+  --kit-panneau: rgba(255, 255, 255, 0.09);
+  --kit-bord: rgba(255, 255, 255, 0.14);
+  --kit-accent: #ffc933;
+  --kit-accent-clair: #ffe27a;
+  --kit-accent-fonce: #f29a00;
+  --kit-accent-texte: #4a2a00;
+  --kit-succes: #34d58a;
+  --kit-fenetre-fond: linear-gradient(180deg, #262a6a, #1b1e4e);
+  --kit-voile: rgba(10, 12, 40, 0.66);
+  --kit-police: 'Fredoka', 'Nunito', system-ui, sans-serif;
   --bg-1: #3b3f98;
   --bg-2: #1f2259;
   --bg-3: #0f1130;
@@ -450,19 +464,19 @@ button { font-family: inherit; color: inherit; -webkit-tap-highlight-color: tran
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
 }
-.banner {
-  flex: none;
-  height: 50px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.22);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-  display: grid;
-  place-items: center;
-  color: rgba(222, 226, 255, 0.45);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
+/* bannière publicitaire (kit) : seulement sur l'accueil et la carte, jamais pendant le jeu */
+body .home, body .cmap { bottom: var(--kit-banniere-h, 0px); } /* plus précis que .home { inset: 0 } plus bas */
+/* boutique */
+.shop-card { max-height: min(88vh, 720px); }
+.shop-list { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; padding: 12px 2px 4px; }
+.shop-ico { width: 74px; height: 74px; border-radius: 20px; display: grid; place-items: center; font-size: 38px; margin: 0 auto;
+  background: radial-gradient(circle at 40% 30%, rgba(255, 226, 122, 0.35), rgba(0, 0, 0, 0.25)); box-shadow: inset 0 0 0 2px rgba(255, 201, 51, 0.35); }
+.shop-ico.noads { color: #fff; font-size: 40px; background: radial-gradient(circle at 40% 30%, #7cc0ff, #3d8bff 60%, #2457e6); }
+.shop-ico small { font-size: 15px; font-family: var(--font-display); margin-left: -4px; }
+#kit-fenetre-boite .shop-ico { margin: 6px auto 10px; }
+.shop-foot { display: flex; gap: 8px; }
+.shop-card .shop-foot .btn { flex: 1; width: auto; min-width: 0; }
+.shop-list .kit-carte-texte { text-align: left; }
 
 /* ---------- fenêtres ---------- */
 .scrim {
@@ -1536,7 +1550,9 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
 .cmap-lock b { font-family: var(--font-display); font-size: 18px; color: #fff; }
 .cmap-play { flex: none; }
 /* ---------- coffres, missions, bandeau ---------- */
-.home-extra { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home-extra { flex: none; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.home-extra .mini-btn { padding: 6px 8px; gap: 6px; }
+.home-extra .mini-btn b { font-size: 13px; }
 .mini-btn { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 6px 10px; border: 0; border-radius: 18px; cursor: pointer; text-align: left; color: #fff; background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
 .mini-btn .ico { font-size: 22px; }
 .mini-btn b { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 600; line-height: 1.1; }
@@ -1653,7 +1669,6 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   </button>
 </nav>
 
-<div class="banner" id="banner">PUB · BANNIÈRE 320×50 (exemple)</div>
 
 <!-- Accueil -->
 <section class="home" id="home" aria-labelledby="home-title">
@@ -1706,6 +1721,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
     <span class="star-chip" id="home-stars"></span>
   </button>
   <div class="home-extra">
+    <button class="mini-btn" id="home-shop" type="button"><span class="ico">🛒</span><span><b>Boutique</b><small>👍 et sans pub</small></span></button>
     <button class="mini-btn" id="home-missions" type="button"><span class="ico">📋</span><span><b>Missions du jour</b><small>0 / 3</small></span></button>
     <button class="mini-btn" id="home-chest" type="button"><span class="ico">🎁</span><span><b>Coffre à étoiles</b><small>0 / 20 ★</small></span></button>
   </div>
@@ -1780,6 +1796,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
       <button class="btn secondary" id="pause-switch" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-4-4"/><path d="M20 16H7l4 4"/></svg><span id="pause-switch-lbl">Casse-tête</span></button>
       <button class="btn secondary" id="pause-levels" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>Niveaux</button>
       <button class="btn secondary" id="pause-garage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16V11l2-5h10l2 5v5"/><path d="M3.5 16h17v3h-17z" fill="currentColor"/><circle cx="7.5" cy="13" r="1" fill="currentColor"/><circle cx="16.5" cy="13" r="1" fill="currentColor"/></svg>Garage</button>
+      <button class="btn secondary" id="pause-shop" type="button"><span class="ico" aria-hidden="true">🛒</span><span>Boutique</span></button>
     </div>
     <div class="notif-row stats-row"><span>Statistiques anonymes<small>Aident à régler la difficulté. Aucune donnée personnelle.</small></span><button class="switch" id="stats-switch" type="button" role="switch" aria-checked="true" aria-label="Statistiques anonymes"></button></div>
     <div class="pause-snd">
@@ -1822,6 +1839,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
       <button class="aid-opt video" id="aid-video" type="button"><span class="aid-ico">🎬</span><span class="aid-txt"><b>3 coups d'avance</b><span>Gratuit contre une vidéo</span></span><span class="aid-cost badge">VIDÉO</span></button>
     </div>
     <p class="aid-note">Gagnez des 👍 en finissant les énigmes à l'objectif, et le double sans Annuler ni aide.</p>
+    <button class="btn secondary" id="aid-shop" type="button">🛒 Plus de 👍 dans la boutique</button>
     <button class="btn secondary" id="aid-close" type="button">Fermer</button>
   </div>
 </div>
@@ -1884,6 +1902,18 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
 </div>
 
 <!-- Pub simulée : à remplacer par un vrai SDK (AdMob, AppLovin…) -->
+<!-- Boutique (kit commun : catalogue de jeu.json) -->
+<div class="scrim sheet" id="shop" hidden>
+  <div class="card sheet-card shop-card" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+    <div class="sheet-head"><h2 id="shop-title">Boutique</h2><span class="star-chip" id="shop-boost"></span></div>
+    <div class="shop-list" id="shop-list"></div>
+    <div class="shop-foot">
+      <button class="btn secondary" id="shop-restore" type="button">Restaurer mes achats</button>
+      <button class="btn primary" id="shop-close" type="button">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <div class="scrim over" id="ad" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="ad-title">
     <p class="eyebrow" id="ad-kind"></p>
@@ -1897,10 +1927,13 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
 <script>
 /*ENGINE*/
 </script>
+<script>/*KIT*/</script>
 <script>
 (function () {
   'use strict';
   const E = window.CarEngine;
+  /* Kit commun (window.Kit) : pubs, boutique. Voir kit/README.md à la racine du dépôt. */
+  const Kit = window.Kit;
   /* Niveaux casse-tête : { opt: coups minimum, ways: nombre de solutions de cette longueur, cars: [[horizontale, ligne/colonne, case, longueur]] } */
   const PUZZLES = /*PUZZLES*/[];
   /* Défis du jour : casse-tête experts (30 coups et plus), un par jour, même grille pour tout le monde. */
@@ -1909,8 +1942,8 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   const COURSE = /*COURSE*/[];
   const MAX = COURSE.length;
 
-  /* Réglages des pubs (simulées ici) */
-  const ADS = { interstitialEvery: 3, interstitialSeconds: 3, rewardedSeconds: 5 };
+  /* Durées des pubs simulées dans le navigateur. Fréquence des interstitielles : règles du kit (jeu.json). */
+  const ADS = { interstitialSeconds: 3, rewardedSeconds: 5 };
 
   const PALETTE = ['#ef5b43', '#f4b81d', '#22b8a5', '#4a90f2', '#9a6ee0', '#f27f34', '#62bf5d', '#ee79ac', '#e8e4da'];
   const ROT = { R: 0, D: 90, L: 180, U: 270 };
@@ -1946,13 +1979,14 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
     notif: Object.assign({ on: false, hour: 18, minute: 0, asked: false }, saved.notif),
     uid: saved.uid || '', stats: saved.stats !== false,
     boost: Object.assign({ n: 3, row: 0, got: {} }, saved.boost),
+    noAds: !!saved.noAds, bought: saved.bought || {},
     seen: saved.seen || {}, rockNodes: new Map(), rocks: [], has: {},
     mode: saved.mode === 'puzzle' && PUZZLES.length ? 'puzzle' : 'run',
     pz: Object.assign({ level: 1, max: 1, stars: {} }, saved.pz),
     W: 4, H: 4, cell: 40, cars: [], byId: {}, nodes: new Map(), grid: null,
-    left: 0, hearts: 3, over: false, hintId: null, sinceAd: 0, session: 0
+    left: 0, hearts: 3, over: false, hintId: null, session: 0
   };
-  const save = () => store.write({ crv: 1, legacy: S.legacy, freeAid: S.freeAid, inv: S.inv, chest: S.chest, mis: S.mis, level: S.level, max: S.max, test: S.test, seen: S.seen, mode: S.mode, pz: S.pz, sfx: S.sfx, music: S.music, skin: S.skin, rs: S.rs, ads: S.ads, daily: S.daily, notif: S.notif, uid: S.uid, stats: S.stats, boost: S.boost });
+  const save = () => store.write({ crv: 1, legacy: S.legacy, freeAid: S.freeAid, inv: S.inv, chest: S.chest, mis: S.mis, level: S.level, max: S.max, test: S.test, seen: S.seen, mode: S.mode, pz: S.pz, sfx: S.sfx, music: S.music, skin: S.skin, rs: S.rs, ads: S.ads, daily: S.daily, notif: S.notif, uid: S.uid, stats: S.stats, boost: S.boost, noAds: S.noAds, bought: S.bought });
   const show = el => { el.hidden = false; };
   const hide = el => { el.hidden = true; };
   const vibrate = ms => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* ignoré */ } };
@@ -3068,7 +3102,6 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   }
 
   function pzWin() {
-    S.sinceAd++;
     hide($('win-chest'));
     const stars = starsFor(P.moves, P.opt);
     hide($('win-streak'));
@@ -3452,7 +3485,6 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   }
 
   function win() {
-    S.sinceAd++;
     hide($('win-streak'));
     hide($('win-boost'));
     hide($('win-notif'));
@@ -3499,47 +3531,74 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   /* meilleur coup depuis la position actuelle (indice et tutoriel) */
   function pickHint() { const b = E.crBest(S.L, S.P); return b.car; }
 
-  /* ---------- pubs simulées ---------- */
-  let adTimer = null, adCb = null, adDone = false, adKind = 'reward';
+  /* ---------- pubs : kit commun ----------
+     Dans l'appli : AdMob (Kit.Ads). Dans le navigateur : l'écran #ad simule la pub (Kit.Ads.simulateur).
+     Le kit applique les règles communes : interstitielle à partir du niveau 4, une partie sur 3,
+     2 minutes au moins entre deux, jamais juste après une vidéo récompensée. */
+  let adTimer = null, adResolve = null, adDone = false, adKind = 'reward';
   let adPlace = '', adNext = '';
-  function runAd(kind, seconds, cb, place) {
-    adKind = kind; adCb = cb; adDone = false; adPlace = place || adNext || kind; adNext = '';
-    Stats.track('ad_shown', { kind, place: adPlace });
-    Snd.duck(true);
-    const close = $('ad-close');
-    $('ad-kind').textContent = kind === 'reward' ? 'Vidéo récompensée · exemple' : 'Publicité · exemple';
-    $('ad-slot').innerHTML = kind === 'reward'
-      ? 'Ici : la vidéo du SDK pub<br>(AdMob, AppLovin…)'
-      : 'Ici : la pub plein écran<br>entre deux niveaux';
-    $('ad-fill').style.width = '0%';
-    close.className = 'btn secondary';
-    close.disabled = kind === 'inter';
-    close.textContent = kind === 'reward' ? 'Fermer sans récompense' : 'Fermer dans ' + seconds + ' s';
-    show($('ad'));
-    const t0 = performance.now();
-    clearInterval(adTimer);
-    adTimer = setInterval(() => {
-      const p = Math.min(1, (performance.now() - t0) / (seconds * 1000));
-      $('ad-fill').style.width = p * 100 + '%';
-      if (p < 1) {
-        if (kind === 'inter') close.textContent = 'Fermer dans ' + Math.ceil(seconds * (1 - p)) + ' s';
-        return;
-      }
+  function simAd({ seconds, closable }) {
+    return new Promise(resolve => {
+      const kind = closable ? 'reward' : 'inter';
+      adKind = kind; adResolve = resolve; adDone = false;
+      const close = $('ad-close');
+      $('ad-kind').textContent = kind === 'reward' ? 'Vidéo récompensée · exemple' : 'Publicité · exemple';
+      $('ad-slot').innerHTML = kind === 'reward'
+        ? 'Ici : la vidéo du SDK pub<br>(AdMob, AppLovin…)'
+        : 'Ici : la pub plein écran<br>entre deux niveaux';
+      $('ad-fill').style.width = '0%';
+      close.className = 'btn secondary';
+      close.disabled = kind === 'inter';
+      close.textContent = kind === 'reward' ? 'Fermer sans récompense' : 'Fermer dans ' + seconds + ' s';
+      show($('ad'));
+      const t0 = performance.now();
       clearInterval(adTimer);
-      adDone = true;
-      close.disabled = false;
-      close.className = 'btn primary';
-      close.textContent = kind === 'reward' ? 'Récupérer la récompense' : 'Fermer';
-    }, 100);
+      adTimer = setInterval(() => {
+        const p = Math.min(1, (performance.now() - t0) / (seconds * 1000));
+        $('ad-fill').style.width = p * 100 + '%';
+        if (p < 1) {
+          if (kind === 'inter') close.textContent = 'Fermer dans ' + Math.ceil(seconds * (1 - p)) + ' s';
+          return;
+        }
+        clearInterval(adTimer);
+        adDone = true;
+        close.disabled = false;
+        close.className = 'btn primary';
+        close.textContent = kind === 'reward' ? 'Récupérer la récompense' : 'Fermer';
+      }, 100);
+    });
   }
+  Kit.Ads.simulateur.pub = ({ closable }) => simAd({ seconds: closable ? ADS.rewardedSeconds : ADS.interstitialSeconds, closable });
   function closeAd() {
     clearInterval(adTimer);
-    Stats.track('ad_closed', { kind: adKind, place: adPlace, completed: adDone });
-    Snd.duck(false);
     hide($('ad'));
-    const cb = adCb, done = adDone;
-    adCb = null;
-    if (done && cb) cb();
+    const r = adResolve;
+    adResolve = null;
+    if (r) r(adDone);
+  }
+  /* vidéo récompensée : cb() seulement si elle a été vue jusqu'au bout */
+  function runAd(kind, seconds, cb, place) {
+    adPlace = place || adNext || kind; adNext = '';
+    Stats.track('ad_shown', { kind: 'reward', place: adPlace });
+    Snd.duck(true);
+    Kit.Ads.rewarded().then(ok => {
+      Snd.duck(false);
+      Stats.track('ad_closed', { kind: 'reward', place: adPlace, completed: ok });
+      if (ok && cb) cb();
+    });
+  }
+  /* fin de partie : interstitielle si les règles du kit le permettent, puis go() */
+  async function interstitial(level, go) {
+    Snd.duck(true);
+    const shown = await Kit.Ads.maybeInterstitial(level);
+    Snd.duck(false);
+    if (shown) { Stats.track('ad_shown', { kind: 'inter', place: 'inter' }); Stats.track('ad_closed', { kind: 'inter', place: 'inter', completed: true }); }
+    go();
+  }
+  /* bannière : seulement quand l'accueil ou la carte est affiché (jamais pendant le jeu) */
+  function banner() {
+    if (!home.hidden && !home.classList.contains('leaving') || !$('cmap').hidden) Kit.Ads.showBanner();
+    else Kit.Ads.hideBanner();
   }
 
   /* ---------- choix du niveau ---------- */
@@ -3798,12 +3857,18 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   }
   function leaveHome(pz, daily) {
     homeOpen = false;
+    Kit.Ads.hideBanner(); /* avant que le jeu apparaisse */
     Stats.track('home_choice', { mode: daily ? 'daily' : pz ? 'puzzle' : 'run' });
     home.classList.add('leaving');
     setTimeout(() => { hide(home); home.classList.remove('leaving'); }, reduce ? 0 : 280);
     if (daily) pzStart(0, true); else if (pz) pzStart(S.pz.level); else { setMode('run'); if (!S.L) start(S.level); openMap(); }
   }
   buildHome();
+  if (window.MutationObserver) {
+    const mo = new MutationObserver(banner);
+    mo.observe(home, { attributes: true, attributeFilter: ['hidden', 'class'] });
+    mo.observe($('cmap'), { attributes: true, attributeFilter: ['hidden'] });
+  }
 
   /* ---------- défi du jour et série de jours ---------- */
   const FLAME = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.6 3.2 2.6 4.9 4.3 6.8 1.6 1.8 2.7 3.8 2.7 6.2 0 3.9-3.1 6.5-7 6.5s-7-2.6-7-6.5c0-2.5 1.2-4.4 2.7-5.8.3 1.5 1 2.6 2.1 3.2-.4-3.7 1-7.2 2.2-10.4z" fill="url(#g-flame)"/><path d="M12 12.5c.9 1.7 2.6 2.6 2.6 4.6 0 1.7-1.2 2.9-2.6 2.9s-2.6-1.2-2.6-2.9c0-1.5.9-2.4 1.6-3.2.1.8.4 1.3 1 1.5-.2-1 0-2 0-2.9z" fill="#fff3b0"/></svg>';
@@ -4616,6 +4681,38 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
       Stats.track('boost_earned', { gain: 2, reasons: 'video', total: S.boost.n });
     });
   });
+  /* ---------- boutique : kit commun (catalogue et prix dans jeu.json) ---------- */
+  const SHOP_ART = {
+    noads: () => '<div class="shop-ico noads">' + Kit.ICONS.noads + '</div>',
+    s: () => '<div class="shop-ico">👍<small>×10</small></div>',
+    m: () => '<div class="shop-ico">🎁</div>',
+    l: () => '<div class="shop-ico">👍<small>×100</small></div>'
+  };
+  function shopHud() { $('shop-boost').textContent = S.boost.n + ' 👍'; }
+  Kit.Boutique.configurer({
+    data: S, enregistrer: save,
+    art: p => (SHOP_ART[p.art] || SHOP_ART.s)(),
+    accorder: p => {
+      const g = p.contenu || {};
+      if (g.boost) S.boost.n += g.boost;
+      for (const aid of ['fuel', 'reverse']) if (g[aid]) S.inv[aid] = (S.inv[aid] || 0) + g[aid];
+      Stats.track('purchase', { product: p.id });
+    },
+    apres: () => { shopHud(); garageHud(); },
+    effet: () => celebrate()
+  });
+  function openShop() {
+    shopHud();
+    Kit.Boutique.afficher($('shop-list'));
+    show($('shop'));
+    Stats.track('shop_open', {});
+  }
+  $('home-shop').addEventListener('click', () => { Snd.click(); openShop(); });
+  $('pause-shop').addEventListener('click', () => { hide($('pause')); openShop(); });
+  $('aid-shop').addEventListener('click', () => { hide($('aid')); openShop(); });
+  $('shop-close').addEventListener('click', () => hide($('shop')));
+  $('shop-restore').addEventListener('click', () => Kit.Boutique.restaurer());
+
   function openPause() {
     const pz = S.mode === 'puzzle';
     $('pause-sub').textContent = pz ? (P.daily ? 'Défi du jour · objectif ' + P.opt + ' coups' : 'Casse-tête · Énigme ' + P.n) : 'Course · Niveau ' + S.level;
@@ -4709,10 +4806,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
     if (pz ? P.n >= PUZZLES.length : S.level >= MAX) { if (pz) openLevels(); else openMap(); return; }
     if (!pz && S.level % PER_CITY === 0) { openMap(cityOf(S.level + 1)); return; }
     const go = () => (pz ? pzStart(P.n + 1) : start(S.level + 1));
-    if (S.sinceAd >= ADS.interstitialEvery) {
-      S.sinceAd = 0;
-      runAd('inter', ADS.interstitialSeconds, go);
-    } else go();
+    interstitial(pz ? P.n : S.level, go);
   });
   $('ad-close').addEventListener('click', closeAd);
   document.addEventListener('keydown', e => {
@@ -4720,6 +4814,7 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
     if (!$('ad').hidden && !$('ad-close').disabled) closeAd();
     else if (!$('levels').hidden) hide($('levels'));
     else if (!$('garage').hidden) hide($('garage'));
+    else if (!$('shop').hidden) hide($('shop'));
     else if (!$('chest').hidden) hide($('chest'));
     else if (!$('missions').hidden) hide($('missions'));
     else if (!$('aid').hidden) hide($('aid'));
@@ -4731,7 +4826,11 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   if (window.ResizeObserver) new ResizeObserver(layout).observe(stage);
   else window.addEventListener('resize', layout);
 
+  /* objet de débogage pour les tests automatiques */
+  window.__caroule = { S, Kit, save, start, pzStart, openShop };
   try { window.claude && window.claude.hot && window.claude.hot.snapshot && window.claude.hot.snapshot(() => ({ level: S.level })); } catch (e) { /* ignoré */ }
+  Kit.Ads.init();
+  Kit.Store.init(Kit.Boutique.surSansPub);
   const boot = () => {
     Stats.track('session_start', { level: S.level, max: S.max, pz_level: S.pz.max, stars: totalStars(), streak: streakNow(), skin: S.skin, music: S.music, sfx: S.sfx, reminder: S.notif.on, returning: S.max > 1 || S.pz.max > 1 });
     openHome(); if (S.mode === 'puzzle') pzStart(S.pz.level); else start(S.level); Notif.sync();

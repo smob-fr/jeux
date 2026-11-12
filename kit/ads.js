@@ -82,7 +82,11 @@ export const Ads = {
   get bannerShown() { return bannerWanted; },
 
   async init() {
-    if (!estNatif()) { ready = true; canRequestAds = true; return; }
+    if (!estNatif()) {
+      ready = true; canRequestAds = true;
+      if (bannerWanted) this.showBanner(); // bannière demandée avant l'initialisation
+      return;
+    }
     const A = AdMob();
     if (!A) { console.warn("AdMob : plugin absent"); return; }
     try {

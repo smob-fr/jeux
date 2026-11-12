@@ -1,0 +1,11 @@
+{
+  "appId": "fr.smob.caroule",
+  "appName": "Ça Roule",
+  "webDir": "site",
+  "backgroundColor": "#15173d",
+  "android": { "allowMixedContent": false, "backgroundColor": "#15173d" },
+  "ios": { "contentInset": "never" },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 1000, "launchAutoHide": true, "backgroundColor": "#15173d", "showSpinner": false, "androidScaleType": "CENTER_CROP" }
+  }
+}

@@ -1,37 +1,63 @@
-# Ça Roule — notes pour Claude Code
+# Ça Roule : notes pour Claude Code
 
-Jeu mobile de puzzle de parking, en français. Prototype web mono-fichier (HTML/CSS/JS sans framework) qui doit devenir une vraie appli mobile monétisée par la pub.
-Le propriétaire parle français : répondre et commenter en français, textes du jeu en français.
+Jeu mobile de casse-tête de parking, en français : une Course à sorties limitées, un Casse-tête et un
+défi du jour. Lis d'abord le `CLAUDE.md` de la racine (stack, kit, monétisation, conventions).
+Identité et monétisation : `jeu.json` (id `caroule`, appId `fr.smob.caroule`). Pistes : `docs/ROADMAP.md`.
+Maquettes de conception : `docs/maquettes/`.
+
+## Technique
+
+- **HTML, CSS et JavaScript sans framework**, aucune dépendance à l'exécution à part les polices Google
+  Fonts (Fredoka et Nunito) et le **kit commun** du dépôt, intégré au build en format global (`window.Kit`).
+- `src/template.html` contient toute l'interface : styles, écrans, logique de jeu, sons, statistiques.
+  `src/engine.js` est le moteur pur, sans DOM, utilisable aussi sous Node.
+- Les niveaux sont des données JSON précalculées et vérifiées par des solveurs (`data/`), produites par
+  les générateurs de `tools/`.
+- `tools/build.js` assemble **un seul fichier HTML** (`dist/index.html`, versionné) et **une version web
+  installable** (`site/`, non versionnée) : c'est le `webDir` de Capacitor et ce que publie le site du dépôt.
+- Tous les graphismes sont dessinés par le code ; tous les sons sont synthétisés (`Snd`, propre au jeu :
+  ses musiques « run » et « calm » n'utilisent pas `Sound` du kit).
+- Statistiques anonymes PostHog (UE), clé publique dans `stats.config.json`.
 
 ## Commandes
-- `npm run build` : assemble `dist/index.html` (template + moteur + énigmes + défis, fichier unique pour l'artefact claude.ai) et `site/` (page complète avec viewport mobile, manifeste, icônes, service worker hors ligne ; publiée par GitHub Pages, non versionnée). Vérifie la syntaxe des scripts embarqués. **Toujours relancer après une modif de `src/` ou `data/`.**
-- `node tools/make_icons.js` : regénère `assets/icons/` à partir des graphismes du jeu (après `npm run build`).
+
+Depuis `jeux/ca-roule/` (Node 20 ou plus) :
+
+- `npm test` : build, `verify:course`, `verify:daily`, `verify`, puis les 5 tests de bout en bout. Doit passer avant tout envoi.
+- `npm run build` : assemble `dist/index.html` (template + kit + moteur + niveaux) et `site/`. Vérifie la syntaxe des scripts embarqués. **Toujours relancer après une modif de `src/`, `data/` ou du kit.**
+- `npm run test:e2e` : tests de bout en bout (Playwright, sur `dist/index.html`) : `e2e-run-touch` (Course au doigt), `e2e-puzzle-touch`, `e2e-puzzle-mouse`, `e2e-levels-sheet`, `e2e-kit` (bannière hors jeu, boutique, vidéo récompensée). Chacun sort en erreur si une vérification échoue.
 - `npm run verify:course` : re-résout les 75 niveaux de la Course (`data/course.json`) : solubles, objectif = vrai minimum, chaque voiture vise une porte possible, aucun bouton occupé au départ.
-- `npm run course:gen` : régénère les niveaux de la Course (`tools/gen_course.js`, escalade guidée par une fiche par niveau, puis `merge` garde la meilleure recherche par niveau). Attention : change tous les niveaux.
-- `npm run verify` : vérifie les 1000 niveaux de l'ANCIENNE Course (`generate`), plus utilisée dans le jeu mais gardée pour l'historique.
-- `npm install && npx playwright install chromium && npm run test:e2e` : tests de bout en bout (appuis tactiles, glisser des voitures, fenêtre des niveaux).
 - `npm run verify:daily` : re-résout chaque défi du jour (`data/daily.json`) et vérifie qu'il demande exactement `opt` coups (30 et plus).
-- `npm run daily:search` puis `npm run daily:select` : cherche de nouveaux défis experts (`tools/gen_daily.js`, une graine par processus) puis reconstruit `data/daily.json`. Attention : changer la liste change le défi de chaque jour.
-- `npm run screenshot` : capture d'écran du mode Casse-tête (écrit dans /tmp).
+- `npm run verify` : vérifie les 1000 niveaux de l'ANCIENNE Course (`generate`), plus utilisée dans le jeu mais gardée pour l'historique.
+- `npm run course:gen` : régénère les niveaux de la Course (`tools/gen_course.js`, puis `merge`). Attention : change tous les niveaux.
+- `npm run daily:search` puis `npm run daily:select` : nouveaux défis experts. Attention : changer la liste change le défi de chaque jour.
+- `npm run puzzles:search` puis `npm run puzzles:select` : nouvelles énigmes.
+- `node tools/make_icons.js` : regénère `assets/icons/` (après `npm run build`). `npm run screenshot` : capture du Casse-tête.
+- `npm run add:android | add:ios | sync | android | ios | assets | admob:config` : appli native (voir `docs/publication.md` à la racine).
+
+Attention, régénérer des niveaux change la progression des joueurs et le défi de chaque jour.
 
 ## Architecture
 - `src/engine.js` : moteur pur (UMD, sans DOM). Course « sorties limitées » : `crSlide`, `crApply` (marche arrière avec `back`), `crAnalyse` (exploration complète, coups minimum et impasses), `crBest` (meilleur coup). Casse-tête : `pzSolve` (parcours en largeur). `generate(n)` = ancienne Course, inutilisée.
 - `data/course.json` : 75 niveaux `{city, hard?, boss?, W, H, opt, naive, gates:[[côté, ligne/colonne, couleur|'any']], bars:[[côté, n°]], buttons:[[x, y, barrière]], cars:[[horizontale, ligne/colonne, case, longueur, sens ±1, couleur]]}`. Marqueur `/*COURSE*/[]` dans le template.
-- `src/template.html` : toute l'interface (CSS + HTML + script principal). Marqueurs `/*ENGINE*/` et `/*PUZZLES*/[]` remplacés au build. Ne pas les supprimer.
+- `src/template.html` : toute l'interface (CSS + HTML + script principal). Marqueurs remplacés au build : `/*KIT_CSS*/`, `/*KIT*/`, `/*ENGINE*/`, `/*PUZZLES*/[]`, `/*DAILY*/[]`, `/*COURSE*/[]`. Ne pas les supprimer.
 - `data/puzzles.json` : 50 énigmes `{opt, ways, cars:[[horizontale, ligne/colonne, case, longueur]]}` ; la voiture 0 est la rouge (ligne 2, sort à droite). `ways===1` = solution optimale unique.
-- `data/daily.json` : défis du jour `{opt, cars}` (même format que les énigmes), tous à 30 coups ou plus. Générés par `tools/gen_daily.js` : pour une disposition, exploration de toutes les positions atteignables puis choix de la plus éloignée de la sortie (escalade sur les dispositions). Recherches brutes dans `data/daily/`. Marqueur `/*DAILY*/[]` dans le template.
-- `data/candidates/` : ~42 000 grilles candidates trouvées par recherche (`tools/gen_puzzles.js`, escalade de colline) ; `tools/select_pz.js` en tire les 50 énigmes (échelle de difficulté, re-vérifiées par `pzSolve`).
-- `dist/index.html` : fichier généré, jamais édité à la main.
-- Publication : `.github/workflows/pages.yml` publie `site/` sur GitHub Pages à chaque envoi sur `main` (après `verify` et `verify:daily`). Le service worker charge la page depuis le réseau d'abord, donc les testeurs ont toujours la dernière version.
-- `docs/` : expériences de faisabilité du mode Casse-tête.
+- `data/daily.json` : défis du jour `{opt, cars}`, tous à 30 coups ou plus (`tools/gen_daily.js`, recherches brutes dans `data/daily/`).
+- `data/candidates/` : ~42 000 grilles candidates (`tools/gen_puzzles.js`) ; `tools/select_pz.js` en tire les 50 énigmes.
+- `dist/index.html` : fichier généré, jamais édité à la main. Sa date de build change à chaque construction.
+- Publication web : le workflow `pages.yml` de la racine du dépôt construit `site/` et le publie dans `https://smob-fr.github.io/jeux/ca-roule/` à chaque envoi sur `main`, après `npm test`. Le service worker charge la page depuis le réseau d'abord.
+- Objet de débogage : `window.__caroule` (`S`, `Kit`, `save`, `start`, `pzStart`, `openShop`).
+- `docs/` : feuille de route, maquettes, expériences de faisabilité.
 
 ## Règles du jeu
 **Course** « sorties limitées » (75 niveaux, 3 villes de 25) : le parking est fermé par un mur avec quelques portes. Toucher une voiture la fait avancer jusqu'au premier obstacle ; elle sort seulement si elle arrive face à une porte de sa couleur ou rayée (« toutes couleurs ») non fermée par une barrière. Sinon elle s'arrête et reste garée. Une barrière se lève pour de bon quand une voiture s'arrête sur son bouton jaune. Les voitures n'avancent jamais en arrière (sauf aide « Marche arrière »). Objectif = coups minimum, réserve = objectif + 3 (+5 niveau géant), étoiles : 3 à l'objectif, 2 jusqu'à +2, 1 au-delà. Impasse (plus aucune solution) ou réserve insuffisante → fenêtre d'échec (Annuler gratuit / +3 coups contre une vidéo). Villes : 1 Centre-ville (portes rayées), 2 Le port (portes de couleur), 3 La gare (barrières) ; niveau géant 7 × 9 en fin de ville, badge Difficile tous les 5 niveaux. Ville suivante ouverte quand le niveau géant est battu.
 **Casse-tête** (50 énigmes, grille 6x6) : voitures qui glissent dans les deux sens (glisser-déposer), sortir la rouge, sans chrono ni cœurs, compteur de coups, Annuler, Aide (coups de pouce ou vidéo, calculée par `pzSolve`). Étoiles : 3 si coups ≤ optimum, 2 si ≤ ceil(opt×1.4), 1 sinon.
 
 ## Points d'attention
-- Pubs **simulées** (`runAd`, `ADS`) : à remplacer par un vrai SDK (AdMob/AppLovin) ; bannière = div « PUB ».
-- Sauvegarde : `localStorage` clé `caroule.v1` = `{crv,legacy,freeAid,inv,chest,mis,level,max,test,seen,mode,pz:{level,max,stars},sfx,music,skin,rs,ads,daily,notif,uid,stats,boost}`. `crv: 1` = nouvelle Course : `level`, `max`, `rs` (étoiles par niveau) la concernent. Une sauvegarde sans `crv` a sa progression d'ancienne Course déplacée dans `legacy {max, rs}` (comptée dans `totalStars` pour le garage) et repart au niveau 1. Garder la compatibilité ascendante.
+- **Pubs (kit commun)** : `Kit.Ads` décide et affiche (AdMob dans l'appli). Dans le navigateur, l'écran `#ad` de Ça Roule sert de simulation (`Kit.Ads.simulateur.pub = simAd`). `runAd('reward', …, cb, place)` = vidéo récompensée (cb seulement si vue jusqu'au bout) ; `interstitial(niveau, go)` à « Suivant » après une victoire, selon les règles du kit (à partir du niveau 4, une partie sur 3, 2 min). Plus de pub interstitielle « toutes les 3 victoires dès le niveau 1 » comme avant.
+- **Bannière** : seulement quand l'accueil ou la carte des villes est affiché (`banner()`, appelé par un `MutationObserver` sur `#home` et `#cmap`, et masquée dès `leaveHome`). L'ancienne bannière « PUB » sous le plateau a été supprimée (règle commune : jamais pendant le jeu). `body .home, body .cmap { bottom: var(--kit-banniere-h) }` leur laisse la place.
+- **Boutique (kit commun)** : fenêtre `#shop` (accueil, pause, fenêtre « Coup de pouce »), cartes dessinées par `Kit.Boutique` d'après `jeu.json › produits` (« Sans pub », 10 👍 à 0,99 €, pack découverte unique à 1,99 €, 100 👍 à 4,99 €), illustrations `SHOP_ART`, « Restaurer mes achats » en bas de la boutique. `contenu` : `boost` (👍), `fuel` et `reverse` (aides en réserve dans `S.inv`).
+- Sauvegarde : `localStorage` clé `caroule.v1` = `{crv,legacy,freeAid,inv,chest,mis,level,max,test,seen,mode,pz:{level,max,stars},sfx,music,skin,rs,ads,daily,notif,uid,stats,boost,noAds,bought}` (`noAds`, `bought` : achats, ajoutés avec le kit). `save()` écrit une liste explicite de champs : tout nouveau champ doit y être ajouté. `crv: 1` = nouvelle Course : `level`, `max`, `rs` (étoiles par niveau) la concernent. Une sauvegarde sans `crv` a sa progression d'ancienne Course déplacée dans `legacy {max, rs}` (comptée dans `totalStars` pour le garage) et repart au niveau 1. Garder la compatibilité ascendante.
 - Un seul thème sombre voulu (nuit violette en Course, nuit bleue en Casse-tête) ; accent jaune panneau (`--sign`, `--sign-hi`, `--sign-deep`), bleu (`--psign…`) pour le Casse-tête.
 - Style visuel « jeu mobile moderne » : dégradés doux, verre dépoli, relief léger, polices arrondies. Éviter les contours épais, les ombres dures décalées et les polices monospace (look rétro).
 - Pas de dépendance externe à part les polices Google Fonts (Fredoka pour les titres et chiffres, Nunito pour le texte).
@@ -54,4 +80,68 @@ Le propriétaire parle français : répondre et commenter en français, textes d
 - Bug déjà rencontré : la fenêtre « Niveaux » (`.sheet-card`) sortait de l'écran à cause de la grille de 1000 boutons ; corrigé avec `max-height: min(82vh, 680px)` et `min-height: 0` sur `.level-grid`. Garder ça en tête en touchant au CSS.
 - Mascotte (cône de chantier) : états idle/cheer/ouch/sad, pupilles qui suivent le doigt.
 
-## Pistes (voir docs/ROADMAP.md)
+## Écarts avec les conventions communes (à décider avec le propriétaire)
+
+- **Vouvoiement** : Ça Roule vouvoie le joueur (« Vous avez », « votre série »), les autres jeux le tutoient.
+- **Rappels la nuit** : l'heure du rappel peut être 8 h ou 21 h (`HOURS`), et la « dernière chance » est
+  programmée à 21 h 30, alors que la convention interdit 21 h à 9 h. Le joueur choisit lui-même son heure,
+  mais la « dernière chance » est imposée.
+- **Pas de vies, pas de cadeau du jour** : remplacés par les 👍, les coffres à étoiles et les missions.
+  C'est permis (un jeu n'utilise que les mécaniques qui lui vont).
+- **Réglages** : pas de fenêtre de réglages complète ; son, musique, rappels et statistiques sont dans la
+  pause et sur l'accueil, « Restaurer mes achats » dans la boutique. Pas encore de « Confidentialité et
+  publicité » (`Kit.Ads.privacyOptionsRequired`) ni d'« Effacer ma progression ».
+
+## Fonctionnalités
+
+**Modes de jeu**
+- **Course « sorties limitées »**, 75 niveaux répartis en 3 villes de 25 :
+  - on touche une voiture : elle avance jusqu'au premier obstacle, et ne sort que face à une porte de sa couleur ou à une porte rayée « toutes couleurs » ;
+  - Centre-ville : portes simples ; Le port : portes de couleur ; La gare : barrières qui se lèvent quand une voiture s'arrête sur un bouton ;
+  - chaque niveau a un objectif en coups (le minimum calculé), une réserve de coups, des étoiles, la détection d'impasse, Annuler, des niveaux Difficile et un niveau géant en fin de ville.
+- **Casse-tête** : 50 énigmes de 6 × 6 où l'on fait glisser les voitures pour sortir la rouge, avec un objectif en coups optimal vérifié.
+- **Défi du jour** : un casse-tête expert de 30 à 50 coups, identique pour tous, avec une série de jours consécutifs.
+
+**Progression et récompenses**
+- Carte illustrée des villes, avec la route des niveaux, la progression dorée et la ville suivante verrouillée.
+- Étoiles, garage de 10 styles de voitures (7 gagnés avec les étoiles, 3 exclusifs avec des vidéos récompensées).
+- Coups de pouce 👍 : monnaie d'aide gagnée en jouant bien.
+- Aides :
+  - Casse-tête : Premier coup, 3 coups d'avance, Pilote ;
+  - Course : +3 coups, Marche arrière, Meilleur coup.
+- Coffre toutes les 20 étoiles de Course, 3 missions par jour.
+
+**Confort**
+- Accueil illustré, menu Pause, tutoriel avec une main animée sur les premiers niveaux.
+- Mascotte (un cône de chantier), musique et bruitages réglables.
+- Rappels du défi du jour : notifications locales dans l'appli, API Notification sur le web.
+- Statistiques anonymes que le joueur peut désactiver.
+- Version web installable sur l'écran d'accueil, qui marche hors ligne.
+
+**Publicités et achats** (kit commun) : bannière sur l'accueil et la carte, interstitielle plafonnée, vidéos récompensées, boutique (« Sans pub » et 👍). AdMob et RevenueCat dans l'appli (identifiants de test pour l'instant), simulés dans le navigateur.
+
+## État d'avancement
+
+- Prototype web complet et jouable, en test auprès d'utilisateurs via GitHub Pages (ancien dépôt `smob-fr/ca-roule`, puis `https://smob-fr.github.io/jeux/ca-roule/`).
+- Novembre 2026 : import dans le dépôt commun, branché sur le kit (pubs, bannière hors jeu, boutique).
+- Tous les niveaux sont vérifiés automatiquement : 75 niveaux de Course, 50 énigmes, 207 défis. La publication refuse de mettre en ligne un niveau insoluble.
+- Les statistiques arrivent bien dans PostHog.
+- La nouvelle Course vient d'être livrée (75 niveaux, carte, coffres, missions). Elle attend les retours des testeurs, surtout sur la difficulté.
+- `docs/maquettes/` contient trois maquettes HTML autonomes : les quatre pistes étudiées pour la Course, le niveau test jouable et les écrans de progression. `docs/exp_sorties_*.js` contient le premier prototype de la règle, remplacé depuis par `src/engine.js` et `tools/gen_course.js`.
+
+## Ce qui reste à faire
+
+0. Régler les écarts avec les conventions communes (ci-dessus).
+
+1. **Emballer en vraie appli** avec Capacitor (`capacitor.config.json` et commandes prêts : `npm run add:android`), Android d'abord, puis iOS. Il faut un compte Google Play (25 $) et, pour iOS, un compte Apple Developer (99 $ par an) et un Mac.
+2. **Vraies notifications** dans l'appli (plugin `@capacitor/local-notifications`), à vérifier sur un vrai téléphone.
+3. **Monétisation réelle** : AdMob, consentement RGPD et « Sans pub » sont branchés par le kit ; restent les vrais identifiants dans `jeu.json`, les produits dans les stores et une politique de confidentialité (checklist de `docs/publication.md`).
+4. **Contenu de la Course** :
+   - villes 4 à 6 : aéroport et plaques tournantes, montagne et voitures bâchées, plage et feux ;
+   - aides Peinture et Dépanneuse ;
+   - collections de plaques d'immatriculation et « permis » de ville ;
+   - calendrier de la semaine, rallye du week-end.
+5. **Défis du jour** : passer de 207 à au moins 365, avant la sortie, car changer la liste change le défi de chaque jour.
+6. **Équilibrage** grâce aux statistiques : 15 niveaux de Course ont une manœuvre de moins que prévu, la place de l'énigme 38 est à revoir.
+7. **Musique** : remplacer éventuellement la musique synthétisée par un morceau dont on a les droits.
+8. **Fiche des stores** : textes, captures d'écran, classification d'âge.

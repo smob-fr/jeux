@@ -4,6 +4,7 @@ const E = require('../src/engine.js');
 const LV = require('../data/course.json');
 const toL = l => ({ W: l.W, H: l.H, gates: l.gates.map(([side, at, color]) => ({ side, at, color })), bars: (l.bars || []).map(([side, at]) => ({ side, at })), buttons: (l.buttons || []).map(([x, y, bar]) => ({ x, y, bar })), cars: l.cars.map(([h, line, pos, len, dir, color]) => ({ h: !!h, line, pos, len, dir, color })) });
 const solution = n => { const L = toL(LV[n - 1]), A = E.crAnalyse(L); let s = 0; const seq = []; while (A.win[s] > 0) { const [i, t] = A.E[s].find(([, t]) => A.win[t] === A.win[s] - 1); seq.push(i); s = t; } return seq; };
+const ok=(c,m)=>{if(!c){console.error('ÉCHEC : '+m);process.exitCode=1;}}; /* une vérification ratée fait échouer le test (code de sortie 1) */
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
@@ -16,9 +17,10 @@ const solution = n => { const L = toL(LV[n - 1]), A = E.crAnalyse(L); let s = 0;
     await p.waitForTimeout(900);
     const w = await p.evaluate(() => !document.getElementById('win').hidden);
     console.log('lvl', lvl, 'win', w, 'coups', await p.textContent('#pz-n'), '/', LV[lvl - 1].opt);
+    ok(w, 'niveau ' + lvl + ' non gagné en jouant la solution parfaite');
     if (!w) break;
     await p.tap('#win-next'); await p.waitForTimeout(300);
     if (await p.evaluate(() => !document.getElementById('ad').hidden)) { await p.waitForTimeout(3300); await p.tap('#ad-close'); await p.waitForTimeout(300); }
   }
-  console.log(errs); await b.close();
-})();
+  console.log(errs); ok(!errs.length, 'erreurs : ' + errs); await b.close();
+})().catch(e=>{console.error(e);process.exitCode=1;});

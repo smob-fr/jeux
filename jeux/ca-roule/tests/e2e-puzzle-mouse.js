@@ -1,6 +1,7 @@
 const {chromium}=require('playwright');
 const E=require('../src/engine.js');
 const PZ=require('../data/puzzles.json');
+const ok=(c,m)=>{if(!c){console.error('ÉCHEC : '+m);process.exitCode=1;}}; /* une vérification ratée fait échouer le test (code de sortie 1) */
 (async()=>{
  const b=await chromium.launch();
  const p=await b.newPage({viewport:{width:390,height:780},hasTouch:false});
@@ -23,5 +24,5 @@ const PZ=require('../data/puzzles.json');
  await p.waitForTimeout(1200);
  console.log('moves',await p.textContent('#pz-n'),'opt',r.opt,'win visible',await p.evaluate(()=>!document.getElementById('win').hidden),await p.textContent('#win-stat'));
  await p.screenshot({path:'/tmp/pz3.png'});
- console.log(errs);await b.close();
-})();
+ ok(await p.evaluate(()=>!document.getElementById('win').hidden),'énigme 3 non gagnée');ok(+(await p.textContent('#pz-n'))===r.opt,'coups différents de l\'optimum');console.log(errs);ok(!errs.length,'erreurs : '+errs);await b.close();
+})().catch(e=>{console.error(e);process.exitCode=1;});
