@@ -8,6 +8,8 @@ achats et les notifications sont simulés. Sur téléphone, « Ajouter à l'écr
 jeu comme une appli.
 
 À faire une fois : dans les réglages du dépôt sur GitHub, *Pages* › *Source* : **GitHub Actions**.
+Le détail (adresses, déroulé du workflow, ajout d'un jeu, vérification en local) est dans la
+section « Publication web » du `CLAUDE.md` racine.
 
 Les anciens dépôts (`smob-fr/melopop`, `smob-fr/ca-roule`, `smob-fr/max-oeil-de-jade`) gardent leur
 propre site tant qu'ils ne sont pas archivés : les testeurs peuvent continuer à utiliser les anciens

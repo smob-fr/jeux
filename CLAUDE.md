@@ -67,6 +67,7 @@ Les identifiants et les textes propres à un jeu ne vont jamais dans le kit : il
 ```bash
 npm test                 # tests du kit, conventions, puis tests de chaque jeu (npm test du jeu)
 npm run verifier         # conventions seules : jeu.json, appId, catalogue, prix
+npm run site             # construit le site web de tous les jeux dans _site/ (comme GitHub Pages)
 node outils/tester-tout.mjs melopop   # un seul jeu
 ```
 
@@ -138,6 +139,37 @@ module du kit correspondant.
   anglais visible par le joueur.
 - **Outils de test** : chaque jeu expose un objet de débogage dans la console (`window.__<id>`)
   utilisé par ses tests automatiques.
+
+## Publication web (GitHub Pages)
+
+Tous les jeux sont publiés ensemble, en version web de test (pubs, achats et notifications simulés),
+sur **https://smob-fr.github.io/jeux/** :
+
+| Jeu | Adresse | Dossier publié (`webDir`) |
+|---|---|---|
+| Mélo Pop | https://smob-fr.github.io/jeux/melopop/ | `jeux/melopop/www` |
+| Ça Roule | https://smob-fr.github.io/jeux/ca-roule/ | `jeux/ca-roule/site` |
+| Max et l'Œil de Jade | https://smob-fr.github.io/jeux/max/ | `jeux/max/www` |
+| Pingo Glisse (prototype) | https://smob-fr.github.io/jeux/pingo/ | `jeux/pingo/www` |
+
+- **Quand** : à chaque envoi sur `main` (ou à la main : onglet *Actions* › « Publier les jeux » ›
+  *Run workflow*). Les autres branches ne publient rien ; elles lancent seulement les tests (`tests.yml`).
+- **Comment** (`.github/workflows/pages.yml`) : `npm install`, Playwright, **`npm test`** (si un test
+  échoue, rien n'est publié et l'ancienne version reste en ligne), puis **`npm run site`**
+  (`outils/construire-site.mjs`) : pour chaque dossier de `jeux/`, `npm run build`, puis copie de son
+  `webDir` (lu dans `capacitor.config.json`) dans `_site/<dossier>/`, plus une page d'accueil qui liste
+  les jeux (nom et `description` de `jeu.json`). Enfin `_site/` est envoyé à GitHub Pages.
+- **Un nouveau jeu** est publié automatiquement dès qu'il a son dossier dans `jeux/`, avec `jeu.json`,
+  `capacitor.config.json` (`webDir`) et des scripts `build` et `test`. L'adresse est le nom du dossier.
+- **Réglages GitHub, une seule fois** : *Settings* › *Pages* › *Source* : **GitHub Actions** ; branche par
+  défaut du dépôt : `main`. Sans la source « GitHub Actions », l'étape de publication échoue.
+- **Vérifier en local** avant d'envoyer : `npm run site`, puis servir `_site/` (par exemple
+  `npx --yes http-server _site -p 8080`) et ouvrir http://localhost:8080/<dossier>/.
+- **Mises à jour chez les testeurs** : Ça Roule et Max ont un service worker (jeu hors ligne). Ça Roule
+  change sa version de cache à chaque build ; pour Max, augmenter `VERSION` dans `sw.js` à chaque
+  publication qui change le jeu.
+- Les anciens sites (`smob-fr.github.io/melopop/`, `/ca-roule/`, `/max-oeil-de-jade/`) viennent des
+  anciens dépôts : ils ne bougent plus. Les archiver quand les testeurs ont la nouvelle adresse.
 
 ## Checklist de publication
 
