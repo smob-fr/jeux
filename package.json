@@ -1,0 +1,15 @@
+{
+  "name": "jeux-smob",
+  "private": true,
+  "description": "Jeux mobiles smob-fr : kit commun et un dossier par jeu",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node outils/tester-tout.mjs",
+    "verifier": "node outils/verifier-jeux.mjs",
+    "site": "node outils/construire-site.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

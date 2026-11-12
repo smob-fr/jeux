@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.log
+_site/
+# projets natifs générés par Capacitor (à versionner seulement si on y fait des modifications à la main)
+jeux/*/android/
+jeux/*/ios/
