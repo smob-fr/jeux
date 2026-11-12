@@ -2827,21 +2827,10 @@
    * Dans l'appli des stores (Capacitor + @capacitor-community/admob), c'est une vraie
    * vidéo récompensée AdMob. Sur le web, un écran de démonstration la remplace. */
   const PUB = {
-    // identifiant AdMob de la vidéo récompensée ; celui-ci est l'identifiant de TEST de Google,
-    // à remplacer par le tien dans la version des stores
-    adId: "ca-app-pub-3940256099942544/5224354917",
-    admob() { const P = window.Capacitor && window.Capacitor.Plugins; return P && P.AdMob; },
-    async regarder() {
-      const admob = this.admob();
-      if (admob) {
-        try {
-          await admob.prepareRewardVideoAd({ adId: this.adId });
-          const r = await admob.showRewardVideoAd();
-          return !!r;
-        } catch (_) { return false; }
-      }
-      return demoPub();
-    },
+    // Kit commun (window.Kit) : AdMob dans l'appli, écran de démonstration ci-dessous dans le navigateur.
+    // Identifiants AdMob : jeu.json.
+    admob() { return window.Kit && Kit.Ads.native; },
+    regarder() { return Kit.Ads.rewarded(); },
   };
   const PASSER_APRES = 10;    // « passer le niveau » : dernier recours, après 10 chutes
   const AMULETTE_APRES = 3;   // proposer l'amulette après 3 chutes
@@ -2854,6 +2843,20 @@
       const t = setInterval(() => { n--; el.textContent = n; if (n <= 0) { clearInterval(t); res(true); } }, 1000);
     });
   }
+  // Interstitielle simulée (navigateur) : le même écran, sans bouton, avec un compte à rebours.
+  function demoInterstitielle(secondes) {
+    return new Promise((res) => {
+      document.getElementById("pub-titre").textContent = "Publicité";
+      document.getElementById("pub-etiquette").textContent = "PUBLICITÉ · DÉMO";
+      document.getElementById("pub-video").hidden = false;
+      document.getElementById("pub-texte").textContent = "Dans l'appli des stores, une pub plein écran s'affiche ici de temps en temps entre deux niveaux.";
+      const el = document.getElementById("pub-compte"), lancer = document.getElementById("btn-pub-lancer");
+      let n = secondes; el.textContent = n; lancer.disabled = true; lancer.textContent = "Publicité…";
+      showOverlay("pub");
+      const t = setInterval(() => { n--; el.textContent = n; if (n <= 0) { clearInterval(t); res(true); } }, 1000);
+    });
+  }
+  if (window.Kit) Kit.Ads.simulateur.pub = ({ seconds, closable }) => (closable ? demoPub() : demoInterstitielle(seconds));
   let pubRetour = null;
   function ouvrirPubAmulette(retour) {
     pubBut = "amulette"; pubRetour = retour;
@@ -2991,36 +2994,52 @@
   });
   document.getElementById("btn-relance-non").addEventListener("click", refuserRelance);
 
-  /* Boutique : pièces → amulettes, vidéo, packs (vrais achats seulement dans l'appli des stores) */
-  const ACHAT = {
-    produits: {
-      "amulettes_10": { prix: "0,99 €", amulettes: 10, nom: "10 amulettes de jade" },
-      "pack_aventurier": { prix: "2,99 €", amulettes: 40, chapeau: true, nom: "Pack aventurier : 40 amulettes + chapeau doré" },
-    },
-    // l'appli native fournira window.MaxStore.purchase(id) → Promise<boolean> (achat intégré Google Play / App Store)
-    natif() { return window.MaxStore && typeof window.MaxStore.purchase === "function"; },
-    async acheter(id) {
-      if (this.natif()) { try { return !!(await window.MaxStore.purchase(id)); } catch (_) { return false; } }
-      return demoAchat(id);
-    },
-  };
+  /* Boutique : pièces → amulettes, vidéo, et offres payantes du kit commun (catalogue dans jeu.json).
+     Dans l'appli : RevenueCat. Dans le navigateur : l'écran « achat simulé » ci-dessous. */
   let achatRes = null;
-  function demoAchat(id) {
-    const pr = ACHAT.produits[id];
-    document.getElementById("achat-nom").textContent = pr.nom;
-    document.getElementById("achat-prix").textContent = pr.prix;
+  function demoAchat(p) {
+    document.getElementById("achat-nom").textContent = p.titre;
+    document.getElementById("achat-prix").textContent = p.prix;
     showOverlay("achat");
     return new Promise((res) => { achatRes = res; });
   }
+  Kit.Store.simulateur.paiement = demoAchat;
   document.getElementById("btn-achat-ok").addEventListener("click", () => { showOverlay("boutique"); achatRes && achatRes(true); achatRes = null; });
   document.getElementById("btn-achat-non").addEventListener("click", () => { showOverlay("boutique"); achatRes && achatRes(false); achatRes = null; });
+  function messageBoutique(msg) { const el = document.getElementById("boutique-retour"); if (el) { el.textContent = msg; el.hidden = false; } }
+  Kit.Boutique.configurer({
+    data: progress, enregistrer: saveProgress,
+    accorder: (p) => {
+      const g = p.contenu || {};
+      if (g.amulettes) progress.amulettes = (progress.amulettes || 0) + g.amulettes;
+      if (g.chapeau) progress.chapeauOr = true;
+    },
+    apres: (p) => {
+      sfx.pick(); majBoutique();
+      messageBoutique(p.type === "noads" ? "Merci ! Les publicités sont supprimées." : `Merci ! ${p.titre} : c'est dans ton sac.`);
+    },
+  });
   async function acheter(id) {
-    const pr = ACHAT.produits[id];
-    const ok = await ACHAT.acheter(id);
-    if (!ok) return;
-    if (pr.chapeau) progress.chapeauOr = true;
-    gagnerAmulettes(pr.amulettes, `Merci ! +${pr.amulettes} amulettes${pr.chapeau ? " et le chapeau doré" : ""}.`);
+    const p = Kit.Store.product(id);
+    if (!p) return;
+    const r = await Kit.Store.buy(p);
+    if (r.ok) Kit.Boutique.accorder(p);
+    else if (r.error) messageBoutique(r.error);
   }
+  async function restaurer(cible) {
+    const r = await Kit.Store.restore();
+    if (r.noAds) Kit.Boutique.surSansPub(true);
+    const msg = !r.ok ? "La restauration n'a pas abouti. Vérifie ta connexion et réessaie."
+      : r.noAds || progress.noAds ? "Ton achat « Sans pub » est bien actif sur cet appareil." : "Aucun achat à restaurer pour ce compte.";
+    const el = document.getElementById(cible); el.textContent = msg; el.hidden = false;
+  }
+  document.getElementById("offres-payantes").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-produit]");
+    if (b && !b.disabled) acheter(b.dataset.produit);
+  });
+  document.getElementById("btn-restaurer-boutique").addEventListener("click", () => restaurer("boutique-retour"));
+  document.getElementById("btn-restaurer").addEventListener("click", () => restaurer("options-msg"));
+  document.getElementById("btn-confidentialite").addEventListener("click", () => Kit.Ads.showPrivacyOptions());
   let boutiqueRetour = "options";
   function majBoutique() {
     const el = document.getElementById("boutique-solde");
@@ -3029,7 +3048,12 @@
     const ech = document.getElementById("btn-echange");
     ech.disabled = (progress.pieces || 0) < PIECES_PAR_AMULETTE;
     ech.textContent = `Échanger ${PIECES_PAR_AMULETTE} pièces → 1 amulette`;
-    document.getElementById("boutique-demo").hidden = ACHAT.natif();
+    document.getElementById("boutique-demo").hidden = Kit.Store.native;
+    const echap = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    document.getElementById("offres-payantes").innerHTML = Kit.Boutique.produits().map((p) => {
+      const achete = p.type === "noads" && progress.noAds;
+      return `<div class="offre"><p>${echap(p.titre)}<small>${echap(p.description)}</small></p><button class="bouton" type="button" data-produit="${p.id}" ${achete ? "disabled" : ""}>${achete ? "Acheté ✓" : echap(Kit.Store.priceOf(p))}</button></div>`;
+    }).join("");
   }
   function ouvrirBoutique() {
     boutiqueRetour = game.mode === "title" ? "options" : "pause";
@@ -3043,8 +3067,6 @@
     progress.pieces -= PIECES_PAR_AMULETTE; gagnerAmulettes(1, "Échange fait : +1 amulette.");
   });
   document.getElementById("btn-video-amulette").addEventListener("click", () => ouvrirPubAmulette("boutique"));
-  document.getElementById("btn-pack-10").addEventListener("click", () => acheter("amulettes_10"));
-  document.getElementById("btn-pack-aventurier").addEventListener("click", () => acheter("pack_aventurier"));
   document.getElementById("btn-utiliser-amulette").addEventListener("click", () => {
     if (activerAmulette()) { game.paused = false; showOverlay(null); }
   });
@@ -3079,7 +3101,15 @@
     showOverlay("recit");
     setTimeout(() => document.getElementById("btn-recit-suite").focus(), 50);
   }
-  document.getElementById("btn-recit-suite").addEventListener("click", () => { if (game.mode === "recit") { showOverlay(null); nextRoom(); } });
+  let suiteEnCours = false;
+  document.getElementById("btn-recit-suite").addEventListener("click", async () => {
+    if (game.mode !== "recit" || suiteEnCours) return;
+    suiteEnCours = true;
+    // interstitielle seulement si les règles du kit le permettent (à partir du niveau 4, une partie sur 3, 2 min)
+    await Kit.Ads.maybeInterstitial(R.index + 1);
+    suiteEnCours = false;
+    showOverlay(null); nextRoom();
+  });
 
   function goHome() {
     game.mode = "title"; game.paused = false; R = null;
@@ -4913,8 +4943,15 @@
     fin: document.getElementById("ecran-fin"),
     recit: document.getElementById("ecran-recit"),
   };
+  // Bannière publicitaire (kit) : seulement sur les menus, hors partie (jamais en jeu ni en pause).
+  // Pas sur l'accueil : en paysage, elle cacherait les boutons dessinés sur l'illustration.
+  const MENUS_AVEC_BANNIERE = new Set(["mondes", "options", "boutique", "stats", "avis", "quitter"]);
   function showOverlay(name) {
     for (const k in overlays) overlays[k].hidden = k !== name;
+    if (window.Kit) {
+      if (name && MENUS_AVEC_BANNIERE.has(name) && game.mode === "title") Kit.Ads.showBanner(); else Kit.Ads.hideBanner();
+      if (name === "options") document.getElementById("btn-confidentialite").hidden = !Kit.Ads.privacyOptionsRequired;
+    }
     document.body.classList.toggle("en-jeu", !name);
     if (heros) heros.hidden = name !== "titre";
   }
@@ -5234,5 +5271,7 @@
       return c.toDataURL("image/png");
     } finally { R = vraiR; ctx = vraiCtx; Object.assign(cam, vc); Object.assign(view, vv); }
   }
-  window.__temple = { mesurePerf, game, get room() { return R; }, LEVELS, input, pressed, startLevel, playFrom, progress, apercuNiveau, camera: () => updateCamera(true) };
+  Kit.Ads.init();
+  Kit.Store.init(Kit.Boutique.surSansPub);
+  window.__temple = { Kit, mesurePerf, game, get room() { return R; }, LEVELS, input, pressed, startLevel, playFrom, progress, apercuNiveau, camera: () => updateCamera(true) };
 })();

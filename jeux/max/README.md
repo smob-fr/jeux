@@ -1,6 +1,6 @@
 # Max et l'Œil de Jade
 
-**Jouer : https://smob-fr.github.io/max-oeil-de-jade/** (sur téléphone : « Ajouter à l'écran d'accueil » pour le plein écran)
+**Jouer : https://smob-fr.github.io/jeux/max/** (sur téléphone : « Ajouter à l'écran d'accueil » pour le plein écran)
 
 Jeu de plateforme pour mobile (en paysage), à mi-chemin entre l'exploration d'un *Rick Dangerous*
 (munitions limitées, dynamite, momies) et les pièges farceurs d'un *Level Devil*

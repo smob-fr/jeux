@@ -1,0 +1,35 @@
+{
+  "name": "max-oeil-de-jade",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Max et l'Œil de Jade : jeu de plateforme en paysage (Capacitor + kit commun)",
+  "scripts": {
+    "build": "node outils/construire.mjs",
+    "niveaux": "python3 outils/niveaux.py",
+    "serve": "npm run build && python3 -m http.server 8765",
+    "test": "npm run build && python3 outils/niveaux.py > /dev/null && git diff --exit-code --stat -- levels.js && node outils/tests/lancer.js",
+    "add:android": "npm run build && npx cap add android && npm run admob:config",
+    "add:ios": "npm run build && npx cap add ios && npm run admob:config",
+    "admob:config": "node ../../kit/outils/configure-admob.mjs",
+    "sync": "npm run build && npx cap sync",
+    "android": "npm run build && npx cap sync android && npx cap open android",
+    "ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "assets": "npx capacitor-assets generate --iconBackgroundColor '#0d0906' --splashBackgroundColor '#0d0906'"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.3.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/screen-orientation": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@revenuecat/purchases-capacitor": "^14.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0",
+    "playwright": "^1.48.0"
+  }
+}

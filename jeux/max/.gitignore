@@ -1,0 +1,5 @@
+node_modules/
+__pycache__/
+# générés par npm run build : kit commun installé, dossier web de l'appli (webDir)
+kit/
+www/

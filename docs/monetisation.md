@@ -87,5 +87,6 @@ l'interprète, le kit ne fait que le lui transmettre.
 |---|---|---|---|---|
 | Mélo Pop | `melopop_noads` | `melopop_pack_s` (6 bonus), `melopop_lives` (vies pleines) | `melopop_starter` (15 bonus + vies, une fois) | `melopop_pack_l` (50 bonus + vies) |
 | Ça Roule | `caroule_noads` | `caroule_pouces_s` (10 👍) | `caroule_decouverte` (30 👍 + 4 aides, une fois) | `caroule_pouces_l` (100 👍) |
+| Max et l'Œil de Jade | `maxjade_noads` | `maxjade_amulettes_10` | `maxjade_aventurier` (25 amulettes + chapeau, une fois) | `maxjade_amulettes_60` |
 
 Le tableau est complété à l'import de chaque jeu ; `npm run verifier` affiche le catalogue réel.

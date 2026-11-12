@@ -16,6 +16,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Special+Elite&family=Silkscreen:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<!-- kit commun du dépôt (pubs, achats), installé par npm run build -->
+<link rel="stylesheet" href="kit/kit.css">
 <style>
   /* Affiche de film d'aventure : torche, pierre, or vieilli. Une seule ambiance sombre et chaude,
      volontairement sans thème clair. Le jeu occupe tout l'écran, les menus sont posés dessus. */
@@ -124,6 +126,8 @@
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
     background: rgba(13,9,6,.88); overflow-y: auto; touch-action: pan-y;
   }
+  /* bannière publicitaire (kit) : seulement sur les menus hors partie ; les panneaux lui laissent la place */
+  body.kit-banniere .panneau, body.kit-banniere-simulee .panneau { bottom: var(--kit-banniere-h); }
   .carte { width: min(100%, 580px); display: grid; gap: 14px; }
   /* un panneau plus haut que l'écran reste défilable depuis le haut */
   .panneau:not(.accueil) { place-items: start center; }
@@ -322,7 +326,10 @@
       <button class="bouton discret" type="button" data-boutique>Boutique ✦</button>
       <button class="bouton discret" type="button" data-son>Son : activé</button>
       <button class="bouton discret" type="button" data-plein>Plein écran</button>
+      <button id="btn-restaurer" class="bouton discret" type="button">Restaurer mes achats</button>
+      <button id="btn-confidentialite" class="bouton discret" type="button" hidden>Confidentialité et publicité</button>
     </div>
+    <p class="astuce" id="options-msg" hidden></p>
     <label class="interrupteur" for="mode-testeur">
       <input type="checkbox" id="mode-testeur">
       <span>Mode testeur : les 100 niveaux sont débloqués</span>
@@ -448,9 +455,10 @@
     <div class="offres">
       <div class="offre"><p>Échanger tes pièces d'or<small>Ramasse-les dans les niveaux</small></p><button id="btn-echange" class="bouton discret" type="button">Échanger 30 pièces → 1 amulette</button></div>
       <div class="offre"><p>Regarder une vidéo<small>Gratuit</small></p><button id="btn-video-amulette" class="bouton discret" type="button">▶ +1 amulette</button></div>
-      <div class="offre"><p>10 amulettes de jade</p><button id="btn-pack-10" class="bouton" type="button">0,99 €</button></div>
-      <div class="offre"><p>Pack aventurier<small>40 amulettes + chapeau doré pour Max</small></p><button id="btn-pack-aventurier" class="bouton" type="button">2,99 €</button></div>
     </div>
+    <!-- offres payantes : catalogue de jeu.json, prix du store dans l'appli (kit commun) -->
+    <div class="offres" id="offres-payantes"></div>
+    <div class="actions"><button id="btn-restaurer-boutique" class="bouton discret" type="button">Restaurer mes achats</button></div>
     <p class="astuce" id="boutique-demo">Version de test : les achats et les vidéos sont simulés, rien n'est payé. Les vrais achats arriveront avec l'appli des stores.</p>
     <p class="astuce" id="boutique-retour" hidden></p>
   </div>
@@ -512,6 +520,7 @@
 </div>
 
 </div>
+<script src="kit/kit.js"></script>
 <script src="levels.js"></script>
 <script src="mondes.js"></script>
 <script src="game.js"></script>

@@ -1,0 +1,11 @@
+{
+  "appId": "fr.smob.maxjade",
+  "appName": "Max et l'Œil de Jade",
+  "webDir": "www",
+  "backgroundColor": "#0d0906",
+  "android": { "allowMixedContent": false, "backgroundColor": "#0d0906" },
+  "ios": { "contentInset": "never" },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 1000, "launchAutoHide": true, "backgroundColor": "#0d0906", "showSpinner": false, "androidScaleType": "CENTER_CROP" }
+  }
+}

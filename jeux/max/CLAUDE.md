@@ -1,20 +1,26 @@
-# Max et l'Œil de Jade — notes
+# Max et l'Œil de Jade : notes pour Claude Code
 
 Jeu de plateforme pour téléphone, à jouer en paysage. Il mélange l'exploration d'un *Rick Dangerous* (munitions limitées, dynamite, momies) et les pièges farceurs d'un *Level Devil* (le décor change sous les pieds).
 L'explorateur Max fait la course contre le professeur Archibald jusqu'à l'Œil de Jade, à travers 5 mondes de 20 niveaux.
 
-- Version en ligne : https://smob-fr.github.io/max-oeil-de-jade/ (publiée depuis la branche `main` de ce dépôt)
-- Ce dépôt est la source de référence. Copies :
-  - `smob-fr/suivi-piano`, dossier `jeu/` (branche `claude/rick-dangerous-level-devil-game-bllelk`) ;
-  - `smob-fr/jeux`, dossier `jeux/max-et-loeil-de-jade/` (branche `import/max-et-loeil-de-jade`).
+Lis d'abord le `CLAUDE.md` de la racine du dépôt (stack, kit, monétisation, conventions).
+
+- Identité et monétisation : `jeu.json` (id `maxjade`, appId `fr.smob.maxjade`).
+- Version en ligne : https://smob-fr.github.io/jeux/max/ (publiée depuis `main` du dépôt `smob-fr/jeux`).
+  L'ancienne adresse https://smob-fr.github.io/max-oeil-de-jade/ reste en ligne tant que l'ancien dépôt n'est pas archivé.
+- **Ce dossier (`smob-fr/jeux`, `jeux/max/`) est désormais la source de référence.** L'ancien dépôt
+  `smob-fr/max-oeil-de-jade` et ses copies (`smob-fr/suivi-piano`, dossier `jeu/` ; branche
+  `import/max-et-loeil-de-jade` de `smob-fr/jeux`) ne sont plus à jour.
 - Cadrage complet (mondes, niveaux, ennemis, histoire) : `CADRAGE.md`
 - Retours des testeurs et réponses : `RETOURS.md`
 - Présentation pour les joueurs : `README.md`
 
 ## Technique
 
-- **JavaScript pur, sans bibliothèque ni outil de construction.** Le jeu est un `<canvas>` 2D dessiné à la main, sans image de sprite. Max, les ennemis et les décors sont tracés en code.
-  - `index.html` : la page, le style, les menus et les commandes tactiles.
+- **JavaScript pur, sans bibliothèque.** Seule « construction » : `npm run build` installe le **kit commun**
+  (format global, `window.Kit`) dans `kit/` et copie le jeu dans `www/` (dossier web de l'appli et du site).
+  Les deux dossiers sont générés et ignorés par git. Le jeu est un `<canvas>` 2D dessiné à la main, sans image de sprite. Max, les ennemis et les décors sont tracés en code.
+  - `index.html` : la page, le style, les menus et les commandes tactiles. Charge `kit/kit.css` et `kit/kit.js` avant le jeu.
   - `game.js` (≈ 5 200 lignes) : le moteur. Il gère la physique, les collisions, les ennemis, les pièges, les 5 boss, le rendu, le son (synthétisé avec Web Audio) et la sauvegarde (`localStorage`).
   - `mondes.js` : la carte des 5 mondes, en SVG.
 - **Les niveaux sont générés par un script Python**, `outils/niveaux.py` (≈ 4 400 lignes). Il produit `levels.js`, qu'il ne faut jamais modifier à la main. Le script fait trois choses :
@@ -46,8 +52,10 @@ L'explorateur Max fait la course contre le professeur Archibald jusqu'à l'Œil 
 Il n'y a rien à compiler pour le moteur. Seuls les niveaux sont générés, et il faut Python 3 (testé avec 3.13), sans dépendance.
 
 ```sh
+npm run build                      # kit/ et www/ (à relancer après une modification du kit)
 python3 outils/niveaux.py          # réécrit levels.js et vérifie les 100 niveaux
-python3 -m http.server 8765        # puis ouvrir http://localhost:8765/
+python3 -m http.server 8765        # puis ouvrir http://localhost:8765/ (ou : npm run serve)
+npm test                           # build, régénère les niveaux (levels.js doit rester identique), puis les tests de bout en bout
 ```
 
 - Le script affiche « 100 niveaux écrits, … 0 erreur(s) ». Il se termine avec le code 1 si un niveau n'est pas faisable.
@@ -59,7 +67,7 @@ python3 -m http.server 8765        # puis ouvrir http://localhost:8765/
   - `mesurePerf(n)` fait avancer `n` images et en donne le temps moyen.
   - `room` donne l'état du niveau en cours.
   - `apercuNiveau(i)` donne une image du niveau entier.
-- **Tests automatiques** (`outils/tests/`, 16 tests, environ 4 minutes) : les robots qui battent les 5 boss, chaque mécanique des 5 mondes, les 100 niveaux, les plateformes mobiles et le saut tactile. Pour les lancer : une seule fois `cd outils/tests && npm install && npx playwright install chromium`, puis `node outils/tests/lancer.js` depuis la racine (ou `node outils/tests/lancer.js boss saut` pour n'en lancer qu'une partie ; code de sortie 1 en cas d'échec).
+- **Tests automatiques** (`outils/tests/`, 20 tests, environ 4 minutes) : les robots qui battent les 5 boss, chaque mécanique des 5 mondes, les 100 niveaux, les plateformes mobiles, le saut tactile, et le branchement sur le kit (`kit.test.js` : bannière, boutique, vidéo, interstitielle). Playwright vient de la racine du dépôt (`npm install` et `npx playwright install chromium` une seule fois, à la racine). Après `npm run build` : `node outils/tests/lancer.js` (ou `node outils/tests/lancer.js boss saut` pour n'en lancer qu'une partie ; code de sortie 1 en cas d'échec). `npm test` fait tout.
 
 ## Fonctionnalités
 
@@ -90,8 +98,25 @@ python3 -m http.server 8765        # puis ouvrir http://localhost:8765/
   - Des pièces d'or permettent d'obtenir des amulettes de jade (protection contre 2 coups).
   - Après une mort, le jeu propose « Repartir d'ici ? ».
   - Après beaucoup d'échecs, on peut passer le niveau.
-  - Les achats et les vidéos sponsorisées ne sont que des écrans de démonstration sur le web.
+  - Pubs et achats passent par le **kit commun** : AdMob et RevenueCat dans l'appli, écrans de démonstration de Max sur le web (voir « Monétisation » plus bas).
 - **Sauvegarde** de la progression. Chaque niveau a un identifiant stable (`inca-3`, `aby-12`…), et la sauvegarde suit les niveaux même si leur ordre change.
+
+## Monétisation (kit commun)
+
+- **Vidéo récompensée** : `PUB.regarder()` = `Kit.Ads.rewarded()`. Sur le web, `Kit.Ads.simulateur.pub` affiche l'écran `#ecran-pub` de Max (`demoPub`). Récompenses : passer le niveau (après 10 chutes), +1 amulette.
+- **Interstitielle** : au bouton « Suite » du récit de fin de niveau, `Kit.Ads.maybeInterstitial(numéro)` (règles du kit : à partir du niveau 4, une partie sur 3, 2 minutes). Simulée sur le web par `demoInterstitielle` (même écran, compte à rebours).
+- **Bannière** : seulement sur les menus hors partie (`MENUS_AVEC_BANNIERE` dans `showOverlay` : carte des mondes, options, boutique, statistiques, avis, quitter), jamais en jeu ni en pause. **Pas sur l'accueil** : en paysage, elle cacherait les boutons dessinés sur l'illustration. Les panneaux lui laissent la place (`bottom: var(--kit-banniere-h)`).
+- **Boutique** : échange de pièces et vidéo (gratuits), puis les offres payantes de `jeu.json` (`#offres-payantes`, construit par `majBoutique` avec les prix du store) : « Sans pub » 3,99 €, 10 amulettes 0,99 €, pack aventurier (25 amulettes + chapeau doré, une fois) 1,99 €, 60 amulettes 4,99 €. Achat : `Kit.Store.buy`, puis `Kit.Boutique.accorder` ; sur le web, l'écran `#ecran-achat` sert de paiement simulé. « Restaurer mes achats » dans la boutique et les options, « Confidentialité et publicité » dans les options si la loi l'exige.
+- Les fenêtres du kit ne sont pas utilisées : elles ne pivoteraient pas avec le jeu quand le téléphone est tenu droit (`body.rot`).
+- Sauvegarde `temple-progres` : `progress` reçoit aussi `noAds` et `bought` (kit). La clé ne suit pas la convention `<id>.v1` : ne pas la renommer, les joueurs perdraient leur progression.
+- Appli : le jeu se joue en paysage ; dans les projets natifs, verrouiller l'orientation (`android:screenOrientation="sensorLandscape"` dans `AndroidManifest.xml`, orientations paysage seulement dans Xcode) ou utiliser `@capacitor/screen-orientation`.
+
+## Écarts avec les conventions communes (à décider avec le propriétaire)
+
+- **Prix** : l'ancien « Pack aventurier » coûtait 2,99 € (40 amulettes + chapeau), hors de la grille 0,99/1,99/4,99 €. Il passe à 1,99 € (25 amulettes + chapeau, une seule fois), et un coffre de 60 amulettes à 4,99 € est ajouté.
+- **Pas de vies, de bonus ni de cadeau du jour** : remplacés par les amulettes, les pièces, « Repartir d'ici ? » et l'aide automatique. C'est permis.
+- **Pas de rappels (notifications)** ni de tutoriel guidé avec main animée.
+- **Réglages** : l'écran Options n'a ni interrupteur de musique (il n'y a que des bruitages) ni « Effacer ma progression ».
 
 ## État d'avancement
 
@@ -114,8 +139,8 @@ python3 -m http.server 8765        # puis ouvrir http://localhost:8765/
 - **Confirmer sur un vrai téléphone** que le bouton SAUT ne rate plus aucun appui, et que le jeu reste fluide dans les mondes 4 et 5.
 - **Écran de fin du jeu** : il ne montre pas encore l'Œil de Jade et la fin de l'histoire (Max et Archibald ensemble). Pour l'instant, la fin passe par le récit du dernier niveau.
 - **Musique** : il n'y a que des bruitages synthétisés. Le cadrage prévoit une musique par monde.
-- **Version des stores** (appli) : vrais achats intégrés et vraies vidéos sponsorisées, à brancher. Sur le web, ce sont des écrans de démonstration.
-- **Tests automatiques** : lancer `outils/tests/` en intégration continue, à chaque envoi sur GitHub.
+- **Version des stores** (appli) : pubs et achats sont branchés par le kit, avec des identifiants de test (`jeu.json`). Restent les vrais identifiants, les produits dans les stores, le verrouillage en paysage et l'essai sur téléphone (checklist de `docs/publication.md`).
+- ~~Tests automatiques en intégration continue~~ : fait, par le workflow `tests.yml` du dépôt commun.
 - **Nettoyage**
   - `niveaux.py` contient encore les fonctions des anciens niveaux provisoires (`acte1` à `acte10`). Elles servent seulement à reprendre les anciennes sauvegardes.
   - `game.js` mériterait d'être découpé par monde.
