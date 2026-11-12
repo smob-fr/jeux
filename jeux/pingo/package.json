@@ -1,0 +1,14 @@
+{
+  "name": "pingo-glisse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pingo Glisse : prototype de jeu de glisse (pas encore branché sur le kit commun)",
+  "scripts": {
+    "build": "node -e \"const f=require('fs');f.rmSync('www',{recursive:true,force:true});f.mkdirSync('www');f.copyFileSync('index.html','www/index.html');console.log('www/ prêt')\"",
+    "serve": "npm run build && npx --yes http-server www -p 8080 -c-1",
+    "test": "npm run build && node tests/e2e.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

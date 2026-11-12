@@ -1,0 +1,8 @@
+{
+  "appId": "fr.smob.pingo",
+  "appName": "Pingo Glisse",
+  "webDir": "www",
+  "backgroundColor": "#0b2340",
+  "android": { "allowMixedContent": false, "backgroundColor": "#0b2340" },
+  "ios": { "contentInset": "never" }
+}

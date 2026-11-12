@@ -1,0 +1,24 @@
+{
+  "id": "pingo",
+  "nom": "Pingo Glisse",
+  "version": "0.1.0",
+  "statut": "prototype",
+  "description": "Prototype : un pingouin glisse sur des collines enneigées, la banquise fond derrière lui.",
+  "admob": {
+    "test": true,
+    "android": {
+      "appli": "ca-app-pub-3940256099942544~3347511713",
+      "banniere": "ca-app-pub-3940256099942544/9214589741",
+      "interstitielle": "ca-app-pub-3940256099942544/1033173712",
+      "recompensee": "ca-app-pub-3940256099942544/5224354917"
+    },
+    "ios": {
+      "appli": "ca-app-pub-3940256099942544~1458002511",
+      "banniere": "ca-app-pub-3940256099942544/2435281174",
+      "interstitielle": "ca-app-pub-3940256099942544/4411468910",
+      "recompensee": "ca-app-pub-3940256099942544/1712485313"
+    }
+  },
+  "revenuecat": { "android": "", "ios": "", "droitSansPub": "no_ads" },
+  "produits": []
+}

@@ -28,3 +28,7 @@ Voir `jeux/ca-roule/docs/ROADMAP.md`.
 
 Mondes futurs envisagés dans `jeux/max/CADRAGE.md` : pyramides, île aux pirates, forêt hantée, train
 fou, banquise, laboratoire d'Archibald.
+
+## Pingo Glisse (prototype)
+
+Pistes pour en faire un jeu complet (monétisation, missions, cosmétiques) : `jeux/pingo/CLAUDE.md`.
