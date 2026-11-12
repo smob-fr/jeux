@@ -1,0 +1,22 @@
+{
+  "name": "caroule",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ça Roule : jeu mobile de puzzle de parking (1000 niveaux Course + 50 énigmes Casse-tête)",
+  "scripts": {
+    "build": "node tools/build.js",
+    "verify": "node tests/verify-levels.js",
+    "test:e2e": "node tests/e2e-run-touch.js && node tests/e2e-puzzle-touch.js && node tests/e2e-puzzle-mouse.js && node tests/e2e-levels-sheet.js",
+    "puzzles:search": "node tools/gen_puzzles.js 1 300 25",
+    "puzzles:select": "node tools/select_pz.js",
+    "screenshot": "node tools/screenshot.js",
+    "verify:daily": "node tests/verify-daily.js",
+    "daily:search": "node tools/gen_daily.js 1 1200 30",
+    "daily:select": "node tools/select_daily.js",
+    "verify:course": "node tests/verify-course.js",
+    "course:gen": "node tools/gen_course.js 1 75 8 && node tools/gen_course.js merge"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}
