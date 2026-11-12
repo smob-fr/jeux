@@ -6,8 +6,13 @@ const ok = (c, m) => { if (!c) { console.error('ÉCHEC : ' + m); process.exitCod
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.addInitScript(() => { if (!sessionStorage.getItem('ok')) { localStorage.setItem('caroule.v1', JSON.stringify({ crv: 1, level: 1, max: 1, test: true, seen: {}, mode: 'run', boost: { n: 3, row: 0, got: {} } })); sessionStorage.setItem('ok', '1'); } });
-  await p.goto('file://' + require('path').resolve(__dirname, '../dist/index.html')); await p.waitForTimeout(600);
+  /* sauvegarde de départ, seulement au premier chargement (le navigateur est neuf) : le rechargement final garde les achats */
+  await p.addInitScript(() => { if (!localStorage.getItem('caroule.v1')) localStorage.setItem('caroule.v1', JSON.stringify({ crv: 1, level: 1, max: 1, test: true, seen: {}, mode: 'run', boost: { n: 3, row: 0, got: {} } })); });
+  /* servi en HTTP : en file://, le stockage local n'est pas garanti d'un chargement à l'autre */
+  const fs = require('fs'), page = fs.readFileSync(require('path').resolve(__dirname, '../dist/index.html'));
+  const srv = require('http').createServer((q, r) => { r.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); r.end(page); });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  await p.goto('http://127.0.0.1:' + srv.address().port + '/'); await p.waitForTimeout(600);
   const banniere = () => p.evaluate(() => document.body.classList.contains('kit-banniere-simulee'));
   const save = () => p.evaluate(() => JSON.parse(localStorage.getItem('caroule.v1')));
 
@@ -49,5 +54,5 @@ const ok = (c, m) => { if (!c) { console.error('ÉCHEC : ' + m); process.exitCod
   await p.reload(); await p.waitForTimeout(600);
   ok(!(await banniere()), 'plus de bannière après « Sans pub »'); console.log('accueil après « Sans pub » : bannière', await banniere());
   console.log(errs); ok(!errs.length, 'erreurs : ' + errs);
-  await b.close();
+  await b.close(); srv.close();
 })().catch(e => { console.error(e); process.exitCode = 1; });
