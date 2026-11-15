@@ -11,7 +11,9 @@ clé publique du projet (`phc_…`) est dans le `jeu.json` de chaque jeu, rubriq
   les événements par lots (`/batch/`), toutes les 8 secondes ou quand il passe en arrière-plan.
 - Jamais de nom, d'e-mail, de position, ni d'identifiant publicitaire.
 - Chaque événement porte : `jeu` (`melopop`, `caroule`, `maxjade`, `pingo`), `version`, `build`,
-  `platform` (`app`, `web-installed`, `web`), `lang`, `sw` et `sh` (taille d'écran).
+  `platform` (`app`, `web-installed`, `web`), `lang`, `sw` et `sh` (taille d'écran), et pour l'onglet
+  *Web analytics* : `$session_id` (UUID v7 ; nouvelle session après 30 minutes en arrière-plan),
+  `$current_url`, `$host`, `$pathname` (`/jeux/melopop/`…).
 - **Le joueur peut couper les statistiques** : Réglages › Statistiques anonymes (Mélo Pop), pause
   (Ça Roule), Options (Max), lien sous « Glisser ! » (Pingo). Un dernier `setting_change { stats: false }`
   part, puis plus rien.
@@ -23,6 +25,7 @@ clé publique du projet (`phc_…`) est dans le `jeu.json` de chaque jeu, rubriq
 
 | Événement | Quand | Propriétés |
 |---|---|---|
+| `$pageview` | lancement du jeu, et retour après plus de 30 min d'absence | `$referrer`, `title` (pour *Web analytics*) |
 | `session_start` | lancement du jeu | propres au jeu (progression, record…) |
 | `level_start` | début d'un niveau | `mode`, `level`, + infos du jeu |
 | `level_win` | niveau réussi | `ms` (durée active, hors arrière-plan), compteurs de la tentative, `fails`, + infos |
@@ -52,8 +55,32 @@ clé publique du projet (`phc_…`) est dans le `jeu.json` de chaque jeu, rubriq
 - **Pingo Glisse** : `session_start { best }`, `run_start { run, best }`,
   `run_end { run, m, fish, flips, turbos, record, ms }`.
 
+## Séparer les jeux
+
+Les quatre jeux envoient au **même projet PostHog** : on peut les comparer, et on n'a qu'un tableau de
+bord à suivre. Chaque jeu se reconnaît de deux façons :
+
+- **Propriété `jeu`** sur tous les événements (`melopop`, `caroule`, `maxjade`, `pingo`) : c'est la
+  bonne méthode partout, y compris dans les applis (où l'adresse est `localhost`).
+- **Adresse de la page** dans la version web : `/jeux/melopop/`, `/jeux/ca-roule/`, `/jeux/max/`, `/jeux/pingo/`.
+
+Dans PostHog :
+
+- **Web analytics** : le tableau *Paths* donne déjà un chiffre par jeu. Pour n'en voir qu'un :
+  *Filters* › *Event property* › `jeu` › *equals* › `melopop` (ou *Path name* contient `/jeux/melopop/`).
+- **Un graphique** (*Product analytics* › *New insight*) : *Breakdown by* › `jeu` pour une courbe par jeu,
+  ou *Filters* › `jeu = maxjade` pour un seul jeu.
+- **Un tableau de bord par jeu** : *Dashboards* › *New dashboard* « Max », y ajouter ses graphiques, puis
+  *Edit filters* en haut du tableau de bord › `jeu = maxjade` : le filtre s'applique à tous les graphiques.
+  Pour le jeu suivant : *Duplicate dashboard*, puis changer le filtre.
+- **Séparer complètement** (un projet PostHog par jeu) reste possible : créer un projet dans PostHog et
+  mettre sa clé `phc_…` dans le `jeu.json` du jeu concerné. On perd alors la vue d'ensemble, et le nombre
+  de projets dépend de l'offre PostHog.
+
 ## Lire les données dans PostHog
 
+- **Activity** (menu de gauche) : les événements en direct, pour vérifier que tout arrive.
+- **Web analytics** : visiteurs, sessions, durée, pages (une par jeu) ; alimenté par `$pageview` et `$session_id`.
 - Filtrer par jeu : propriété d'événement **`jeu`** = `melopop`, `caroule`, `maxjade` ou `pingo`.
 - Exclure les versions de développement : `build` différent de `dev`.
 - Exemples utiles pendant les tests :

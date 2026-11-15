@@ -7,7 +7,9 @@
 // et intercepte lui-même le réseau.
 //
 // Chaque événement porte : jeu (id), version, build, plateforme (app, web-installed, web), langue,
-// taille d'écran. Événements communs : session_start, level_start, level_win, level_fail, level_quit
+// taille d'écran, et, pour l'onglet « Web analytics » de PostHog, $session_id (UUID v7, nouvelle session
+// après 30 min en arrière-plan), $current_url, $host et $pathname. Un $pageview part au lancement et
+// au début de chaque nouvelle session. Événements communs : session_start, level_start, level_win, level_fail, level_quit
 // (raison : home, restart, switch, closed…), et, envoyés par le kit lui-même : ad_reward,
 // ad_interstitial, purchase, restore. Chaque jeu ajoute les siens avec Stats.track().
 import { config } from "./config.js";
@@ -23,6 +25,24 @@ const pilote = () => !!globalThis.navigator?.webdriver && !globalThis.KIT_STATS_
 const autonome = () => { try { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; } catch (e) { return false; } };
 const attKey = () => `${config().id}.att`;
 const stockage = () => { try { return globalThis.localStorage || null; } catch (e) { return null; } };
+export const SESSION_MAX_PAUSE = 30 * 60e3; // au-delà de 30 min en arrière-plan : nouvelle session
+
+/** UUID v7 (horodaté), le format de $session_id attendu par PostHog. */
+export function uuidv7(ms = Date.now()) {
+  const h = ms.toString(16).padStart(12, "0").slice(-12);
+  const r = Array.from({ length: 20 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  const variante = "89ab"[Math.floor(Math.random() * 4)];
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-7${r.slice(0, 3)}-${variante}${r.slice(3, 6)}-${r.slice(6, 18)}`;
+}
+let session = "", cache = 0;
+const page = () => {
+  const l = globalThis.location;
+  return l ? { $current_url: l.href, $host: l.host, $pathname: l.pathname } : {};
+};
+function nouvelleSession() {
+  session = uuidv7();
+  Stats.track("$pageview", { $referrer: globalThis.document?.referrer || "$direct", title: globalThis.document?.title || config().nom });
+}
 
 function base() {
   const n = globalThis.navigator || {}, s = globalThis.screen || {};
@@ -31,6 +51,7 @@ function base() {
     jeu: config().id, version: config().version, build,
     platform: estNatif() ? "app" : autonome() ? "web-installed" : "web",
     lang: n.language, sw: s.width, sh: s.height,
+    $session_id: session, ...page(),
   };
 }
 function send(beacon) {
@@ -76,11 +97,13 @@ export const Stats = {
       const ancien = JSON.parse(stockage()?.getItem(attKey()) || "null");
       if (ancien) { A = ancien; A.t0 = 0; quitter("closed"); }
     } catch (err) { /* ignoré */ }
+    nouvelleSession();
     if (!branche && globalThis.document) {
       branche = true;
       document.addEventListener("visibilitychange", () => {
         if (A) { if (document.hidden) { A.acc = duree(); A.t0 = 0; garder(); } else A.t0 = Date.now(); }
-        if (document.hidden) send(true);
+        if (document.hidden) { cache = Date.now(); send(true); }
+        else if (cache && Date.now() - cache > SESSION_MAX_PAUSE) nouvelleSession(); // retour après une longue absence
       });
       globalThis.addEventListener?.("pagehide", () => { if (A) { A.acc = duree(); A.t0 = 0; garder(); } send(true); });
     }
@@ -122,5 +145,7 @@ export const Stats = {
 
   /** Envoie tout de suite ce qui attend. */
   flush() { send(); },
-  _reinitialiser() { data = null; queue = []; clearTimeout(timer); timer = null; A = null; build = "dev"; },
+  /** Identifiant de la session en cours ($session_id). */
+  get session() { return session; },
+  _reinitialiser() { session = ""; cache = 0; data = null; queue = []; clearTimeout(timer); timer = null; A = null; build = "dev"; },
 };

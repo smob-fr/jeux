@@ -2499,7 +2499,7 @@ return { estNatif, plateforme, plugin };
 })();
 
 /* ---- stats.js ---- */
-const { Stats } = (() => {
+const { SESSION_MAX_PAUSE, uuidv7, Stats } = (() => {
 // Kit — statistiques anonymes (PostHog, hébergement UE), extraites de Ça Roule.
 // Aucune donnée personnelle : un identifiant aléatoire par appareil, pas de cookie, pas de script
 // externe (simple envoi groupé vers l'API /batch/), pas de profil (`$process_person_profile: false`).
@@ -2509,7 +2509,9 @@ const { Stats } = (() => {
 // et intercepte lui-même le réseau.
 //
 // Chaque événement porte : jeu (id), version, build, plateforme (app, web-installed, web), langue,
-// taille d'écran. Événements communs : session_start, level_start, level_win, level_fail, level_quit
+// taille d'écran, et, pour l'onglet « Web analytics » de PostHog, $session_id (UUID v7, nouvelle session
+// après 30 min en arrière-plan), $current_url, $host et $pathname. Un $pageview part au lancement et
+// au début de chaque nouvelle session. Événements communs : session_start, level_start, level_win, level_fail, level_quit
 // (raison : home, restart, switch, closed…), et, envoyés par le kit lui-même : ad_reward,
 // ad_interstitial, purchase, restore. Chaque jeu ajoute les siens avec Stats.track().
 
@@ -2524,6 +2526,24 @@ const pilote = () => !!globalThis.navigator?.webdriver && !globalThis.KIT_STATS_
 const autonome = () => { try { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; } catch (e) { return false; } };
 const attKey = () => `${config().id}.att`;
 const stockage = () => { try { return globalThis.localStorage || null; } catch (e) { return null; } };
+const SESSION_MAX_PAUSE = 30 * 60e3; // au-delà de 30 min en arrière-plan : nouvelle session
+
+/** UUID v7 (horodaté), le format de $session_id attendu par PostHog. */
+function uuidv7(ms = Date.now()) {
+  const h = ms.toString(16).padStart(12, "0").slice(-12);
+  const r = Array.from({ length: 20 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  const variante = "89ab"[Math.floor(Math.random() * 4)];
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-7${r.slice(0, 3)}-${variante}${r.slice(3, 6)}-${r.slice(6, 18)}`;
+}
+let session = "", cache = 0;
+const page = () => {
+  const l = globalThis.location;
+  return l ? { $current_url: l.href, $host: l.host, $pathname: l.pathname } : {};
+};
+function nouvelleSession() {
+  session = uuidv7();
+  Stats.track("$pageview", { $referrer: globalThis.document?.referrer || "$direct", title: globalThis.document?.title || config().nom });
+}
 
 function base() {
   const n = globalThis.navigator || {}, s = globalThis.screen || {};
@@ -2532,6 +2552,7 @@ function base() {
     jeu: config().id, version: config().version, build,
     platform: estNatif() ? "app" : autonome() ? "web-installed" : "web",
     lang: n.language, sw: s.width, sh: s.height,
+    $session_id: session, ...page(),
   };
 }
 function send(beacon) {
@@ -2577,11 +2598,13 @@ const Stats = {
       const ancien = JSON.parse(stockage()?.getItem(attKey()) || "null");
       if (ancien) { A = ancien; A.t0 = 0; quitter("closed"); }
     } catch (err) { /* ignoré */ }
+    nouvelleSession();
     if (!branche && globalThis.document) {
       branche = true;
       document.addEventListener("visibilitychange", () => {
         if (A) { if (document.hidden) { A.acc = duree(); A.t0 = 0; garder(); } else A.t0 = Date.now(); }
-        if (document.hidden) send(true);
+        if (document.hidden) { cache = Date.now(); send(true); }
+        else if (cache && Date.now() - cache > SESSION_MAX_PAUSE) nouvelleSession(); // retour après une longue absence
       });
       globalThis.addEventListener?.("pagehide", () => { if (A) { A.acc = duree(); A.t0 = 0; garder(); } send(true); });
     }
@@ -2623,10 +2646,12 @@ const Stats = {
 
   /** Envoie tout de suite ce qui attend. */
   flush() { send(); },
-  _reinitialiser() { data = null; queue = []; clearTimeout(timer); timer = null; A = null; build = "dev"; },
+  /** Identifiant de la session en cours ($session_id). */
+  get session() { return session; },
+  _reinitialiser() { session = ""; cache = 0; data = null; queue = []; clearTimeout(timer); timer = null; A = null; build = "dev"; },
 };
 
-return { Stats };
+return { SESSION_MAX_PAUSE, uuidv7, Stats };
 })();
 
 /* ---- ads.js ---- */
@@ -3822,7 +3847,7 @@ return { VIES_MAX, RECHARGE_MS, creerVies };
 })();
 
 configurer({"id":"caroule","nom":"Ça Roule","version":"0.1.0","description":"Le casse-tête du parking : 75 niveaux de Course, 50 énigmes et un défi expert chaque jour.","statistiques":{"posthog":"phc_tYQQxGun3aD3jRuJY8dvLmE2STkP62vTh5jNDJuQ4kXr","hote":"https://eu.i.posthog.com"},"admob":{"test":true,"android":{"appli":"ca-app-pub-3940256099942544~3347511713","banniere":"ca-app-pub-3940256099942544/9214589741","interstitielle":"ca-app-pub-3940256099942544/1033173712","recompensee":"ca-app-pub-3940256099942544/5224354917"},"ios":{"appli":"ca-app-pub-3940256099942544~1458002511","banniere":"ca-app-pub-3940256099942544/2435281174","interstitielle":"ca-app-pub-3940256099942544/4411468910","recompensee":"ca-app-pub-3940256099942544/1712485313"}},"interstitielle":{"toutesLes":3,"delaiMin":120,"aPartirDuNiveau":4},"revenuecat":{"android":"","ios":"","droitSansPub":"no_ads"},"produits":[{"id":"caroule_noads","type":"noads","titre":"Sans pub","prix":"3,99 €","art":"noads","badge":"Le plus demandé","description":"Fini la bannière et les pubs entre les niveaux. Les vidéos restent disponibles pour gagner des 👍 et des styles exclusifs."},{"id":"caroule_pouces_s","type":"consumable","titre":"Poignée de 👍","prix":"0,99 €","art":"s","description":"10 coups de pouce pour les aides du Casse-tête et de la Course.","contenu":{"boost":10}},{"id":"caroule_decouverte","type":"once","titre":"Pack découverte","prix":"1,99 €","art":"m","badge":"Offre unique","description":"30 coups de pouce, 2 « +3 coups » et 2 « Marche arrière » en réserve.","contenu":{"boost":30,"fuel":2,"reverse":2}},{"id":"caroule_pouces_l","type":"consumable","titre":"Coffre de 👍","prix":"4,99 €","art":"l","badge":"Meilleure affaire","description":"100 coups de pouce : de quoi finir toutes les énigmes en douceur.","contenu":{"boost":100}}]});
-window.Kit = Object.freeze({ configurer, config, estNatif, plateforme, plugin, Stats, REGLES_INTERSTITIELLE, Ads, creerInventaire, Store, SCALE, tone, bell, vibrate, Sound, fenetre, demander, informer, Ecrans, Boutique, aujourdhui, creerCadeau, svg, ICONS, HEURES_CALMES, CANAL, horsHeuresCalmes, rappelsStandard, Notify, appliquerReglages, ouvrirReglages, proposerRappels, creerSauvegarde, Tutoriel, VIES_MAX, RECHARGE_MS, creerVies });
+window.Kit = Object.freeze({ configurer, config, estNatif, plateforme, plugin, SESSION_MAX_PAUSE, uuidv7, Stats, REGLES_INTERSTITIELLE, Ads, creerInventaire, Store, SCALE, tone, bell, vibrate, Sound, fenetre, demander, informer, Ecrans, Boutique, aujourdhui, creerCadeau, svg, ICONS, HEURES_CALMES, CANAL, horsHeuresCalmes, rappelsStandard, Notify, appliquerReglages, ouvrirReglages, proposerRappels, creerSauvegarde, Tutoriel, VIES_MAX, RECHARGE_MS, creerVies });
 })();
 </script>
 <script>
@@ -4136,7 +4161,7 @@ window.Kit = Object.freeze({ configurer, config, estNatif, plateforme, plugin, S
      setting_change, home_choice, boost_earned, boost_spent, purchase, shop_open ; le kit ajoute ad_reward,
      ad_interstitial, purchase et restore, et les propriétés jeu et version. Tentative en cours gardée
      dans caroule.att (abandons par fermeture de l'appli comptés au lancement suivant). */
-  const BUILD = "2026-11-15-f222833";
+  const BUILD = "2026-11-15-cf583b8";
   Kit.Stats.init({ data: S, enregistrer: save, build: BUILD });
   const Stats = {
     track: (event, props) => Kit.Stats.track(event, props),

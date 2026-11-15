@@ -10,7 +10,8 @@ const memoire = new Map();
 globalThis.localStorage = { getItem: (k) => memoire.get(k) ?? null, setItem: (k, v) => memoire.set(k, String(v)), removeItem: (k) => memoire.delete(k) };
 let envois;
 globalThis.fetch = async (url, o) => { envois.push({ url, corps: JSON.parse(o.body) }); return { ok: true }; };
-const evenements = () => envois.flatMap((e) => e.corps.batch);
+const tous = () => envois.flatMap((e) => e.corps.batch);
+const evenements = () => tous().filter((e) => e.event !== "$pageview"); // les tests regardent leurs propres événements
 const JEU = { id: "essai", nom: "Essai", version: "1.2", statistiques: { posthog: "phc_essai123" }, admob: { test: true }, produits: [{ id: "essai_lot", type: "consumable", titre: "Lot", prix: "0,99 €", description: "…" }] };
 
 beforeEach(() => {
@@ -126,4 +127,26 @@ test("le kit compte lui-même les pubs et les achats", async () => {
   assert.deepEqual(evenements().map((e) => [e.event, e.properties.place ?? e.properties.product ?? e.properties.level ?? e.properties.ok]),
     [["ad_reward", "vie"], ["purchase", "essai_lot"], ["restore", true]],
     "pas d'interstitielle juste après une vidéo récompensée");
+});
+
+test("Web analytics : $pageview au lancement, $session_id (UUID v7) et adresse sur chaque événement", () => {
+  globalThis.location = { href: "https://smob-fr.github.io/jeux/essai/", host: "smob-fr.github.io", pathname: "/jeux/essai/" };
+  try {
+    Stats.init({ data: {} });
+    Stats.track("level_start", { level: 1 });
+    Stats.flush();
+    const [pv, ls] = tous();
+    assert.equal(pv.event, "$pageview");
+    assert.match(pv.properties.$session_id, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    assert.equal(ls.properties.$session_id, pv.properties.$session_id, "même session");
+    assert.deepEqual([ls.properties.$pathname, ls.properties.$host, ls.properties.jeu], ["/jeux/essai/", "smob-fr.github.io", "essai"]);
+    assert.equal(Stats.session, pv.properties.$session_id);
+  } finally { delete globalThis.location; }
+});
+
+test("UUID v7 : horodaté (les sessions se trient dans le temps)", async () => {
+  const { uuidv7 } = await import("../stats.js");
+  const a = uuidv7(1700000000000), b = uuidv7(1700000000001);
+  assert.equal(a.slice(0, 13), "018bcfe5-6800");
+  assert.ok(a < b);
 });
