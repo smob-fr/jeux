@@ -1,3 +1,4 @@
 node_modules/
-# généré par npm run build
+# générés par npm run build : kit commun installé, dossier web
+kit/
 www/

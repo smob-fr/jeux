@@ -70,7 +70,10 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
 @keyframes toast { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -80%) scale(1); } }
 @keyframes blink { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { .toast.show { animation-duration: .6s; } #melt-bar.danger { animation: none; } }
+.stats-btn { margin-top: 6px; border: 0; background: none; color: var(--frost); font: 600 12px var(--display); letter-spacing: .04em; text-decoration: underline; cursor: pointer; }
 </style>
+<!-- kit commun du dépôt (statistiques anonymes), installé par npm run build ; facultatif -->
+<script src="kit/kit.js"></script>
 </head>
 <body>
 
@@ -98,6 +101,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
     </div>
     <button class="btn" id="play" type="button">Glisser !</button>
     <p class="proto">Prototype</p>
+    <button class="stats-btn" id="stats-btn" type="button" hidden></button>
   </div>
 </div>
 
@@ -179,9 +183,25 @@ function curvAt(x) {
 }
 
 /* ---------------- État de la partie ---------------- */
+/* ---------------- Statistiques anonymes (kit commun, PostHog) ----------------
+   Identifiant aléatoire, pas de cookie, désactivables sur l'écran de départ. Sans le kit
+   (index.html ouvert directement), le jeu marche pareil, sans statistiques. */
+const K = window.Kit;
+const statsSave = K ? K.creerSauvegarde({ cle: "pingo.v1", defauts: () => ({ uid: "", stats: true }) }) : null;
+const stats = (event, props) => { if (K) K.Stats.track(event, props); };
+let runs = 0, turbos = 0, runT0 = 0;
+if (K) {
+  K.Stats.init({ data: statsSave.data, enregistrer: () => statsSave.enregistrer(), build: K.config().version });
+  const btn = $("stats-btn");
+  const maj = () => { btn.hidden = !K.Stats.disponible; btn.textContent = "Statistiques anonymes : " + (statsSave.data.stats !== false ? "activées" : "coupées"); };
+  btn.onclick = () => { K.Stats.activer(statsSave.data.stats === false); maj(); };
+  maj();
+}
+
 let state = "menu";
 let p, meltX, meltV, fishes, flips, fishCount, turbo, turboT, cam, particles, time, best = 0, hold = false, pressT = 0;
 try { best = +localStorage.getItem("pingo.best") || 0; } catch (e) { /* stockage indisponible */ }
+stats("session_start", { best });
 
 function newGame() {
   resetHills();
@@ -281,7 +301,7 @@ function step(dt) {
       f.got = true; fishCount++; turbo++; meltX -= 50;
       Sound.ding(1 + (turbo % FISH_FOR_TURBO) * 0.06);
       for (let k = 0; k < 8; k++) particles.push({ x: f.x, y: f.y, vx: (Math.random() - .5) * 300, vy: (Math.random() - .2) * 300, life: .6, r: 3, c: "gold" });
-      if (turbo >= FISH_FOR_TURBO) { turbo = 0; turboT = 2.6; meltX -= 450; toast("Turbo ! 🚀"); Sound.turbo(); }
+      if (turbo >= FISH_FOR_TURBO) { turbos++; turbo = 0; turboT = 2.6; meltX -= 450; toast("Turbo ! 🚀"); Sound.turbo(); }
     }
   }
   fishes = fishes.filter((f) => f.x > p.x - 1500);
@@ -551,6 +571,7 @@ function gameOver() {
   const m = Math.floor(Math.max(0, p.x) / PX_PER_M);
   const record = m > best;
   if (record) { best = m; try { localStorage.setItem("pingo.best", String(best)); } catch (e) { /* ok */ } }
+  stats("run_end", { run: runs, m, fish: fishCount, flips, turbos, record, ms: Math.round(performance.now() - runT0) });
   $("s-dist").textContent = m.toLocaleString("fr-FR");
   $("s-fish").textContent = fishCount;
   $("s-flip").textContent = flips;
@@ -560,6 +581,8 @@ function gameOver() {
 
 function start() {
   newGame();
+  runs++; turbos = 0; runT0 = performance.now();
+  stats("run_start", { run: runs, best });
   $("start").hidden = true; $("over").hidden = true; $("hud").hidden = false;
   state = "play";
   Sound.unlock();

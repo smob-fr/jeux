@@ -8,6 +8,7 @@
 // `prix` n'est qu'une valeur de repli : dans l'appli, c'est le prix du store (devise du joueur) qui s'affiche.
 import { config } from "./config.js";
 import { estNatif, plateforme, plugin } from "./plateforme.js";
+import { Stats } from "./stats.js";
 
 let ready = false;
 let storeProducts = {}; // id → produit renvoyé par le store
@@ -82,6 +83,11 @@ export const Store = {
    * C'est à l'appelant d'accorder ce qui a été acheté (voir boutique.js).
    */
   async buy(p) {
+    const res = await this._buy(p);
+    Stats.track("purchase", { product: p.id, type: p.type, ok: !!res.ok, cancelled: !!res.cancelled });
+    return res;
+  },
+  async _buy(p) {
     if (!ready) return { ok: false, error: "La boutique n'est pas disponible pour le moment." };
     if (!estNatif()) {
       const ok = await this.simulateur.paiement({ ...p, prix: this.priceOf(p) });
@@ -102,6 +108,11 @@ export const Store = {
 
   /** Restaure « Sans pub » (obligatoire pour l'App Store, utile après un changement de téléphone). */
   async restore() {
+    const res = await this._restore();
+    Stats.track("restore", { ok: !!res.ok, noAds: !!res.noAds });
+    return res;
+  },
+  async _restore() {
     if (!estNatif()) return { ok: true, noAds: false };
     if (!ready) return { ok: false };
     try {

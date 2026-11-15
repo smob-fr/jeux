@@ -16,11 +16,8 @@ t = t.replace('/*COURSE*/[]', () => fs.readFileSync(path.join(root, 'data/course
   if (!t.includes('/*KIT*/') || !t.includes('/*KIT_CSS*/')) { console.error('Marqueurs /*KIT*/ ou /*KIT_CSS*/ absents du template'); process.exit(1); }
   t = t.replace('/*KIT*/', () => kitJs).replace('/*KIT_CSS*/', () => kitCss);
 }
-/* clé publique PostHog (phc_…) : variable d'environnement POSTHOG_KEY, sinon stats.config.json ; vide = statistiques désactivées */
-let statsKey = process.env.POSTHOG_KEY || '';
-try { if (!statsKey) statsKey = JSON.parse(fs.readFileSync(path.join(root, 'stats.config.json'), 'utf8')).posthogKey || ''; } catch (e) { /* pas de configuration */ }
-if (statsKey && !/^phc_[A-Za-z0-9]+$/.test(statsKey)) { console.error('Clé PostHog invalide'); process.exit(1); }
-t = t.replace("/*STATS_KEY*/''", () => JSON.stringify(statsKey));
+/* statistiques : clé publique PostHog (phc_…) dans jeu.json › statistiques.posthog, lue par le kit ; vide = désactivées */
+const statsKey = (JSON.parse(fs.readFileSync(path.join(root, 'jeu.json'), 'utf8')).statistiques || {}).posthog || '';
 t = t.replace("/*BUILD*/'dev'", () => JSON.stringify(new Date().toISOString().slice(0, 10) + '-' + require('crypto').createHash('sha1').update(t).digest('hex').slice(0, 7)));
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist/index.html'), t);

@@ -32,6 +32,7 @@ Les copies installées sont générées : les ignorer dans git, ne jamais les mo
 | `ads.js` | `Ads`, `REGLES_INTERSTITIELLE` | AdMob, consentement UMP, ATT, règles de fréquence, simulation |
 | `store.js` | `Store` | RevenueCat, catalogue `jeu.json › produits`, « Sans pub », restauration, simulation |
 | `notify.js` | `Notify`, `rappelsStandard`, `horsHeuresCalmes` | notifications locales, heures calmes |
+| `stats.js` | `Stats` | statistiques anonymes PostHog : `init`, `track`, tentative de niveau (`debut`, `compter`, `gagne`, `echec`, `quitter`), `activer` (réglage) |
 | `sound.js` | `Sound`, `tone`, `bell`, `vibrate`, `SCALE` | Web Audio : sons d'interface, musique, vibrations |
 | `sauvegarde.js` | `creerSauvegarde` | `localStorage`, valeurs par défaut, sauvegarde illisible |
 | `vies.js` | `creerVies`, `VIES_MAX`, `RECHARGE_MS` | 5 vies, 1 toutes les 20 min |

@@ -2769,6 +2769,8 @@
     progress.deaths++;
     statOf(R.index).morts++;
     saveProgress();
+    Kit.Stats.compter("morts");
+    Kit.Stats.track("death", { level: R.index + 1, id: R.def.id, x: Math.round(p.x / 16), y: Math.round(p.y / 16), why: msg || "" });
     sfx.death();
     R.shake = 6;
     burst(p.x + 5, p.y + 7, C.jacket, 12, 2.2);
@@ -2788,6 +2790,7 @@
 
   function startLevel(i) {
     game.level = i;
+    Kit.Stats.debut("level", i + 1, { id: LEVELS[i].id, morts: 0, relances: 0, amulettes: 0, restarts: 0 });
     game.cpLevel = -1;   // nouvelle tentative depuis le menu : on repart du début
     statOf(i).essais++; saveProgress();
     const am = LEVELS[i].ammo || [6, 1];
@@ -2804,7 +2807,7 @@
 
   function restartRoom(fromDeath) {
     if (!R) return;
-    if (!fromDeath && game.mode === "play") { game.deathsByRoom[R.index]++; progress.deaths++; saveProgress(); }
+    if (!fromDeath && game.mode === "play") { game.deathsByRoom[R.index]++; progress.deaths++; saveProgress(); Kit.Stats.compter("restarts"); }
     const am = LEVELS[game.level].ammo || [6, 1];
     game.ammo = { tnt: am[1] };
     game.coins = 0;
@@ -2830,7 +2833,7 @@
     // Kit commun (window.Kit) : AdMob dans l'appli, écran de démonstration ci-dessous dans le navigateur.
     // Identifiants AdMob : jeu.json.
     admob() { return window.Kit && Kit.Ads.native; },
-    regarder() { return Kit.Ads.rewarded(); },
+    regarder(place) { return Kit.Ads.rewarded(place); },
   };
   const PASSER_APRES = 10;    // « passer le niveau » : dernier recours, après 10 chutes
   const AMULETTE_APRES = 3;   // proposer l'amulette après 3 chutes
@@ -2886,7 +2889,7 @@
   async function lancerPub() {
     if (pubEnCours) return;
     pubEnCours = true;
-    const ok = await PUB.regarder();
+    const ok = await PUB.regarder(pubBut);
     pubEnCours = false;
     if (ok && pubBut === "amulette") { gagnerAmulettes(1, "Merci ! +1 amulette de jade."); showOverlay(pubRetour); return; }
     if (!ok) {
@@ -2898,6 +2901,8 @@
   }
   function passerNiveau() {
     const i = game.level;
+    Kit.Stats.track("level_skip", { level: i + 1, id: LEVELS[i].id });
+    Kit.Stats.quitter("skip");
     statOf(i).passe = 1;
     progress.unlocked = Math.max(progress.unlocked, Math.min(LEVELS.length - 1, i + 1));
     progress.passes = (progress.passes || 0) + 1;
@@ -2931,6 +2936,7 @@
     if (!R || !R.player || !R.player.alive) return false;
     if ((progress.amulettes || 0) <= 0) return false;
     progress.amulettes--; saveProgress();
+    Kit.Stats.compter("amulettes");
     R.player.shield = 2;
     burst(R.player.x + 5, R.player.y + 7, C.jade, 18, 1.8); sfx.spring();
     R.hint = { text: "Amulette de jade : elle absorbe 2 coups (pas les chutes dans le vide).", t: 0, dur: 180 };
@@ -2968,6 +2974,7 @@
   }
   function relancer() {
     clearInterval(relanceT);
+    Kit.Stats.compter("relances");
     const p = R.player;
     p.alive = true; p.x = p.safe.x; p.y = p.safe.y; p.vx = 0; p.vy = 0;
     p.shield = 2; p.invuln = 90; R.hat = null;
@@ -2988,7 +2995,7 @@
   document.getElementById("btn-relance-video").addEventListener("click", async () => {
     clearInterval(relanceT);
     const b = document.getElementById("btn-relance-video"); b.disabled = true; b.textContent = "Vidéo en cours…";
-    const ok = await PUB.regarder();
+    const ok = await PUB.regarder("relance");
     b.disabled = false; b.textContent = "▶ Oui, avec une vidéo";
     if (ok) relancer(); else refuserRelance();
   });
@@ -3088,6 +3095,7 @@
   // Fin de niveau : Archibald raconte la suite de l'histoire (on a le temps de lire)
   function montrerRecit() {
     game.mode = "recit";
+    Kit.Stats.gagne({ pieces: game.coins, morts: game.deathsByRoom[R.index] });
     releaseAll();
     const d = R.def, nm = window.MondesUI ? MondesUI.NIV : 20;
     document.getElementById("recit-surtitre").textContent = `Niveau ${(R.index % nm) + 1} terminé · ${d.name}`;
@@ -3112,6 +3120,7 @@
   });
 
   function goHome() {
+    if (R) Kit.Stats.quitter("home");
     game.mode = "title"; game.paused = false; R = null;
     releaseAll();
     resize();
@@ -5138,6 +5147,7 @@
   }
   function quitterVersMonde() {
     const i = R ? R.index : game.level;
+    if (R) Kit.Stats.quitter("menu");
     game.mode = "title"; game.paused = false; R = null;
     releaseAll(); resize();
     MondesUI.afficherMonde(MondesUI.mondeDe(i));
@@ -5273,5 +5283,18 @@
   }
   Kit.Ads.init();
   Kit.Store.init(Kit.Boutique.surSansPub);
-  window.__temple = { Kit, mesurePerf, game, get room() { return R; }, LEVELS, input, pressed, startLevel, playFrom, progress, apercuNiveau, camera: () => updateCamera(true) };
+  // Statistiques anonymes (PostHog, clé dans jeu.json). Identifiant et réglage dans une sauvegarde à part :
+  // progress.stats contient déjà les statistiques locales par niveau.
+  const statsSauvegarde = Kit.creerSauvegarde({ cle: "maxjade.stats", defauts: () => ({ uid: "", stats: true }) });
+  Kit.Stats.init({ data: statsSauvegarde.data, enregistrer: () => statsSauvegarde.enregistrer(), build: Kit.config().version });
+  Kit.Stats.track("session_start", { unlocked: progress.unlocked + 1, deaths: progress.deaths, amulettes: progress.amulettes, noAds: !!progress.noAds, returning: progress.unlocked > 0 });
+  const majStatsBouton = () => {
+    const b = document.getElementById("btn-statistiques");
+    b.hidden = !Kit.Stats.disponible;
+    b.textContent = statsSauvegarde.data.stats !== false ? "Statistiques anonymes : activées" : "Statistiques anonymes : coupées";
+    b.setAttribute("aria-pressed", String(statsSauvegarde.data.stats !== false));
+  };
+  document.getElementById("btn-statistiques").addEventListener("click", () => { Kit.Stats.activer(statsSauvegarde.data.stats === false); majStatsBouton(); });
+  majStatsBouton();
+  window.__temple = { Kit, mesurePerf, game, get room() { return R; }, LEVELS, input, pressed, startLevel, playFrom, goHome, progress, apercuNiveau, camera: () => updateCamera(true) };
 })();

@@ -4,7 +4,7 @@
 // (avec confirmation), numéro de version.
 //
 // La sauvegarde garde data.sound, data.music, data.haptics (booléens) et data.notif
-// (true, false, ou null tant que les rappels n'ont pas été proposés).
+// (true, false, ou null tant que les rappels n'ont pas été proposés), et data.stats (statistiques anonymes).
 import { Ads } from "./ads.js";
 import { Notify } from "./notify.js";
 import { Sound } from "./sound.js";
@@ -12,6 +12,7 @@ import { config } from "./config.js";
 import { ICONS } from "./icones.js";
 import { fenetre } from "./fenetres.js";
 import { Boutique } from "./boutique.js";
+import { Stats } from "./stats.js";
 
 /** Applique les réglages enregistrés au moteur de son (au démarrage). */
 export function appliquerReglages(data) {
@@ -38,6 +39,7 @@ export function ouvrirReglages(o) {
       ${interrupteur("music", "Musique", "music", Sound.music)}
       ${interrupteur("haptics", "Vibrations", "vibrate", Sound.haptics)}
       ${Notify.supported ? interrupteur("notif", "Rappels", "bell", data.notif === true) : ""}
+      ${Stats.disponible ? interrupteur("stats", "Statistiques anonymes", "chart", data.stats !== false) : ""}
     </div>
     ${enJeu || !actions.tutoriel ? "" : `<button class="kit-btn" data-act="tuto">Revoir le tutoriel</button>`}
     ${enJeu ? "" : `<button class="kit-btn" data-act="restore">Restaurer mes achats</button>`}
@@ -60,6 +62,7 @@ export function ouvrirReglages(o) {
         } else rouvrir();
       })();
     }
+    if (act === "stats") { Stats.activer(data.stats === false); rouvrir(); }
     if (act === "tuto") actions.tutoriel();
     if (act === "restore") Boutique.restaurer();
     if (act === "help") actions.aide();

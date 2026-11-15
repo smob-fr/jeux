@@ -48,19 +48,23 @@ modification à la main.
    développeur dans les deux stores. Une seule ligne par compte AdMob, commune à tous les jeux.
 6. **Achats intégrés** : produits créés dans les deux stores, droit `no_ads`, clés RevenueCat dans
    `jeu.json` (voir `docs/monetisation.md`).
-7. `appId` définitif dans `capacitor.config.json` (`fr.smob.<id>`) ; numéro de version augmenté dans
+7. **Statistiques** : la politique de confidentialité mentionne les statistiques anonymes (modèle dans
+   celle de Mélo Pop) ; dans Google Play « Sécurité des données », déclarer « Interactions avec
+   l'appli » (analytique, non associées à l'identité). Dans App Store Connect, « Usage Data › Product
+   Interaction », non lié à l'utilisateur, pas de suivi.
+8. `appId` définitif dans `capacitor.config.json` (`fr.smob.<id>`) ; numéro de version augmenté dans
    `package.json` et `jeu.json`.
-8. **Icône et écran de démarrage** : `assets/icon-only.png` 1024×1024, `assets/splash.png`
+9. **Icône et écran de démarrage** : `assets/icon-only.png` 1024×1024, `assets/splash.png`
    2732×2732, puis `npm run assets`.
-9. **Politique de confidentialité** : partir de celle de Mélo Pop (`jeux/melopop/www/privacy.html`),
+10. **Politique de confidentialité** : partir de celle de Mélo Pop (`jeux/melopop/www/privacy.html`),
    compléter les zones surlignées (nom, e-mail, date), la publier (GitHub Pages) et indiquer son
    adresse dans les deux stores.
-10. **Google Play Console** (25 $ une fois) : formulaire « Sécurité des données » (identifiant
+11. **Google Play Console** (25 $ une fois) : formulaire « Sécurité des données » (identifiant
     publicitaire collecté), case « Contient des annonces », classification du contenu, et test fermé
     avec 12 testeurs pendant 14 jours pour un nouveau compte personnel.
-11. **App Store Connect** (99 $ par an) : « App Privacy » (Identifiers › Device ID, utilisé pour la
+12. **App Store Connect** (99 $ par an) : « App Privacy » (Identifiers › Device ID, utilisé pour la
     publicité tierce), classification d'âge, capacité In-App Purchase dans Xcode.
-12. **Fiche des stores** : titre, textes en français, captures d'écran (téléphone et tablette).
-13. **Essai sur un vrai téléphone** : pubs de test, consentement, achat avec un compte testeur,
+13. **Fiche des stores** : titre, textes en français, captures d'écran (téléphone et tablette).
+14. **Essai sur un vrai téléphone** : pubs de test, consentement, achat avec un compte testeur,
     restauration après réinstallation, notifications (et leur absence la nuit), mode avion, retour
     au premier plan.

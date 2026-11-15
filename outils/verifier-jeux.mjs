@@ -73,6 +73,12 @@ export function verifierJeu(dossier) {
   if (inter.delaiMin !== undefined && inter.delaiMin < 120) err("interstitielle.delaiMin < 120 s : plus agressif que la règle commune");
   if (inter.aPartirDuNiveau !== undefined && inter.aPartirDuNiveau < 4) err("interstitielle.aPartirDuNiveau < 4 : plus agressif que la règle commune");
 
+  // Statistiques (PostHog)
+  const st = jeu.statistiques;
+  if (!st?.posthog) warn("pas de statistiques (jeu.json › statistiques.posthog)");
+  else if (!/^phc_[A-Za-z0-9]+$/.test(st.posthog)) err("jeu.json › statistiques.posthog doit être une clé publique phc_…");
+  if (st?.hote && !/^https:\/\/(eu|us)\.i\.posthog\.com$/.test(st.hote)) err("jeu.json › statistiques.hote : https://eu.i.posthog.com attendu");
+
   // RevenueCat
   const rc = jeu.revenuecat;
   if (!rc) monet("jeu.json › revenuecat manquant");

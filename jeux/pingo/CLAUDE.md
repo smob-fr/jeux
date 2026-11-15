@@ -13,7 +13,7 @@ par le rattraper. Le but : aller le plus loin possible. Lis d'abord le `CLAUDE.m
 Depuis `jeux/pingo/` :
 
 ```bash
-npm run build   # copie index.html dans www/ (webDir, généré)
+npm run build   # installe le kit dans kit/, puis copie index.html et le kit dans www/ (webDir, générés)
 npm run serve   # build, puis http://localhost:8080
 npm test        # build, puis le test de fumée (tests/e2e.mjs, ~40 s)
 ```
@@ -54,7 +54,11 @@ fichier. Seule dépendance externe : la police Baloo 2 (Google Fonts), facultati
 ## État d'avancement
 
 - Prototype jouable dans le navigateur, une seule partie infinie, record local.
-- Pas encore branché sur le kit : ni pubs, ni boutique, ni réglages, ni sauvegarde commune.
+- Kit commun installé au build (`kit/`, format global, comme Max) **pour les statistiques seulement** :
+  `session_start`, `run_start`, `run_end` (mètres, poissons, saltos, turbos, record, durée), identifiant et
+  réglage dans `pingo.v1`, lien « Statistiques anonymes » sous « Glisser ! ». Sans le kit (`index.html`
+  ouvert directement), le jeu marche pareil, sans statistiques.
+- Pas encore de pubs, de boutique ni de réglages.
 - Pas de tutoriel guidé (seulement le panneau « comment jouer » au départ), pas de vibrations, pas de
   musique, pas de réglage du son.
 

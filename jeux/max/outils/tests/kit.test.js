@@ -82,4 +82,35 @@ module.exports = [
       return { ok: JSON.stringify(vues) === JSON.stringify(attendu), detail: "pubs : " + vues.map((x) => (x ? "oui" : "non")).join(" ") };
     },
   },
+  {
+    nom: "Kit : statistiques anonymes (niveau, chute, abandon), puis désactivation dans les options",
+    async run(page) {
+      const envois = [];
+      await page.route("https://eu.i.posthog.com/**", async (r) => { envois.push(JSON.parse(r.request().postData())); await r.fulfill({ status: 200, body: "{}" }); });
+      await page.evaluate(() => { window.KIT_STATS_TEST = true; __temple.progress.tester = true; __temple.playFrom(0); });
+      await page.waitForTimeout(200);
+      // une chute : Max tombe dans le vide
+      await page.evaluate(() => { const R = __temple.room; __temple.game.mode = "play"; R.player.y = R.tiles.length * 16 + 40; for (let k = 0; k < 5; k++) __temple.mesurePerf(1); });
+      await page.evaluate(() => { __temple.playFrom(1); Kit.Stats.flush(); });
+      await page.waitForTimeout(300);
+      const ev = envois.flatMap((e) => e.batch), noms = ev.map((e) => e.event);
+      const debut = ev.find((e) => e.event === "level_start"), quitte = ev.find((e) => e.event === "level_quit"), chute = ev.find((e) => e.event === "death");
+      const v = [
+        ["clé PostHog de jeu.json", envois.length > 0 && envois.every((e) => /^phc_/.test(e.api_key))],
+        ["level_start niveau 1 avec son identifiant", debut && debut.properties.jeu === "maxjade" && debut.properties.level === 1 && !!debut.properties.id],
+        ["death avec la position de la chute", chute && Number.isFinite(chute.properties.x)],
+        ["level_quit « switch » avec le nombre de chutes", quitte && quitte.properties.reason === "switch" && quitte.properties.morts >= 1],
+        ["progress.stats (statistiques locales par niveau) intact", await page.evaluate(() => typeof __temple.progress.stats === "object")],
+      ];
+      // le joueur coupe les statistiques dans les options
+      await page.evaluate(() => __temple.goHome());
+      await page.click("#btn-options"); await page.click("#btn-statistiques");
+      v.push(["bouton « coupées »", (await page.textContent("#btn-statistiques")).includes("coupées")]);
+      const avant = envois.length;
+      await page.evaluate(() => { Kit.Stats.track("essai"); Kit.Stats.flush(); }); await page.waitForTimeout(300);
+      v.push(["plus aucun envoi", !envois.slice(avant).flatMap((e) => e.batch).some((e) => e.event === "essai")]);
+      const rates = v.filter(([, ok]) => !ok).map(([l]) => l);
+      return { ok: !rates.length, detail: (rates.length ? "ÉCHEC : " + rates.join(", ") + " — " : "") + noms.join(", ") };
+    },
+  },
 ];

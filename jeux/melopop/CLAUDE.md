@@ -34,7 +34,7 @@ www/js/levels.js         60 niveaux en 6 mondes
 www/js/fx.js             décor animé et particules (canvas)
 www/js/sons.js           sons propres au jeu (swap, match, special, boom), ajoutés au Sound du kit
 www/kit/                 GÉNÉRÉ par npm run build (kit/ de la racine + jeu.js) : ne jamais modifier
-tests/e2e.mjs            10 tests de bout en bout (Playwright)
+tests/e2e.mjs            11 tests de bout en bout (Playwright), dont les statistiques (requêtes interceptées)
 assets/                  sources de l'icône et de l'écran de démarrage
 ```
 
@@ -77,7 +77,11 @@ projecteur, main, bulle), pubs (`Ads`), achats (`Store`), icônes (`ICONS`).
   Ne jamais renommer ces champs.
 - `lastGift` est désormais la date **locale** (avant : date UTC). Effet unique : un joueur peut
   rouvrir un cadeau le jour du changement. Sans conséquence.
-- Objet de débogage : `window.__melopop` (`state`, `startLevel`, `save`, `levelCard`), utilisé par les tests.
+- Objet de débogage : `window.__melopop` (`state`, `startLevel`, `save`, `levelCard`, `Stats`), utilisé par les tests.
+- **Statistiques anonymes** (`Kit.Stats`, PostHog) : `Stats.init` au démarrage (champs `uid` et `stats` de la
+  sauvegarde), `Stats.debut` dans `startLevel`, `gagne` dans `onWin`, `echec` dans `checkEnd`, `quitter` à
+  l'abandon (pause, « Abandonner »), plus `booster_used`, `tutorial_done`, `gift_open`, `shop_open`,
+  `reminder_set`. Réglage « Statistiques anonymes » dans les réglages du kit. Liste : `docs/statistiques.md`.
 - Les boutons des fenêtres utilisent les classes du kit (`kit-btn big`, `ghost`, `reward`,
   `danger-fill`, `petit`), les titres `kit-surtitre`, les rangées `kit-rang`.
 - Le bouton « Jouer » et plusieurs éléments sont animés en continu : dans les tests Playwright,

@@ -287,6 +287,35 @@ const TESTS = [
     },
   },
   {
+    nom: "Statistiques anonymes : session, niveau, abandon, puis désactivation dans les réglages",
+    save: DEJA_JOUE,
+    stats: true,
+    async run(page) {
+      await accueil(page);
+      await jouerNiveau(page, 0);
+      await clic(page, "#pause");
+      await bouton(page, "quit");
+      await page.waitForSelector("#map.active");
+      await page.evaluate(() => window.__melopop.Stats.flush());
+      await page.waitForTimeout(300);
+      const ev = page.envois.flatMap((e) => e.batch);
+      const noms = ev.map((e) => e.event);
+      verifier(page.envois.every((e) => /^phc_/.test(e.api_key)), "clé PostHog de jeu.json attendue");
+      for (const n of ["session_start", "level_start", "level_quit"]) verifier(noms.includes(n), `événement ${n} attendu (reçus : ${noms.join(", ")})`);
+      const q = ev.find((e) => e.event === "level_quit").properties;
+      verifier(q.jeu === "melopop" && q.level === 1 && q.reason === "pause" && q.ms > 0, "level_quit : jeu, niveau 1, raison « pause », durée");
+      // le joueur coupe les statistiques
+      await clic(page, "#map-settings");
+      await bouton(page, "stats");
+      verifier((await lireSauvegarde(page)).stats === false, "réglage enregistré");
+      const avant = page.envois.length;
+      await page.evaluate(() => { window.__melopop.Stats.track("essai"); window.__melopop.Stats.flush(); });
+      await page.waitForTimeout(300);
+      verifier(!page.envois.slice(avant).flatMap((e) => e.batch).some((e) => e.event === "essai"), "plus aucun envoi une fois coupées");
+      return noms.join(", ");
+    },
+  },
+  {
     nom: "Mobile : l'accueil tient dans l'écran d'un téléphone, au doigt",
     mobile: true,
     save: DEJA_JOUE,
@@ -315,6 +344,12 @@ for (const t of choisis) {
     : { viewport: { width: 430, height: 900 } });
   if (t.save) await ctx.addInitScript(([k, v]) => { if (!sessionStorage.getItem("prepare")) { localStorage.setItem(k, v); sessionStorage.setItem("prepare", "1"); } }, [CLE, JSON.stringify(t.save)]);
   const page = await ctx.newPage();
+  // Statistiques : envoi autorisé pour ce test, mais intercepté (rien ne part vers PostHog).
+  page.envois = [];
+  if (t.stats) {
+    await ctx.addInitScript(() => { window.KIT_STATS_TEST = true; });
+    await page.route("https://eu.i.posthog.com/**", async (r) => { page.envois.push(JSON.parse(r.request().postData())); await r.fulfill({ status: 200, body: "{}" }); });
+  }
   const erreurs = [];
   page.on("pageerror", (e) => erreurs.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") erreurs.push(m.text()); });

@@ -107,6 +107,11 @@ npm test                           # build, régénère les niveaux (levels.js d
 - **Interstitielle** : au bouton « Suite » du récit de fin de niveau, `Kit.Ads.maybeInterstitial(numéro)` (règles du kit : à partir du niveau 4, une partie sur 3, 2 minutes). Simulée sur le web par `demoInterstitielle` (même écran, compte à rebours).
 - **Bannière** : seulement sur les menus hors partie (`MENUS_AVEC_BANNIERE` dans `showOverlay` : carte des mondes, options, boutique, statistiques, avis, quitter), jamais en jeu ni en pause. **Pas sur l'accueil** : en paysage, elle cacherait les boutons dessinés sur l'illustration. Les panneaux lui laissent la place (`bottom: var(--kit-banniere-h)`).
 - **Boutique** : échange de pièces et vidéo (gratuits), puis les offres payantes de `jeu.json` (`#offres-payantes`, construit par `majBoutique` avec les prix du store) : « Sans pub » 3,99 €, 10 amulettes 0,99 €, pack aventurier (25 amulettes + chapeau doré, une fois) 1,99 €, 60 amulettes 4,99 €. Achat : `Kit.Store.buy`, puis `Kit.Boutique.accorder` ; sur le web, l'écran `#ecran-achat` sert de paiement simulé. « Restaurer mes achats » dans la boutique et les options, « Confidentialité et publicité » dans les options si la loi l'exige.
+- **Statistiques anonymes** (`Kit.Stats`, PostHog) : `debut` dans `startLevel`, `death` (position de la chute
+  en cases) et compteur `morts` à chaque chute, `gagne` dans `montrerRecit`, `quitter` dans `goHome`,
+  `quitterVersMonde` et `passerNiveau` (`level_skip`), compteurs `relances`, `amulettes`, `restarts`.
+  Identifiant et réglage dans la sauvegarde à part `maxjade.stats` (`progress.stats` contient déjà les
+  statistiques locales par niveau). Bouton « Statistiques anonymes » dans les options. Liste : `docs/statistiques.md`.
 - Les fenêtres du kit ne sont pas utilisées : elles ne pivoteraient pas avec le jeu quand le téléphone est tenu droit (`body.rot`).
 - Sauvegarde `temple-progres` : `progress` reçoit aussi `noAds` et `bought` (kit). La clé ne suit pas la convention `<id>.v1` : ne pas la renommer, les joueurs perdraient leur progression.
 - Appli : le jeu se joue en paysage ; dans les projets natifs, verrouiller l'orientation (`android:screenOrientation="sensorLandscape"` dans `AndroidManifest.xml`, orientations paysage seulement dans Xcode) ou utiliser `@capacitor/screen-orientation`.

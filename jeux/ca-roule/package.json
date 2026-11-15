@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node tools/build.js",
     "verify": "node tests/verify-levels.js",
-    "test:e2e": "node tests/e2e-run-touch.js && node tests/e2e-puzzle-touch.js && node tests/e2e-puzzle-mouse.js && node tests/e2e-levels-sheet.js && node tests/e2e-kit.js",
+    "test:e2e": "node tests/e2e-run-touch.js && node tests/e2e-puzzle-touch.js && node tests/e2e-puzzle-mouse.js && node tests/e2e-levels-sheet.js && node tests/e2e-kit.js && node tests/e2e-stats.js",
     "puzzles:search": "node tools/gen_puzzles.js 1 300 25",
     "puzzles:select": "node tools/select_pz.js",
     "screenshot": "node tools/screenshot.js",

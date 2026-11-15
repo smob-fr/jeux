@@ -8,6 +8,7 @@
 // vidéos récompensées toujours au choix du joueur.
 import { config } from "./config.js";
 import { estNatif, plateforme, plugin } from "./plateforme.js";
+import { Stats } from "./stats.js";
 
 /** Règles de fréquence par défaut des interstitielles. Un jeu peut seulement les rendre plus douces. */
 export const REGLES_INTERSTITIELLE = { toutesLes: 3, delaiMin: 120, aPartirDuNiveau: 4 };
@@ -160,6 +161,7 @@ export const Ads = {
     if (gamesSinceAd < r.toutesLes || Date.now() - lastAdAt < r.delaiMin * 1000) return false;
     gamesSinceAd = 0;
     lastAdAt = Date.now();
+    Stats.track("ad_interstitial", { level: levelNumber });
     if (!estNatif()) { await this.simulateur.pub({ title: "Pub interstitielle", seconds: 3, closable: false }); return true; }
     if (!canRequestAds) return false;
     try { await AdMob().showInterstitial(); } catch (e) { /* pas encore chargée */ }
@@ -167,8 +169,8 @@ export const Ads = {
     return true;
   },
 
-  /** Pub récompensée. Résout `true` si le joueur l'a regardée jusqu'au bout. */
-  async rewarded() {
+  /** Pub récompensée. Résout `true` si le joueur l'a regardée jusqu'au bout. `place` : où (statistiques). */
+  async rewarded(place = "") {
     if (!ready) return false;
     let ok = false;
     if (!estNatif()) ok = await this.simulateur.pub({ title: "Pub récompensée", seconds: 5, closable: true });
@@ -177,6 +179,7 @@ export const Ads = {
       preload();
     }
     lastAdAt = Date.now(); // évite d'enchaîner avec une interstitielle
+    Stats.track("ad_reward", { place, completed: ok });
     return ok;
   },
 

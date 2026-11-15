@@ -3,6 +3,10 @@
   "nom": "Max et l'Œil de Jade",
   "version": "1.0.0",
   "description": "Plateforme en paysage : 5 mondes, 100 niveaux pleins de pièges farceurs, course contre le professeur Archibald.",
+  "statistiques": {
+    "posthog": "phc_tYQQxGun3aD3jRuJY8dvLmE2STkP62vTh5jNDJuQ4kXr",
+    "hote": "https://eu.i.posthog.com"
+  },
   "admob": {
     "test": true,
     "android": {
@@ -18,16 +22,54 @@
       "recompensee": "ca-app-pub-3940256099942544/1712485313"
     }
   },
-  "interstitielle": { "toutesLes": 3, "delaiMin": 120, "aPartirDuNiveau": 4 },
-  "revenuecat": { "android": "", "ios": "", "droitSansPub": "no_ads" },
+  "interstitielle": {
+    "toutesLes": 3,
+    "delaiMin": 120,
+    "aPartirDuNiveau": 4
+  },
+  "revenuecat": {
+    "android": "",
+    "ios": "",
+    "droitSansPub": "no_ads"
+  },
   "produits": [
-    { "id": "maxjade_noads", "type": "noads", "titre": "Sans pub", "prix": "3,99 €",
-      "description": "Plus de bannière ni de pub entre les niveaux. Les vidéos pour gagner des amulettes restent disponibles." },
-    { "id": "maxjade_amulettes_10", "type": "consumable", "titre": "10 amulettes de jade", "prix": "0,99 €",
-      "description": "Chaque amulette absorbe 2 coups.", "contenu": { "amulettes": 10 } },
-    { "id": "maxjade_aventurier", "type": "once", "titre": "Pack aventurier", "prix": "1,99 €",
-      "description": "25 amulettes et le chapeau doré pour Max. Offre unique.", "contenu": { "amulettes": 25, "chapeau": true } },
-    { "id": "maxjade_amulettes_60", "type": "consumable", "titre": "Coffre de 60 amulettes", "prix": "4,99 €",
-      "description": "De quoi traverser les 5 mondes sereinement.", "contenu": { "amulettes": 60 } }
+    {
+      "id": "maxjade_noads",
+      "type": "noads",
+      "titre": "Sans pub",
+      "prix": "3,99 €",
+      "description": "Plus de bannière ni de pub entre les niveaux. Les vidéos pour gagner des amulettes restent disponibles."
+    },
+    {
+      "id": "maxjade_amulettes_10",
+      "type": "consumable",
+      "titre": "10 amulettes de jade",
+      "prix": "0,99 €",
+      "description": "Chaque amulette absorbe 2 coups.",
+      "contenu": {
+        "amulettes": 10
+      }
+    },
+    {
+      "id": "maxjade_aventurier",
+      "type": "once",
+      "titre": "Pack aventurier",
+      "prix": "1,99 €",
+      "description": "25 amulettes et le chapeau doré pour Max. Offre unique.",
+      "contenu": {
+        "amulettes": 25,
+        "chapeau": true
+      }
+    },
+    {
+      "id": "maxjade_amulettes_60",
+      "type": "consumable",
+      "titre": "Coffre de 60 amulettes",
+      "prix": "4,99 €",
+      "description": "De quoi traverser les 5 mondes sereinement.",
+      "contenu": {
+        "amulettes": 60
+      }
+    }
   ]
 }

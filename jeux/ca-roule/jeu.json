@@ -3,6 +3,10 @@
   "nom": "Ça Roule",
   "version": "0.1.0",
   "description": "Le casse-tête du parking : 75 niveaux de Course, 50 énigmes et un défi expert chaque jour.",
+  "statistiques": {
+    "posthog": "phc_tYQQxGun3aD3jRuJY8dvLmE2STkP62vTh5jNDJuQ4kXr",
+    "hote": "https://eu.i.posthog.com"
+  },
   "admob": {
     "test": true,
     "android": {
@@ -18,19 +22,62 @@
       "recompensee": "ca-app-pub-3940256099942544/1712485313"
     }
   },
-  "interstitielle": { "toutesLes": 3, "delaiMin": 120, "aPartirDuNiveau": 4 },
-  "revenuecat": { "android": "", "ios": "", "droitSansPub": "no_ads" },
+  "interstitielle": {
+    "toutesLes": 3,
+    "delaiMin": 120,
+    "aPartirDuNiveau": 4
+  },
+  "revenuecat": {
+    "android": "",
+    "ios": "",
+    "droitSansPub": "no_ads"
+  },
   "produits": [
-    { "id": "caroule_noads", "type": "noads", "titre": "Sans pub", "prix": "3,99 €", "art": "noads", "badge": "Le plus demandé",
-      "description": "Fini la bannière et les pubs entre les niveaux. Les vidéos restent disponibles pour gagner des 👍 et des styles exclusifs." },
-    { "id": "caroule_pouces_s", "type": "consumable", "titre": "Poignée de 👍", "prix": "0,99 €", "art": "s",
+    {
+      "id": "caroule_noads",
+      "type": "noads",
+      "titre": "Sans pub",
+      "prix": "3,99 €",
+      "art": "noads",
+      "badge": "Le plus demandé",
+      "description": "Fini la bannière et les pubs entre les niveaux. Les vidéos restent disponibles pour gagner des 👍 et des styles exclusifs."
+    },
+    {
+      "id": "caroule_pouces_s",
+      "type": "consumable",
+      "titre": "Poignée de 👍",
+      "prix": "0,99 €",
+      "art": "s",
       "description": "10 coups de pouce pour les aides du Casse-tête et de la Course.",
-      "contenu": { "boost": 10 } },
-    { "id": "caroule_decouverte", "type": "once", "titre": "Pack découverte", "prix": "1,99 €", "art": "m", "badge": "Offre unique",
+      "contenu": {
+        "boost": 10
+      }
+    },
+    {
+      "id": "caroule_decouverte",
+      "type": "once",
+      "titre": "Pack découverte",
+      "prix": "1,99 €",
+      "art": "m",
+      "badge": "Offre unique",
       "description": "30 coups de pouce, 2 « +3 coups » et 2 « Marche arrière » en réserve.",
-      "contenu": { "boost": 30, "fuel": 2, "reverse": 2 } },
-    { "id": "caroule_pouces_l", "type": "consumable", "titre": "Coffre de 👍", "prix": "4,99 €", "art": "l", "badge": "Meilleure affaire",
+      "contenu": {
+        "boost": 30,
+        "fuel": 2,
+        "reverse": 2
+      }
+    },
+    {
+      "id": "caroule_pouces_l",
+      "type": "consumable",
+      "titre": "Coffre de 👍",
+      "prix": "4,99 €",
+      "art": "l",
+      "badge": "Meilleure affaire",
       "description": "100 coups de pouce : de quoi finir toutes les énigmes en douceur.",
-      "contenu": { "boost": 100 } }
+      "contenu": {
+        "boost": 100
+      }
+    }
   ]
 }

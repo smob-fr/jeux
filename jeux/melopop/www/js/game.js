@@ -4,7 +4,7 @@ import { FX, PALETTE } from "./fx.js";
 import { Sound } from "./sons.js";
 import JEU from "../kit/jeu.js";
 import {
-  configurer, Ads, Store, Notify, rappelsStandard, ICONS,
+  configurer, Ads, Store, Stats, Notify, rappelsStandard, ICONS,
   creerSauvegarde, creerVies, creerInventaire, creerCadeau, aujourdhui,
   fenetre, Ecrans, Boutique, ouvrirReglages, appliquerReglages, proposerRappels, Tutoriel,
 } from "../kit/index.js";
@@ -36,6 +36,7 @@ const sauvegarde = creerSauvegarde({
     boosterTutoDone: false, boosterSeen: {},
     lastGift: "", tutorialDone: false, intros: {},
     noAds: false, bought: {}, notif: null, // notif : null = pas encore proposé
+    uid: "", stats: true, // statistiques anonymes (kit/stats.js)
   }),
   completer: (d) => { d.intros = d.intros || {}; d.bought = d.bought || {}; },
 });
@@ -568,6 +569,7 @@ let btut = null; // tutoriel des bonus en cours
 async function useTargeted(kind, r, c) {
   booster = null;
   save.boosters[kind]--; persist();
+  Stats.compter("boosters"); Stats.track("booster_used", { kind, level: level.number });
   updateBoosters();
   busy = true;
   clearHint();
@@ -625,7 +627,7 @@ async function onBooster(kind) {
       <button class="kit-btn big reward" data-act="reward">${ICONS.video} Obtenir 1 ${b.name.toLowerCase()}</button>
       <button class="kit-btn" data-act="shop">${ICONS.cart} Voir les lots de bonus</button>
       <button class="kit-btn ghost" data-act="close">Non merci</button>`, async (act) => {
-      if (act === "reward" && (await Ads.rewarded())) {
+      if (act === "reward" && (await Ads.rewarded("bonus"))) {
         save.boosters[kind]++; persist(); updateBoosters();
         Sound.gift();
       }
@@ -648,6 +650,7 @@ async function onBooster(kind) {
     return;
   }
   save.boosters[kind]--; persist(); updateBoosters();
+  Stats.compter("boosters"); Stats.track("booster_used", { kind, level: level.number });
   if (kind === "shuffle") {
     busy = true;
     await shuffle(true);
@@ -733,6 +736,7 @@ async function runBoosterTutorial() {
   Tutoriel.fermer();
   btut = null;
   save.boosterTutoDone = true;
+  Stats.track("booster_tutorial_done", {});
   persist();
   checkEnd();
   scheduleHint();
@@ -955,6 +959,7 @@ async function runTutorial() {
   Tutoriel.fermer();
   tut = null;
   save.tutorialDone = true;
+  Stats.track("tutorial_done", { score });
   persist();
   scheduleHint();
   checkEnd();
@@ -1110,6 +1115,9 @@ async function startLevel(index, { replayTutorial = false } = {}) {
   refreshLives();
   if (save.lives <= 0) { showNoLives(index); return; }
   level = getLevel(index);
+  Stats.debut("level", level.number, { moves: level.moves, colors: level.colors, boosters: 0,
+    goal: level.ice.length ? "ice" : Object.keys(level.collect).length ? "collect" : "score",
+    tutorial: !!(level.tutorial && (!save.tutorialDone || replayTutorial)) });
   score = 0; shownScore = 0; moves = level.moves; collected = {}; ended = false; busy = true; extraMovesUsed = false;
   booster = null;
   btut = null;
@@ -1221,7 +1229,7 @@ async function checkEnd() {
     ended = true;
     clearHint();
     updateHud();
-    if (won) { await finale(); onWin(); } else { await sleep(500); onOutOfMoves(); }
+    if (won) { await finale(); onWin(); } else { await sleep(500); Stats.echec({ score }); onOutOfMoves(); }
   }
 }
 
@@ -1268,6 +1276,7 @@ function onWin() {
   save.unlocked = Math.max(save.unlocked, Math.min(LEVEL_COUNT, level.number + 1));
   persist();
   const gains = levelRewards(prevStars, stars);
+  Stats.gagne({ stars, score, record: isRecord, first: prevStars === 0, gains: gains.length });
   const gainHtml = gains.length ? `<div class="reward-box"><small class="kit-surtitre">${level.number % 5 === 0 && prevStars === 0 ? "Coffre de palier" : "Bonus gagné"}</small>
     <div class="reward-items">${gains.map((k) => `<span>${ICONS[BOOSTERS[k].icon]}<b>+1</b><small>${BOOSTERS[k].name}</small></span>`).join("")}</div></div>` : "";
   FX.confetti();
@@ -1318,7 +1327,7 @@ function onOutOfMoves() {
       return;
     }
     if (act === "reward") {
-      const ok = await Ads.rewarded();
+      const ok = await Ads.rewarded("coups");
       if (ok) {
         extraMovesUsed = true;
         moves += 5; ended = false; updateHud(); scheduleHint();
@@ -1328,6 +1337,7 @@ function onOutOfMoves() {
       onOutOfMoves();
       return;
     }
+    Stats.quitter("giveup");
     loseLife();
     onLose();
   });
@@ -1359,7 +1369,7 @@ function showNoLives(index) {
       if (ok && index !== undefined) startLevel(index);
       return;
     }
-    if (act === "reward" && (await Ads.rewarded())) {
+    if (act === "reward" && (await Ads.rewarded("vie"))) {
       vies.gagner(1);
       updateLivesUi();
       Sound.gift();
@@ -1468,6 +1478,7 @@ function openGift() {
     <p class="muted">Touche le cadeau pour l'ouvrir</p>`, (act) => {
     if (act !== "open") return;
     const g = cadeau.ouvrir();
+    Stats.track("gift_open", { kind: g.kind });
     if (g.kind === "life") vies.gagner(1, { depasser: true });
     else if (g.kind === "hammer2") inventaire.ajouter("hammer", 2);
     else inventaire.ajouter(g.kind);
@@ -1513,7 +1524,7 @@ function pause() {
     <button class="kit-btn ghost danger" data-act="quit">Quitter le niveau (−1 vie)</button>`, (act) => {
     if (act === "settings") openSettings(true);
     if (act === "help") openHelp("game");
-    if (act === "quit") { ended = true; clearHint(); loseLife(); openMap(); }
+    if (act === "quit") { ended = true; clearHint(); Stats.quitter("pause"); loseLife(); openMap(); }
   });
 }
 function resumeGame() { scheduleHint(); }
@@ -1545,6 +1556,7 @@ Boutique.configurer({
 
 let shopReturn = "home";
 function openShop(ret = Ecrans.actuel) {
+  Stats.track("shop_open", { from: ret });
   shopReturn = ret;
   showScreen("shop", renderShop);
 }
@@ -1558,7 +1570,7 @@ const renderShop = () => Boutique.afficher($("#shop-list"), $("#shop-inv"));
 /* ---------------------------------------------------------------------- */
 /* Notifications                                                          */
 /* ---------------------------------------------------------------------- */
-const askNotifications = () => proposerRappels(save, persist);
+const askNotifications = () => proposerRappels(save, persist).then((on) => { Stats.track("reminder_set", { on }); return on; });
 function scheduleNotifications() {
   refreshLives();
   Notify.schedule(rappelsStandard({ livesFullAt: vies.pleinesA(), giftOpenedToday: !cadeau.pret }, {
@@ -1595,6 +1607,10 @@ function fillIcons() {
 }
 
 async function boot() {
+  // Statistiques anonymes (PostHog, clé dans jeu.json) : identifiant aléatoire, désactivables dans les réglages.
+  Stats.init({ data: save, enregistrer: persist, build: JEU.version });
+  Stats.track("session_start", { unlocked: save.unlocked, stars: Object.values(save.stars).reduce((a, b) => a + b, 0),
+    lives: save.lives, noAds: save.noAds, returning: save.unlocked > 1 || save.tutorialDone });
   appliquerReglages(save);
   refreshLives();
   fillIcons();
@@ -1639,4 +1655,4 @@ async function boot() {
 boot();
 
 // Accès de débogage depuis la console.
-window.__melopop = { get state() { return { level, score, moves, collected, grid, busy, ended }; }, startLevel, save, levelCard };
+window.__melopop = { get state() { return { level, score, moves, collected, grid, busy, ended }; }, startLevel, save, levelCard, Stats };

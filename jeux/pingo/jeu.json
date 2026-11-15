@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "statut": "prototype",
   "description": "Prototype : un pingouin glisse sur des collines enneigées, la banquise fond derrière lui.",
+  "statistiques": {
+    "posthog": "phc_tYQQxGun3aD3jRuJY8dvLmE2STkP62vTh5jNDJuQ4kXr",
+    "hote": "https://eu.i.posthog.com"
+  },
   "admob": {
     "test": true,
     "android": {
@@ -19,6 +23,10 @@
       "recompensee": "ca-app-pub-3940256099942544/1712485313"
     }
   },
-  "revenuecat": { "android": "", "ios": "", "droitSansPub": "no_ads" },
+  "revenuecat": {
+    "android": "",
+    "ios": "",
+    "droitSansPub": "no_ads"
+  },
   "produits": []
 }

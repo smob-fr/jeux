@@ -27,5 +27,6 @@ export const ICONS = {
   bomb: svg('<circle cx="10.5" cy="14" r="7" fill="currentColor" fill-opacity=".3"/><path d="M15.5 9l2.5-2.5"/><path d="M18 4.5v-1M20.5 6.5h1M19.8 4.7l.8-.8"/><circle cx="8" cy="11.5" r="1.3" fill="currentColor"/>'),
   wand: svg('<path d="M4 20L15 9" stroke-width="2.8"/><path fill="currentColor" stroke="none" d="M17 2.5l1.2 2.6 2.8.4-2 2 .5 2.8L17 9l-2.5 1.3.5-2.8-2-2 2.8-.4z"/><path d="M20.5 13v2M19.5 14h2M7 4v2M6 5h2"/>'),
   clock: svg('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/>'),
+  chart: svg('<path d="M4 20h16"/><path d="M7 16v-4M12 16V7M17 16v-7" stroke-width="2.8"/>'),
   map: svg('<path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z"/><path d="M9 4v14M15 6v14"/>'),
 };

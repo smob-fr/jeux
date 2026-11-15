@@ -5,6 +5,7 @@ export { configurer, config } from "./config.js";
 export { estNatif, plateforme, plugin } from "./plateforme.js";
 export { Ads, REGLES_INTERSTITIELLE } from "./ads.js";
 export { Store } from "./store.js";
+export { Stats } from "./stats.js";
 export { Notify, rappelsStandard, horsHeuresCalmes, HEURES_CALMES, CANAL } from "./notify.js";
 export { Sound, SCALE, tone, bell, vibrate } from "./sound.js";
 export { creerSauvegarde } from "./sauvegarde.js";

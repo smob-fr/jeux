@@ -2231,76 +2231,26 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   ['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, () => Snd.unlock(), { capture: true, passive: true }));
   document.addEventListener('visibilitychange', () => Snd.visibility());
 
-  /* ---------- statistiques anonymes (PostHog, hébergement UE) ----------
-     Aucune donnée personnelle : un identifiant aléatoire par appareil, pas de cookie, pas de script externe.
-     Désactivées tant que STATS_KEY est vide, et désactivables par le joueur (S.stats).
-     Événements : session_start, level_start, level_win, level_fail, level_quit, hint_used, ad_shown, ad_closed,
-     skin_equip, reminder_set, setting_change, home_choice. Envoi groupé (fetch), et sendBeacon à la fermeture. */
-  const STATS_HOST = 'https://eu.i.posthog.com';
-  const STATS_KEY = (window.CAROULE_STATS && window.CAROULE_STATS.key) || /*STATS_KEY*/'';
+  /* ---------- statistiques anonymes : kit commun (Kit.Stats, PostHog, hébergement UE) ----------
+     Clé publique dans jeu.json › statistiques. Aucune donnée personnelle : identifiant aléatoire S.uid,
+     pas de cookie. Désactivables par le joueur (S.stats, interrupteur dans la pause).
+     Mêmes événements qu'avant le kit (continuité des tableaux de bord) : session_start, level_start,
+     level_win, level_fail, level_quit, hint_used, ad_shown, ad_closed, skin_equip, reminder_set,
+     setting_change, home_choice, boost_earned, boost_spent, purchase, shop_open ; le kit ajoute ad_reward,
+     ad_interstitial, purchase et restore, et les propriétés jeu et version. Tentative en cours gardée
+     dans caroule.att (abandons par fermeture de l'appli comptés au lancement suivant). */
   const BUILD = /*BUILD*/'dev';
-  const Stats = (function () {
-    let queue = [], timer = null, A = null;
-    if (!S.uid) { S.uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); save(); }
-    /* navigator.webdriver : navigateur piloté par les tests automatiques, on n'envoie rien */
-    const on = () => !!STATS_KEY && S.stats !== false && (!navigator.webdriver || !!window.CAROULE_STATS);
-    const standalone = () => { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; } };
-    const base = () => ({
-      distinct_id: S.uid, $process_person_profile: false, build: BUILD,
-      platform: window.Capacitor ? 'app' : standalone() ? 'web-installed' : 'web',
-      lang: navigator.language, sw: screen.width, sh: screen.height
-    });
-    function send(beacon) {
-      clearTimeout(timer); timer = null;
-      if (!queue.length) return;
-      const body = JSON.stringify({ api_key: STATS_KEY, batch: queue.splice(0) });
-      try {
-        if (beacon && navigator.sendBeacon && navigator.sendBeacon(STATS_HOST + '/batch/', new Blob([body], { type: 'text/plain' }))) return;
-        fetch(STATS_HOST + '/batch/', { method: 'POST', body, keepalive: true, headers: { 'Content-Type': 'text/plain' } }).catch(() => {});
-      } catch (e) { /* réseau indisponible : tant pis */ }
-    }
-    function track(event, props) {
-      if (!on()) return;
-      queue.push({ event, timestamp: new Date().toISOString(), properties: Object.assign(base(), props) });
-      if (queue.length >= 20) send(); else if (!timer) timer = setTimeout(send, 8000);
-    }
-    /* tentative de niveau en cours : gardée en stockage pour compter aussi les abandons par fermeture de l'appli */
-    const ATT = 'caroule.att';
-    const keep = () => { try { if (A) localStorage.setItem(ATT, JSON.stringify(A)); else localStorage.removeItem(ATT); } catch (e) { /* ignoré */ } };
-    const dur = () => (A ? A.acc + (A.t0 ? Date.now() - A.t0 : 0) : 0);
-    const info = () => ({ mode: A.mode, level: A.level, ms: dur(), bumps: A.bumps, hints: A.hints, undos: A.undos, revives: A.revives, fails: A.fails, opt: A.opt });
-    function quit(reason, beacon) {
-      if (!A) return;
-      track('level_quit', Object.assign(info(), { reason }));
-      A = null; keep();
-      if (beacon) send(true);
-    }
-    /* reprise : une tentative restée ouverte à la dernière session a été abandonnée en fermant le jeu */
-    try {
-      const old = JSON.parse(localStorage.getItem(ATT) || 'null');
-      if (old) { A = old; A.t0 = 0; quit('closed'); }
-    } catch (e) { /* ignoré */ }
-    document.addEventListener('visibilitychange', () => {
-      if (A) { if (document.hidden) { A.acc = dur(); A.t0 = 0; keep(); } else A.t0 = Date.now(); }
-      if (document.hidden) send(true);
-    });
-    window.addEventListener('pagehide', () => { if (A) { A.acc = dur(); A.t0 = 0; keep(); } send(true); });
-    return {
-      track,
-      begin(mode, level, extra) {
-        if (A) quit(A.mode === mode && A.level === level ? 'restart' : 'switch');
-        A = Object.assign({ mode, level, t0: Date.now(), acc: 0, bumps: 0, hints: 0, undos: 0, revives: 0, fails: 0, opt: 0 }, extra);
-        keep();
-        track('level_start', { mode, level, opt: A.opt, timed: !!A.timed });
-      },
-      count(k) { if (A) { A[k] = (A[k] || 0) + 1; keep(); } },
-      win(props) { if (!A) return; track('level_win', Object.assign(info(), props)); A = null; keep(); },
-      fail(props) { if (!A) return; A.fails++; keep(); track('level_fail', Object.assign(info(), props)); },
-      leave(reason) { quit(reason); },
-      current: () => (A ? A.mode : null),
-      flush: () => send()
-    };
-  })();
+  Kit.Stats.init({ data: S, enregistrer: save, build: BUILD });
+  const Stats = {
+    track: (event, props) => Kit.Stats.track(event, props),
+    begin(mode, level, extra) { Kit.Stats.debut(mode, level, Object.assign({ bumps: 0, hints: 0, undos: 0, revives: 0, opt: 0 }, extra)); },
+    count: k => Kit.Stats.compter(k),
+    win: props => Kit.Stats.gagne(props),
+    fail: props => Kit.Stats.echec(props),
+    leave: reason => Kit.Stats.quitter(reason),
+    current: () => Kit.Stats.enCours,
+    flush: () => Kit.Stats.flush()
+  };
 
   /* petit « pop » sur tous les boutons de l'interface (pas sur les voitures) */
   document.addEventListener('click', e => {
@@ -4726,14 +4676,11 @@ body.reversing .car { animation: revpulse 1s ease-in-out infinite; }
   $('btn-menu').addEventListener('click', openPause);
   function renderStatsSwitch() {
     $('stats-switch').setAttribute('aria-checked', String(S.stats !== false));
-    $('stats-switch').closest('.stats-row').hidden = !STATS_KEY;
-    $('stats-note').hidden = !STATS_KEY || S.stats === false;
+    $('stats-switch').closest('.stats-row').hidden = !Kit.Stats.disponible;
+    $('stats-note').hidden = !Kit.Stats.disponible || S.stats === false;
   }
   $('stats-switch').addEventListener('click', () => {
-    if (S.stats !== false) Stats.track('setting_change', { stats: false });
-    S.stats = S.stats === false;
-    save();
-    if (S.stats) Stats.track('setting_change', { stats: true });
+    Kit.Stats.activer(S.stats === false);
     renderStatsSwitch();
   });
   renderStatsSwitch();

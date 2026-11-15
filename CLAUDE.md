@@ -19,7 +19,7 @@ jeux/<nom>/               un dossier par jeu, autonome
   jeu.json                identité et monétisation : id, nom, AdMob, RevenueCat, catalogue
   capacitor.config.json   appId (fr.smob.<id>), nom, webDir
   package.json            ses propres commandes : construction, niveaux, tests
-docs/                     monetisation.md, publication.md, idees.md
+docs/                     monetisation.md, statistiques.md, publication.md, idees.md
 .github/workflows/        tests à chaque envoi, publication web depuis main
 ```
 
@@ -52,6 +52,7 @@ versionnées. L'API complète est dans `kit/README.md`.
 - `ads.js` : AdMob, consentement RGPD (UMP), ATT sur iOS, règles de fréquence, simulation web.
 - `store.js` : RevenueCat, catalogue lu dans `jeu.json`, « Sans pub », restauration, simulation web.
 - `notify.js` : notifications locales, heures calmes, annulation au retour.
+- `stats.js` : statistiques anonymes PostHog (UE), clé dans `jeu.json › statistiques` ; voir `docs/statistiques.md`.
 - `sound.js` : moteur Web Audio (sons, musique, vibrations), chaque jeu y ajoute ses propres sons.
 - `sauvegarde.js`, `vies.js`, `bonus.js`, `cadeau.js` : sauvegarde locale, vies, inventaire de
   bonus, cadeau du jour.
@@ -137,6 +138,11 @@ module du kit correspondant.
 - **Langue française** partout, joueur tutoyé. Typographie française : guillemets « », espace avant
   « : ; ! ? », prix avec virgule (`0,99 €`), nombres avec `toLocaleString("fr-FR")`. Pas de texte
   anglais visible par le joueur.
+- **Statistiques anonymes** (`Kit.Stats`, PostHog UE, un seul projet pour tous les jeux, propriété
+  `jeu` sur chaque événement) : identifiant aléatoire, pas de cookie, coupables par le joueur dans les
+  réglages. Événements communs `session_start`, `level_start`, `level_win`, `level_fail`, `level_quit` ;
+  le kit envoie lui-même `ad_reward`, `ad_interstitial`, `purchase`, `restore`. Rien n'est envoyé par les
+  tests automatiques (navigateur piloté). Détail par jeu : `docs/statistiques.md`.
 - **Outils de test** : chaque jeu expose un objet de débogage dans la console (`window.__<id>`)
   utilisé par ses tests automatiques.
 
