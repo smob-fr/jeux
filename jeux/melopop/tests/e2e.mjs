@@ -105,6 +105,9 @@ async function jouerNiveau(page, index) {
   // Présentation de l'objectif, puis le plateau devient jouable.
   await page.waitForFunction(() => !window.__melopop.state.busy && !window.__melopop.state.ended, null, { timeout: 8000 });
 }
+// Après un coup ou un bonus, les cascades (notes qui tombent, combinaisons en chaîne) durent de 1 à
+// plus de 8 s selon le plateau, tiré au hasard : on leur laisse largement le temps de finir.
+const FIN_CASCADES = 30000;
 const DEJA_JOUE = { tutorialDone: true, boosterTutoDone: true, notif: false, intros: { collect: true, bomb: true, ice: true, star: true, combo: true, ice2: true } };
 
 /* ---------- tests ---------- */
@@ -160,7 +163,7 @@ const TESTS = [
       const coup = await trouverCoup(page);
       verifier(coup, "aucun coup trouvé sur le plateau");
       await glisser(page, ...coup);
-      await page.waitForFunction((n) => window.__melopop.state.moves === n - 1 && !window.__melopop.state.busy, avant, { timeout: 8000 });
+      await page.waitForFunction((n) => window.__melopop.state.moves === n - 1 && !window.__melopop.state.busy, avant, { timeout: FIN_CASCADES });
       const score = await page.evaluate(() => window.__melopop.state.score);
       verifier(score > 0, "le coup devrait rapporter des points");
       await clic(page, "#pause");
@@ -277,7 +280,7 @@ const TESTS = [
       await page.waitForSelector('[data-booster="hammer"].armed');
       const box = await page.locator("#board").boundingBox();
       await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.5);
-      await page.waitForFunction(() => !window.__melopop.state.busy, null, { timeout: 8000 });
+      await page.waitForFunction(() => !window.__melopop.state.busy, null, { timeout: FIN_CASCADES });
       const s = await lireSauvegarde(page);
       verifier(s.boosters.hammer === 2, `2 marteaux attendus, ${s.boosters.hammer}`);
       verifier(s.boosterSeen.hammer === true, "le marteau devrait être marqué comme présenté");
