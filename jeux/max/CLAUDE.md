@@ -133,6 +133,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - salamandre impossible à sauter, corrigé ;
   - fin du Fouisseur avec l'Œil de Jade, ajoutée.
   - 1-9 : des pièges surprises qui se suivaient ne laissaient qu'une case pour atterrir entre des pics et un trou, corrigé. Le générateur refuse désormais tout piège qui crée un tel îlot, et le vérificateur le signale comme une erreur.
+  - 1-9 (suite) : les 3 cases de pics qui jaillissaient sur la partie haute ne se sautaient pas (robot : mort à tous les coups). Les pics surprises font maintenant 2 cases au plus ; le vérificateur refuse des pics de 3 cases ou plus qui jaillissent à 4 cases ou moins devant Max. Niveaux modifiés : 1-2, 1-9, 1-13.
 - Commandes tactiles retravaillées le 10 novembre : saut fiable même sur un appui bref, grand bouton SAUT rectangulaire. À confirmer sur téléphone.
 
 ## Ce qui reste à faire

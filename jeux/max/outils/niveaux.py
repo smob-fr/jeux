@@ -1659,7 +1659,10 @@ def _m_corde(n, d, r):
 def _m_fleches(n, d, r): n.fleches(5 + d, 1); n.plat(2); n.descend(1); n.plat(2)
 def _m_mur(n, d, r): n.plat(3, objet="t"); n.mur_fissure(); n.plat(2)
 def _m_effondre(n, d, r): n.effondrement(2, 2 + (d == 0), delai=(2 - d) * 6)
-def _m_surprise(n, d, r): n.pics_surprise(2 if d < 2 else 3, 2)
+def _m_surprise(n, d, r):
+    # jamais plus de 2 cases : 3 cases de pics qui jaillissent devant Max ne se sautent pas (retour du 1-9).
+    # Plus difficile = les pics jaillissent un peu plus près du saut, pas plus larges.
+    n.pics_surprise(2, 2)
 def _m_plateformes(n, d, r): n.plateformes([(2, 3 - (d > 1), 0), (2 + (d > 0), 3, 0), (2, 3, 0)], fond=r.choice(["pics", "vide"]))
 def _m_fantome(n, d, r): n.plat(2); n.fantome(5 + (d > 1)); n.plat(2)
 def _m_clignote(n, d, r): n.plat(2); n.clignote(5 + d); n.plat(2)
@@ -3998,6 +4001,14 @@ def verifier(niveaux):
                 print(f"✗ {i+1:2d} {lv['name']} (morts={morts}): {pourquoi}")
                 erreurs += 1
                 break
+        # des pics de 3 cases ou plus qui jaillissent juste devant Max ne se sautent pas (retour du 1-9)
+        for tr in lv["triggers"]:
+            if "zone" not in tr or tr.get("air"):
+                continue
+            for a in tr["act"]:
+                if a[0] == "spikes" and (a[5] if len(a) > 5 else "^") == "^" and a[3] >= 3 and 0 < a[1] - tr["zone"][0] <= 4:
+                    print(f"✗ {i+1:2d} {lv['name']}: {a[3]} cases de pics jaillissent {a[1] - tr['zone'][0]} cases devant Max (x={a[1]}) : trop large pour un saut")
+                    erreurs += 1
         if lv.get("eau") is None and lv.get("monde") != 4:
             ilots = ilots_pieges(lv)
             if ilots:
