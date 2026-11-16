@@ -3597,8 +3597,10 @@ const Notify = {
     const notifications = [];
     for (const n of liste) {
       let at = new Date(n.quand);
-      if (n.calme !== false) at = horsHeuresCalmes(at);
+      // un rappel déjà passé est ignoré AVANT le décalage des heures calmes : sinon, la nuit,
+      // il serait repoussé au lendemain matin au lieu d'être oublié
       if (at.getTime() < now + 60e3) continue;
+      if (n.calme !== false) at = horsHeuresCalmes(at);
       notifications.push({ id: n.id, title: n.titre, body: n.texte, channelId: CANAL, extra: n.extra,
         schedule: { at, allowWhileIdle: true } });
     }
@@ -4225,7 +4227,7 @@ window.Kit = Object.freeze({ configurer, config, estNatif, plateforme, plugin, S
      setting_change, home_choice, boost_earned, boost_spent, purchase, shop_open ; le kit ajoute ad_reward,
      ad_interstitial, purchase et restore, et les propriétés jeu et version. Tentative en cours gardée
      dans caroule.att (abandons par fermeture de l'appli comptés au lancement suivant). */
-  const BUILD = "2026-11-16-966d734";
+  const BUILD = "2026-11-16-b3035cf";
   Kit.Stats.init({ data: S, enregistrer: save, build: BUILD });
   const Stats = {
     track: (event, props) => Kit.Stats.track(event, props),
