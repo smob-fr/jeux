@@ -132,6 +132,7 @@ npm test                           # build, régénère les niveaux (levels.js d
 - Les mondes 4 et 5 ont été finis le 9 et le 10 novembre 2026. Ils sont en cours de test réel. Premiers retours traités :
   - salamandre impossible à sauter, corrigé ;
   - fin du Fouisseur avec l'Œil de Jade, ajoutée.
+  - 1-9 : des pièges surprises qui se suivaient ne laissaient qu'une case pour atterrir entre des pics et un trou, corrigé. Le générateur refuse désormais tout piège qui crée un tel îlot, et le vérificateur le signale comme une erreur.
 - Commandes tactiles retravaillées le 10 novembre : saut fiable même sur un appui bref, grand bouton SAUT rectangulaire. À confirmer sur téléphone.
 
 ## Ce qui reste à faire
