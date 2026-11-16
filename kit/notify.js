@@ -88,8 +88,10 @@ export const Notify = {
     const notifications = [];
     for (const n of liste) {
       let at = new Date(n.quand);
-      if (n.calme !== false) at = horsHeuresCalmes(at);
+      // un rappel déjà passé est ignoré AVANT le décalage des heures calmes : sinon, la nuit,
+      // il serait repoussé au lendemain matin au lieu d'être oublié
       if (at.getTime() < now + 60e3) continue;
+      if (n.calme !== false) at = horsHeuresCalmes(at);
       notifications.push({ id: n.id, title: n.titre, body: n.texte, channelId: CANAL, extra: n.extra,
         schedule: { at, allowWhileIdle: true } });
     }
