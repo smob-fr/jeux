@@ -143,6 +143,7 @@
   }
 
   /* ================= Entrées ================= */
+  const AIDE_EN_PLUS = 120;   // les textes d'aide restent 2 s de plus que leur durée prévue (retour de test : trop courts)
   const SAUT_MIN = 7;   // images de saut garanties, même si le doigt est déjà relevé
   const input = { left: false, right: false, jump: false, fire: false, tnt: false };
   const pressed = { jump: false, fire: false, tnt: false };
@@ -780,7 +781,7 @@
     }
 
     if (R.say) { R.say.t++; if (R.say.t > R.say.dur) R.say = null; }
-    if (R.hint) { R.hint.t++; if (R.hint.t > R.hint.dur) R.hint = null; }
+    if (R.hint) { R.hint.t++; if (R.hint.t > R.hint.dur + AIDE_EN_PLUS) R.hint = null; }
     if (R.shake > 0) R.shake -= 0.5;
     if (game.mode === "dead" && ++game.deadT === 32 && offrirRelance()) return;
     if (game.mode === "dead" && game.deadT > 50) restartRoom(true);
@@ -4712,7 +4713,7 @@
       ctx.globalAlpha = 1;
     }
     if (R.hint && game.mode === "play") {
-      const h = R.hint, a = Math.min(1, h.t / 10, (h.dur - h.t) / 20);
+      const h = R.hint, a = Math.min(1, h.t / 10, (h.dur + AIDE_EN_PLUS - h.t) / 20);
       ctx.globalAlpha = a;
       ctx.font = `8px ${FONT_TXT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       const w = ctx.measureText(h.text).width + 16, hy = R.say ? (R.sayBottom || 50) + 6 : 22;
