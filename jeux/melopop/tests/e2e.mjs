@@ -119,7 +119,8 @@ const TESTS = [
       verifier((await page.textContent("#play-label")).includes("Commencer"), "le bouton devrait dire « Commencer »");
       await clic(page, "#play");
       await page.waitForSelector("#game.active");
-      const suite = async () => { await page.waitForSelector("#kit-tuto-ok", { state: "visible", timeout: 8000 }); await clic(page, "#kit-tuto-ok"); await page.waitForTimeout(250); };
+      // après chaque coup guidé, la bulle suivante n'arrive qu'à la fin des cascades (notes tombées au hasard)
+      const suite = async () => { await page.waitForSelector("#kit-tuto-ok", { state: "visible", timeout: FIN_CASCADES }); await clic(page, "#kit-tuto-ok"); await page.waitForTimeout(250); };
       await suite(); await suite(); // objectif, coups
       await page.waitForSelector("#kit-tuto-main:not([hidden])", { state: "attached" });
       await glisser(page, [5, 2], [6, 2]);
