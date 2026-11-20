@@ -137,6 +137,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - Textes d'aide et bulles d'Archibald : 2 s de plus à l'écran (`AIDE_EN_PLUS`).
   - 2-20 (yéti) : le texte d'aide était coupé sur téléphone ; une aide trop large passe maintenant à la ligne.
   - Abysses (monde 3) : en restant à la surface, il suffisait d'avancer. Un plafond de roche couvre maintenant l'eau ; on ne respire qu'aux bulles et dans quelques poches d'air (`Ocean.plongee`, `ECART_AIR`), réserve d'air 10 s. Le vérificateur ne compte plus d'air sous la roche.
+  - Abysses trop calmes (« on avance sans problème, on s'ennuie ») : nouveaux passages (`mur_mines` rideaux de mines en slalom, `chicanes` rochers à oursins et coraux, `eboulement` blocs qui tombent de la roche), plus de requins, moins d'eau vide, et 4 nouvelles surprises (oursins qui jaillissent de la roche, éboulement, rideau de mines, requin de face). Pièges surprises : 9 à 20 par niveau (avant : 3 à 10). Une colonne de bulles est ajoutée là où 16 colonnes passent sans air (`bulles_manquantes`).
   - 3-8 (mines flottantes) : une mine perdue (touchée, ou poussée du mauvais côté) laissait un mur fissuré impossible à casser. Une mine de la carte revient à sa place 2,5 s après son explosion tant qu'un mur fissuré reste à ouvrir devant elle (`murFissureDevant`, action `remine`).
 - Commandes tactiles retravaillées le 10 novembre : saut fiable même sur un appui bref, grand bouton SAUT rectangulaire. À confirmer sur téléphone.
 
