@@ -81,7 +81,7 @@ npm test                           # build, régénère les niveaux (levels.js d
 - **Monde 2, l'Himalaya**
   - Mécaniques : neige profonde, glace vive, ponts de corde, avalanche, crevasses cachées, lac gelé, geysers, jauge de froid et braseros, ski, blizzard ; loups, aigles, yétis, chèvres, bonshommes de neige.
   - Boss : le Yéti grognon.
-- **Monde 3, les abysses** : on alterne îles et plongée, avec une réserve d'air à surveiller.
+- **Monde 3, les abysses** : on plonge sous un plafond de roche et on va de bulle en bulle (10 s d'air, sources d'air tous les 20 à 32 colonnes) ; seuls le départ, l'île refuge du milieu (drapeau) et l'arrivée sont à l'air libre.
   - Mécaniques : méduses, crabes, anguilles, poissons-globes, requin, mines à pousser, sas, tourbillons, coffres qui mordent, torpilles, algues, abysses noirs avec un poisson-lanterne.
   - Boss : la pieuvre géante.
 - **Monde 4, le royaume des nuages** : il n'y a pas de sol.
@@ -136,6 +136,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - 1-9 (suite) : les 3 cases de pics qui jaillissaient sur la partie haute ne se sautaient pas (robot : mort à tous les coups). Les pics surprises font maintenant 2 cases au plus ; le vérificateur refuse des pics de 3 cases ou plus qui jaillissent à 4 cases ou moins devant Max. Niveaux modifiés : 1-2, 1-9, 1-13.
   - Textes d'aide et bulles d'Archibald : 2 s de plus à l'écran (`AIDE_EN_PLUS`).
   - 2-20 (yéti) : le texte d'aide était coupé sur téléphone ; une aide trop large passe maintenant à la ligne.
+  - Abysses (monde 3) : en restant à la surface, il suffisait d'avancer. Un plafond de roche couvre maintenant l'eau ; on ne respire qu'aux bulles et dans quelques poches d'air (`Ocean.plongee`, `ECART_AIR`), réserve d'air 10 s. Le vérificateur ne compte plus d'air sous la roche.
   - 3-8 (mines flottantes) : une mine perdue (touchée, ou poussée du mauvais côté) laissait un mur fissuré impossible à casser. Une mine de la carte revient à sa place 2,5 s après son explosion tant qu'un mur fissuré reste à ouvrir devant elle (`murFissureDevant`, action `remine`).
 - Commandes tactiles retravaillées le 10 novembre : saut fiable même sur un appui bref, grand bouton SAUT rectangulaire. À confirmer sur téléphone.
 

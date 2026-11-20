@@ -1040,7 +1040,7 @@
     if (R.eau == null || game.mode !== "play") return;
     const sousLeau = p.y + 3 > R.eau;
     if (p.dansBulles) { R.o2 = Math.min(1, R.o2 + 0.012); p.dansBulles = false; }
-    else if (sousLeau) R.o2 -= 1 / (13 * 60) / (1 + 0.25 * R.assist);
+    else if (sousLeau) R.o2 -= 1 / (10 * 60) / (1 + 0.25 * R.assist);   // 10 s d'air (avant : 13 s) : il faut aller de bulle en bulle
     else R.o2 = Math.min(1, R.o2 + 0.04);
     if (sousLeau && R.t % 50 === 0) R.particles.push({ x: p.x + (p.face > 0 ? 8 : 2), y: p.y + 3, vx: 0, vy: -0.6, s: 2, life: 50, color: "rgba(200,240,255,0.7)", g: -0.005 });
     if (R.o2 < 0.3 && !R.o2Alerte) { R.o2Alerte = true; R.hint = { text: "Plus beaucoup d'air : remonte respirer ou trouve des bulles !", t: 0, dur: 200 }; }
