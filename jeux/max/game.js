@@ -414,7 +414,7 @@
         else if (c === "u") { room.bulles.push({ x, y }); tiles[y][x] = "."; }
         else if (c === "N" || c === "I" || c === "U" || c === "d") { room.enemies.push(creerOr(c, x, y)); tiles[y][x] = "."; }
         else if (c === "O" || c === "E") { room.enemies.push(creerCiel(c, x, y)); tiles[y][x] = "."; }
-        else if ("hZMX".includes(c)) { room.enemies.push(creerAbysse(c, x, y)); tiles[y][x] = "."; }
+        else if ("hZMX".includes(c)) { const e = creerAbysse(c, x, y); if (c === "M") { e.ox = x; e.oy = y; } room.enemies.push(e); tiles[y][x] = "."; }
         else if (c === "K") room.lanceurs.push({ x, y, t: (x * 37) % 170 });
         else if (c === "L") { room.enemies.push({ kind: "L", x: x * T + 1, y: y * T + 7, w: 14, h: 9, vx: -0.7, vy: 0, alive: true, t: Math.random() * 10, etat: "rode" }); tiles[y][x] = "."; }
         else if (c === "A") { room.enemies.push({ kind: "A", x: x * T + 2, y: y * T + 4, hx: x * T + 2, hy: y * T + 4, w: 12, h: 8, vx: 0.6, vy: 0, alive: true, t: Math.random() * 10, etat: "plane" }); tiles[y][x] = "."; }
@@ -705,6 +705,16 @@
           for (let i = 0; i < 4; i++) R.particles.push({ x: tx * T + Math.random() * T, y: ty * T + Math.random() * 4, vx: (Math.random() - 0.5), vy: -Math.random(), s: 2, life: 26, color: C.gold, g: 0 });
         }
         sfx.pick();
+        break;
+      }
+      case "remine": {
+        // la mine revient (une seule fois à la fois, et pas sur Max)
+        const [ox, oy] = v, pos = { x: ox * T - 4, y: oy * T - 4, w: T + 8, h: T + 8 };
+        if (!murFissureDevant(ox) || R.enemies.some((o) => o.alive && o.kind === "M" && o.ox === ox && o.oy === oy)) break;
+        if (R.player.alive && overlap(R.player, pos)) { R.later.push({ t: 60, act: [["remine", ox, oy]] }); break; }
+        const e = creerAbysse("M", ox, oy); e.ox = ox; e.oy = oy; R.enemies.push(e);
+        burst(e.x + 6, e.y + 6, "rgba(210,245,255,0.8)", 12, 1.2);
+        if (!progress.mineRevue) { progress.mineRevue = true; saveProgress(); R.hint = { text: "La mine est revenue : pousse-la d'un COUP de massue vers le mur fissuré", t: 0, dur: 200 }; }
         break;
       }
       case "boum": { const o = R.enemies[v[0]]; if (o) exploserMine(o); break; }
@@ -2388,6 +2398,10 @@
     } else e.y = e.y0 + Math.sin(e.t * 0.04) * 3;
     if (p.alive && overlap(p, { x: e.x + 2, y: e.y + 2, w: e.w - 4, h: e.h - 4 })) exploserMine(e);
   }
+  function murFissureDevant(ox) {
+    for (let x = ox; x <= Math.min(COLS - 1, ox + 15); x++) for (let y = 0; y < ROWS; y++) if (R.tiles[y][x] === "B") return true;
+    return false;
+  }
   function exploserMine(e) {
     if (!e.alive) return;
     e.alive = false;
@@ -2401,6 +2415,9 @@
     for (const o of R.enemies) if (o.alive && o.kind === "M" && Math.hypot(o.x + 6 - cx, o.y + 6 - cy) < 34) R.later.push({ t: 8, act: [["boum", R.enemies.indexOf(o)]] });
     const p = R.player;
     if (p.alive && Math.hypot(p.x + p.w / 2 - cx, p.y + p.h / 2 - cy) < 30) kill("Boum ! Une mine, ça ne se touche pas. Ça se pousse avec la massue.");
+    // une mine de la carte revient à sa place tant qu'un mur fissuré reste à ouvrir devant elle :
+    // sinon, une mine perdue (touchée, poussée du mauvais côté) bloquait le niveau (retour du 3-8)
+    if (e.ox != null && murFissureDevant(e.ox)) R.later.push({ t: 150, act: [["remine", e.ox, e.oy]] });
   }
   // Coffre piégé : il ressemble à un trésor… et il mord quand on s'approche. Assommé, il donne de l'or.
   function updateCoffre(e) {
@@ -4716,9 +4733,11 @@
       const h = R.hint, a = Math.min(1, h.t / 10, (h.dur + AIDE_EN_PLUS - h.t) / 20);
       ctx.globalAlpha = a;
       ctx.font = `8px ${FONT_TXT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      const w = ctx.measureText(h.text).width + 16, hy = R.say ? (R.sayBottom || 50) + 6 : 22;
-      ctx.fillStyle = "rgba(6,10,8,0.78)"; ctx.fillRect((view.w - w) / 2, hy, w, 14);
-      ctx.fillStyle = C.hint; ctx.fillText(h.text, view.w / 2, hy + 7);
+      // trop large pour l'écran (téléphone) : le texte passe à la ligne au lieu d'être coupé
+      const maxW = Math.min(360, view.w - 24) - 16, lignes = ctx.measureText(h.text).width > maxW ? wrapText(h.text, maxW) : [h.text];
+      const w = Math.max(...lignes.map((l) => ctx.measureText(l).width)) + 16, hy = R.say ? (R.sayBottom || 50) + 6 : 22, hh = 4 + lignes.length * 10;
+      ctx.fillStyle = "rgba(6,10,8,0.78)"; ctx.fillRect((view.w - w) / 2, hy, w, hh);
+      ctx.fillStyle = C.hint; lignes.forEach((l, i) => ctx.fillText(l, view.w / 2, hy + 7 + i * 10));
       ctx.globalAlpha = 1;
     }
   }
