@@ -2369,7 +2369,7 @@ class Ocean:
         """Dernière colonne où l'on peut respirer : bulles, eau à l'air libre, ou terre ferme."""
         for x in range(len(self.cols) - 1, -1, -1):
             c = self.cols[x]
-            if "u" in c or c[self.eau - 1] == "." or c[self.eau] == "#":
+            if self.respire(c):
                 return x
         return 0
 
@@ -2388,7 +2388,33 @@ class Ocean:
     def milieu(self):
         return (self.eau + self.fond) // 2
 
+    def respire(self, c):
+        """Colonne où Max respire : bulles, eau ouverte sur le ciel, ou île (terre ferme sous le ciel)."""
+        return "u" in c or c[self.eau - 1] == "." or (c[self.eau - 1] == "#" and c[self.eau - 2] == ".")
+
+    def bulles_manquantes(self, ecart=16):
+        """En plongée : jamais plus de `ecart` colonnes sans air. Sinon, une colonne de bulles monte du fond."""
+        def degagee(c):
+            """Colonne d'eau libre de la roche jusqu'au fond : renvoie la case du fond, sinon None."""
+            for y in range(self.eau, self.h - 1):
+                if c[y] != ".":
+                    return None
+                if c[y + 1] == "#":
+                    return y if y - self.eau >= 3 else None
+            return None
+        dernier = 0
+        for x in range(1, len(self.cols)):
+            c = self.cols[x]
+            if self.respire(c):
+                dernier = x
+            elif x - dernier > ecart:
+                y = degagee(c)
+                if y is not None:
+                    c[y] = "u"; dernier = x
+
     def fini(self):
+        if self.plongee:
+            self.bulles_manquantes()
         self.cols.append(["#"] * self.h)
         rows = ["".join(c[y] for c in self.cols) for y in range(self.h)]
         d = {"name": self.nom, "type": self.type, "ammo": self.ammo, "map": rows, "triggers": self.trig, "eau": self.eau,
@@ -2605,7 +2631,51 @@ def _o_epave(o, d, r):
         o.put(x0 + n - 2, y, ".")
 
 
-MOTIFS_MER = {"coraux": _o_coraux, "iles": _o_iles, "grotte": _o_grotte, "meduses": _o_meduses, "anguilles": _o_anguilles,
+def _o_stalactite(o, x, bas):
+    """Rocher qui pend de la roche jusqu'à la ligne `bas`, hérissé d'oursins au bout."""
+    for y in range(o.eau, bas):
+        o.put(x, y, "#")
+    o.put(x, bas, "v")
+
+
+def _o_mur_mines(o, d, r):
+    """Rideaux de mines en travers de l'eau : un seul passage, à une hauteur différente à chaque rideau."""
+    o.mer(3)
+    for k in range(2 + d):
+        x = o.mer(1)
+        haut, bas = o.eau, o.fond - 1
+        trou = r.randint(haut + 1, bas - 3)
+        for y in range(haut, bas + 1, 2):
+            if not (trou - 1 <= y <= trou + 3):
+                o.put(x, y, "M")
+        o.mer(4 if d < 2 else 3)
+
+
+def _o_chicanes(o, d, r):
+    """Chicanes : un rocher à oursins pend de la roche, puis un rocher de corail monte du fond, etc."""
+    o.mer(2)
+    for k in range(3 + d):
+        x = o.mer(2)
+        prof = min(r.choice((4, 5, 6)), o.fond - o.eau - 5)
+        for j in range(2):
+            if k % 2 == 0:
+                _o_stalactite(o, x + j, o.eau + prof)
+            else:
+                _o_rocher(o, x + j, o.fond - prof)
+        o.mer(2 + (d < 2))
+
+
+def _o_eboulement(o, d, r):
+    """La roche s'effrite au-dessus de Max : des blocs tremblent, puis tombent au fond."""
+    n = 12 + 2 * d
+    x0 = o.mer(n)
+    for k in range(3, n - 1, 3):
+        o.t([["fall", x0 + k, o.eau - 1, 1, 1, 14 + (k * 7) % 12], ["shake", 2]], o.Z(x0 + k - 2))
+    o.astuce("La roche s'effrite… regarde au-dessus de toi !", x0 - 2, max=0)
+
+
+MOTIFS_MER = {"mur_mines": _o_mur_mines, "chicanes": _o_chicanes, "eboulement": _o_eboulement,
+              "coraux": _o_coraux, "iles": _o_iles, "grotte": _o_grotte, "meduses": _o_meduses, "anguilles": _o_anguilles,
               "crabes": _o_crabes, "courant": _o_courant, "globes": _o_globes, "mine_mur": _o_mine_mur, "mines": _o_mines,
               "algues": _o_algues, "tourbillon": _o_tourbillon, "sas": _o_sas, "coffres": _o_coffres,
               "torpilles": _o_torpilles, "requin": _o_requin, "epave": _o_epave}
@@ -2648,8 +2718,8 @@ def remplir_mer(o, motifs, cible, d0=0):
         tirage = r.random()
         if o.plongee:
             _air_si_besoin(o, r, d)
-            if tirage >= 0.35:
-                o.mer(r.choice((10, 11, 12)))   # eau libre sous la roche… qui recevra une surprise
+            if tirage >= 0.6:
+                o.mer(r.choice((8, 9)))   # un peu d'eau libre sous la roche… qui recevra une surprise
             continue
         if tirage < 0.6:
             n = r.choice((3, 9, 10, 11))
@@ -2678,7 +2748,18 @@ def _pm_mine(lv, x, y, H, r, eau, fond):
     return [{"zone": [x, 1, 1, H - 2], "act": [["spawn", "M", x + 6, r.randint(eau + 1, fond - 2)]]}]
 def _pm_globe(lv, x, y, H, r, eau, fond):
     return [{"zone": [x, 1, 1, H - 2], "act": [["spawn", "h", x + 5, r.randint(eau + 2, fond - 3)]]}]
-PIEGES_MER = {"requin": _pm_requin, "meduse": _pm_meduse, "courant": _pm_courant, "coraux": _pm_coraux, "mine": _pm_mine, "globe": _pm_globe}
+def _pm_oursins(lv, x, y, H, r, eau, fond):
+    k = r.choice((3, 4, 5))
+    return [{"zone": [x, 1, 1, H - 2], "act": [["spikes", x + k, eau, 2, 1, "v"], ["shake", 2]]}]
+def _pm_eboulement(lv, x, y, H, r, eau, fond):
+    return [{"zone": [x, 1, 1, H - 2], "act": [["shake", 5], ["fall", x + 4, eau - 1, 1, 1, 10], ["fall", x + 6, eau - 1, 1, 1, 22]]}]
+def _pm_rideau(lv, x, y, H, r, eau, fond):
+    trou = r.randint(eau + 1, fond - 4)
+    return [{"zone": [x, 1, 1, H - 2], "act": [["spawn", "M", x + 8, yy] for yy in range(eau, fond - 1, 2) if not (trou - 1 <= yy <= trou + 3)]}]
+def _pm_requin_face(lv, x, y, H, r, eau, fond):
+    return [{"zone": [x, 1, 1, H - 2], "act": [["spawn", "Z", x + 16, r.randint(eau + 1, fond - 3)], ["hint", "Un requin, droit devant !"]]}]
+PIEGES_MER = {"oursins": _pm_oursins, "eboulement": _pm_eboulement, "rideau": _pm_rideau, "requin_face": _pm_requin_face,
+              "requin": _pm_requin, "meduse": _pm_meduse, "courant": _pm_courant, "coraux": _pm_coraux, "mine": _pm_mine, "globe": _pm_globe}
 
 
 def pimenter_mer(lv, graine):
@@ -2695,6 +2776,12 @@ def pimenter_mer(lv, graine):
             return None
         col = [g[y][x] for y in range(H)]
         dessus = col[1:eau]
+        if lv.get("_plongee"):
+            # sous la roche : il suffit que le haut de l'eau soit dégagé et l'eau assez profonde
+            if not all(c == "#" for c in dessus) or any(c != "." for c in col[eau:eau + 4]):
+                return None
+            f = next((y for y in range(eau, H) if col[y] == "#"), None)
+            return f if f is not None and f - eau >= 6 else None
         if col[0] != "#" or not (all(c == "." for c in dessus) or all(c == "#" for c in dessus)) or col[eau] != "." or col[eau + 1] != ".":
             return None
         f = next((y for y in range(eau, H) if col[y] != "."), None)
@@ -2703,14 +2790,14 @@ def pimenter_mer(lv, graine):
         return f
     poses, prec, x = 0, None, 1
     while x < W - 10:
-        fs = [eau_libre(x + k) for k in range(9)]
+        fs = [eau_libre(x + k) for k in range(6)]
         if all(f is not None for f in fs):
             noms = [k for k in PIEGES_MER if k != prec]
             nom = r.choice(noms)
             trs = PIEGES_MER[nom](lv, x, fs, H, r, eau, min(fs))
             lv["triggers"].extend(trs)
             if _jouable(lv):
-                poses += 1; prec = nom; x += 12; continue
+                poses += 1; prec = nom; x += 8; continue
             del lv["triggers"][-len(trs):]
         x += 1
     # îles : pics qui jaillissent (pas en plongée : l'île est alors le refuge où l'on plante le drapeau)
@@ -2752,25 +2839,25 @@ FIN_ABYSSES = {
 
 NIVEAUX_MER = [
     # nom, type, motifs (le premier est la vedette), options
-    ("La plongée", "exploration", ["coraux", "iles", "meduses", "crabes"], {}),
-    ("Le récif de corail", "exploration", ["coraux", "globes", "crabes", "iles"], {}),
-    ("Les courants", "action", ["courant", "coraux", "iles", "meduses"], {}),
-    ("Les méduses", "action", ["meduses", "coraux", "grotte", "iles"], {}),
-    ("L'épave", "histoire", ["epave", "crabes", "coraux", "iles"], {}),
-    ("Les anguilles", "action", ["anguilles", "grotte", "coraux", "iles"], {}),
-    ("La cité engloutie", "exploration", ["sas", "anguilles", "coraux", "grotte"], {}),
-    ("Les mines flottantes", "action", ["mine_mur", "mines", "iles", "coraux"], {}),
-    ("Le requin", "action", ["requin", "coraux", "iles", "grotte"], {}),
-    ("Les abysses noirs", "histoire", ["grotte", "coraux", "meduses", "anguilles"], {"_noir": True}),
-    ("Les bulles ascenseur", "exploration", ["grotte", "meduses", "coraux", "globes"], {"_profond": True}),
-    ("Les crabes", "action", ["crabes", "iles", "coraux", "globes"], {}),
-    ("Le tourbillon", "trahison", ["tourbillon", "coraux", "courant", "meduses"], {}),
-    ("Les coffres piégés", "trahison", ["coffres", "crabes", "grotte", "iles"], {}),
-    ("Le jardin d'algues", "histoire", ["algues", "crabes", "meduses", "iles"], {}),
-    ("Les sas", "action", ["sas", "grotte", "meduses", "coraux"], {}),
-    ("Les torpilles d'Archibald", "action", ["torpilles", "iles", "coraux", "mines"], {}),
-    ("La fosse", "action", ["grotte", "meduses", "anguilles", "globes"], {"_profond": True}),
-    ("Le palais englouti", "exploration", ["sas", "mine_mur", "requin", "tourbillon", "algues", "torpilles", "coffres", "anguilles"], {}),
+    ("La plongée", "exploration", ["coraux", "chicanes", "meduses", "crabes"], {}),
+    ("Le récif de corail", "exploration", ["coraux", "globes", "chicanes", "eboulement"], {}),
+    ("Les courants", "action", ["courant", "chicanes", "mur_mines", "meduses"], {}),
+    ("Les méduses", "action", ["meduses", "eboulement", "grotte", "requin"], {}),
+    ("L'épave", "histoire", ["epave", "crabes", "eboulement", "chicanes"], {}),
+    ("Les anguilles", "action", ["anguilles", "grotte", "requin", "chicanes"], {}),
+    ("La cité engloutie", "exploration", ["sas", "anguilles", "eboulement", "mur_mines"], {}),
+    ("Les mines flottantes", "action", ["mine_mur", "mur_mines", "mines", "eboulement"], {}),
+    ("Le requin", "action", ["requin", "chicanes", "mur_mines", "grotte"], {}),
+    ("Les abysses noirs", "histoire", ["grotte", "chicanes", "meduses", "anguilles"], {"_noir": True}),
+    ("Les bulles ascenseur", "exploration", ["grotte", "meduses", "eboulement", "globes"], {"_profond": True}),
+    ("Les crabes", "action", ["crabes", "requin", "chicanes", "globes"], {}),
+    ("Le tourbillon", "trahison", ["tourbillon", "mur_mines", "courant", "meduses"], {}),
+    ("Les coffres piégés", "trahison", ["coffres", "crabes", "eboulement", "requin"], {}),
+    ("Le jardin d'algues", "histoire", ["algues", "crabes", "meduses", "chicanes"], {}),
+    ("Les sas", "action", ["sas", "grotte", "mur_mines", "requin"], {}),
+    ("Les torpilles d'Archibald", "action", ["torpilles", "mur_mines", "eboulement", "mines"], {}),
+    ("La fosse", "action", ["grotte", "meduses", "anguilles", "requin"], {"_profond": True}),
+    ("Le palais englouti", "exploration", ["sas", "mine_mur", "requin", "tourbillon", "algues", "torpilles", "coffres", "anguilles", "chicanes", "eboulement", "mur_mines"], {}),
 ]
 
 INTRO_MER = {
