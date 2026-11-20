@@ -2286,12 +2286,16 @@ def abysses_essai():
 #  MONDE 3 — LES ABYSSES (20 niveaux) : on alterne la surface (îles, radeaux) et la plongée
 # =====================================================================
 EAU, FOND = 7, 18
+ECART_AIR = 18   # en plongée : colonnes au plus entre deux sources d'air, au début d'un niveau (moins ensuite)
 
 
 class Ocean:
     """Niveau sous-marin construit colonne par colonne. Lignes >= eau : sous l'eau."""
-    def __init__(self, nom, type_, num, h=22, eau=EAU, fond=FOND, ammo=(6, 1), **opts):
+    def __init__(self, nom, type_, num, h=22, eau=EAU, fond=FOND, ammo=(6, 1), plongee=True, **opts):
         self.nom, self.type, self.num, self.h, self.eau, self.fond = nom, type_, num, h, eau, fond
+        # plongée : un plafond de roche juste au-dessus de l'eau ; on ne respire qu'aux bulles et aux poches d'air
+        # (retour de test : en restant à la surface, il suffisait d'avancer)
+        self.plongee = plongee
         self.ammo, self.opts = list(ammo), opts
         self.defi = num in DEFIS_MONDE
         self.cols, self.trig, self.winds, self.sas, self.tourb, self.secrets = [], [], [], [], [], []
@@ -2339,17 +2343,45 @@ class Ocean:
             self.put(x0 + max(0, n // 2 - 1), self.eau - 2, objet)
         return x0
 
-    def mer(self, n, fond=None, plafond=0):
+    def mer(self, n, fond=None, plafond=None):
+        if plafond is None:
+            plafond = self.eau - 1 if self.plongee else 0
         x0 = self.x
         for _ in range(n):
             self.col(fond or self.fond, plafond)
         return x0
 
+    def poche(self, n=3):
+        """Poche d'air : la roche s'ouvre, Max peut remonter respirer."""
+        return self.mer(n, plafond=0)
+
+    def bulles(self, n=4):
+        """Quelques colonnes d'eau sous la roche, avec une colonne de bulles pour respirer."""
+        x0 = self.mer(n)
+        self.put(x0 + n // 2, self.fond - 1, "u")
+        return x0
+
+    def refuge(self):
+        """Île refuge au milieu du niveau (le drapeau y est planté), entre deux poches d'air."""
+        self.poche(2); self.ile(6); self.poche(2)
+
+    def dernier_air(self):
+        """Dernière colonne où l'on peut respirer : bulles, eau à l'air libre, ou terre ferme."""
+        for x in range(len(self.cols) - 1, -1, -1):
+            c = self.cols[x]
+            if "u" in c or c[self.eau - 1] == "." or c[self.eau] == "#":
+                return x
+        return 0
+
     def depart(self):
         x0 = self.ile(5)
         self.put(x0 + 1, self.eau - 2, "P")
+        if self.plongee:
+            self.poche(3)   # on plonge ici
 
     def porte(self):
+        if self.plongee:
+            self.poche(3)   # on remonte ici
         x0 = self.ile(6)
         self.put(x0 + 4, self.eau - 2, "D")
 
@@ -2363,6 +2395,8 @@ class Ocean:
              "palette": "abysses", "decor": "abysses", "monde": 3, "_tnt": 0}
         if self.defi:
             d["defi"] = True
+        if self.plongee:
+            d["_plongee"] = True
         for k, v in (("winds", self.winds), ("sas", self.sas), ("tourbillons", self.tourb), ("secrets", self.secrets)):
             if v:
                 d[k] = v
@@ -2402,6 +2436,8 @@ def _o_coraux(o, d, r):
 
 
 def _o_iles(o, d, r):
+    if o.plongee:
+        return _o_coraux(o, d, r)   # sous la roche, pas d'îles : un récif à la place
     for k in range(3 + d):
         o.mer(r.choice((2, 3, 3)), fond=o.fond)
         if r.random() < 0.35:
@@ -2575,6 +2611,16 @@ MOTIFS_MER = {"coraux": _o_coraux, "iles": _o_iles, "grotte": _o_grotte, "meduse
               "torpilles": _o_torpilles, "requin": _o_requin, "epave": _o_epave}
 
 
+def _air_si_besoin(o, r, d):
+    """En plongée : une source d'air (le plus souvent des bulles, parfois une poche d'air) quand la dernière est loin."""
+    if o.x - o.dernier_air() > ECART_AIR - 4 * d:
+        o.mer(r.choice((2, 3)))
+        if r.random() < 0.25:
+            o.poche(3)
+        else:
+            o.bulles(r.choice((3, 4)))
+
+
 def remplir_mer(o, motifs, cible, d0=0):
     """Enchaîne les passages du niveau jusqu'à sa longueur ; entre deux, une île ou une ligne droite piégée."""
     import random
@@ -2582,17 +2628,29 @@ def remplir_mer(o, motifs, cible, d0=0):
     debut = o.x
     base = o.fond
     prec, compte, garde = None, {}, 0
+    refuge_fait = False
     while o.x < cible and garde < 80:
         garde += 1
         d = min(2, d0 + int(3 * (o.x - debut) / max(1, cible - debut)))
         choix = [m for m in motifs if m != prec and compte.get(m, 0) < (4 if m == motifs[0] else 2)] or [m for m in motifs if m != prec]
         m = r.choices(choix, [3 if c == motifs[0] else 1 for c in choix])[0]
+        if o.plongee:
+            # sous la roche : une source d'air de loin en loin, à aller chercher (bulles, parfois une poche d'air)
+            if not refuge_fait and o.x > cible * 0.55:   # le drapeau se plante entre 42 % et 62 % de la largeur finale
+                o.refuge(); refuge_fait = True
+            else:
+                _air_si_besoin(o, r, d)
         MOTIFS_MER[m](o, d, r)
         prec = m; compte[m] = compte.get(m, 0) + 1
         # respirer : une île de temps en temps (la surface et la plongée alternent)
         # le fond change de profondeur d'un passage à l'autre
         o.fond = base - r.choice((0, 0, 1, 2, 3))
         tirage = r.random()
+        if o.plongee:
+            _air_si_besoin(o, r, d)
+            if tirage >= 0.35:
+                o.mer(r.choice((10, 11, 12)))   # eau libre sous la roche… qui recevra une surprise
+            continue
         if tirage < 0.6:
             n = r.choice((3, 9, 10, 11))
             relief = None
@@ -2636,7 +2694,8 @@ def pimenter_mer(lv, graine):
         if x in occ or x < px + 8 or x > W - 10 or abs(x - porte) < 6:
             return None
         col = [g[y][x] for y in range(H)]
-        if col[0] != "#" or any(c != "." for c in col[1:eau + 2]):
+        dessus = col[1:eau]
+        if col[0] != "#" or not (all(c == "." for c in dessus) or all(c == "#" for c in dessus)) or col[eau] != "." or col[eau + 1] != ".":
             return None
         f = next((y for y in range(eau, H) if col[y] != "."), None)
         if f is None or f - eau < 6 or any(c not in "#" for c in col[f:]):
@@ -2654,8 +2713,8 @@ def pimenter_mer(lv, graine):
                 poses += 1; prec = nom; x += 12; continue
             del lv["triggers"][-len(trs):]
         x += 1
-    # îles : pics qui jaillissent
-    for x0, L, y in lignes_droites(lv, 6):
+    # îles : pics qui jaillissent (pas en plongée : l'île est alors le refuge où l'on plante le drapeau)
+    for x0, L, y in ([] if lv.get("_plongee") else lignes_droites(lv, 6)):
         if y >= eau:
             continue
         k = r.choice((2, 3))
@@ -2715,7 +2774,7 @@ NIVEAUX_MER = [
 ]
 
 INTRO_MER = {
-    1: ["Saute dans l'eau ! SAUT = une brasse. Surveille ta réserve d'AIR", "Près de la surface, SAUT te fait sortir de l'eau"],
+    1: ["Plonge ! SAUT = une brasse. Sous la roche, pas d'air : surveille ta réserve", "Respire dans les colonnes de bulles et les poches d'air"],
     2: ["Poisson-globe : il se gonfle et te repousse… parfois sur le corail !"],
     3: ["Les courants te poussent : nage fort, ou laisse-toi porter"],
     4: ["Méduse : passe quand elle ne brille pas (ou assomme-la)"],
@@ -3944,8 +4003,8 @@ def accessible(g, porte, liens=(), depart=None, eau=None, bulles=(), chaud=None,
                 no = FROID_CASES if c in chaud else o2 - max(1, abs(c[0] - x))
                 if no < 0:
                     continue
-            elif mouille(*c) and c not in air_bulles and c[1] > eau:
-                no = (o2 if dans_eau and (x, y) not in air_bulles and y > eau else O2_CASES) - 1
+            elif mouille(*c) and c not in air_bulles and (c[1] > eau or g[eau - 1][c[0]] not in ".o"):   # sous la roche : pas d'air
+                no = (o2 if dans_eau and (x, y) not in air_bulles and (y > eau or g[eau - 1][x] not in ".o") else O2_CASES) - 1
                 if no < 0:
                     continue
             else:
@@ -4357,6 +4416,10 @@ def drapeaux(lv):
         lv["checkpoint"] = None
         point_de_sauvegarde(lv, (a, b), pris)
         c = lv.pop("checkpoint", None)
+        if not c:
+            # pas d'endroit sûr au milieu (sous la roche des abysses, seule l'île refuge convient) : on élargit
+            point_de_sauvegarde(lv, (0.3, 0.75), pris)
+            c = lv.pop("checkpoint", None)
         if c:
             pris.append(c)
     if pris:
@@ -4464,6 +4527,7 @@ def main():
         lv.pop("_pieges", None)
         lv.pop("_tnt", None)
         lv.pop("_liens", None)
+        lv.pop("_plongee", None)
     with open(SORTIE, "w", encoding="utf-8") as f:
         f.write("/* Généré par outils/niveaux.py — ne pas modifier à la main. */\n")
         f.write("window.TEMPLE_ACTS = " + json.dumps(ACTES, ensure_ascii=False) + ";\n")
