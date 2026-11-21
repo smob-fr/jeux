@@ -91,6 +91,7 @@
   .pad.gauche { left: calc(env(safe-area-inset-left, 0px) + 10px); }
   .pad.droite { right: calc(env(safe-area-inset-right, 0px) + 10px); grid-template-columns: 76px 76px; justify-items: center; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
   body.tactile.en-jeu .pad.droite { display: grid; }
+  body.fiche .pad, body.tactile.en-jeu.fiche .pad, body.tactile.en-jeu.fiche .pad.droite { display: none; }   /* fiche « Nouveauté » : rien par-dessus */
   .pad.droite .saut { grid-column: 1 / -1; justify-self: stretch; }
   .touche {
     width: 56px; height: 56px; border-radius: 50%; border: 2px solid rgba(241,230,204,.28);

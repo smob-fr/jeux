@@ -857,7 +857,6 @@ def acte1():
         {"max": 0, "act": [["say", "Tu aimes le sport ?"]]},
         {"min": 1, "act": [["spikes", 10, 9, 2, 1]]},
         {"min": 1, "max": 2, "act": [["say", "Cette fois, je te montre les pics. Je suis bon joueur."]]},
-        {"min": 3, "act": [["say", "Je ralentis le rocher. Ne le dis à personne."]]},
         {"max": 2, "zone": [6, 1, 1, 4], "act": [["boulder", 1, 2, 1, 1.5], ["shake", 6]]},
         {"min": 3, "zone": [6, 1, 1, 4], "act": [["boulder", 1, 2, 1, 1.15], ["shake", 6]]},
         {"max": 0, "zone": [13, 6, 1, 4], "act": [["spikes", 10, 9, 2, 1]]},
@@ -2691,7 +2690,7 @@ def _air_si_besoin(o, r, d):
             o.bulles(r.choice((3, 4)))
 
 
-def remplir_mer(o, motifs, cible, d0=0):
+def remplir_mer(o, motifs, cible, d0=0, dabord=None):
     """Enchaîne les passages du niveau jusqu'à sa longueur ; entre deux, une île ou une ligne droite piégée."""
     import random
     r = random.Random(3000 + o.num)
@@ -2704,6 +2703,8 @@ def remplir_mer(o, motifs, cible, d0=0):
         d = min(2, d0 + int(3 * (o.x - debut) / max(1, cible - debut)))
         choix = [m for m in motifs if m != prec and compte.get(m, 0) < (4 if m == motifs[0] else 2)] or [m for m in motifs if m != prec]
         m = r.choices(choix, [3 if c == motifs[0] else 1 for c in choix])[0]
+        if dabord and garde == 1:
+            m = dabord   # passage imposé en premier (ex. 3-2 : le premier mur de mine, juste après la fiche « Nouveauté »)
         if o.plongee:
             # sous la roche : une source d'air de loin en loin, à aller chercher (bulles, parfois une poche d'air)
             if not refuge_fait and o.x > cible * 0.55:   # le drapeau se plante entre 42 % et 62 % de la largeur finale
@@ -2788,11 +2789,12 @@ def pimenter_mer(lv, graine):
         if f is None or f - eau < 6 or any(c not in "#" for c in col[f:]):
             return None
         return f
+    num = graine - 2999   # numéro du niveau dans le monde (graine = 3000 + indice)
     poses, prec, x = 0, None, 1
     while x < W - 10:
         fs = [eau_libre(x + k) for k in range(6)]
         if all(f is not None for f in fs):
-            noms = [k for k in PIEGES_MER if k != prec]
+            noms = [k for k in PIEGES_MER if k != prec and k not in SANS_PIEGES_MER.get(num, ())]
             nom = r.choice(noms)
             trs = PIEGES_MER[nom](lv, x, fs, H, r, eau, min(fs))
             lv["triggers"].extend(trs)
@@ -2840,7 +2842,7 @@ FIN_ABYSSES = {
 NIVEAUX_MER = [
     # nom, type, motifs (le premier est la vedette), options
     ("La plongée", "exploration", ["coraux", "chicanes", "meduses", "crabes"], {}),
-    ("Le récif de corail", "exploration", ["coraux", "globes", "chicanes", "eboulement"], {}),
+    ("Le récif de corail", "exploration", ["coraux", "globes", "chicanes", "eboulement"], {"_dabord": "mine_mur"}),
     ("Les courants", "action", ["courant", "chicanes", "mur_mines", "meduses"], {}),
     ("Les méduses", "action", ["meduses", "eboulement", "grotte", "requin"], {}),
     ("L'épave", "histoire", ["epave", "crabes", "eboulement", "chicanes"], {}),
@@ -2860,26 +2862,22 @@ NIVEAUX_MER = [
     ("Le palais englouti", "exploration", ["sas", "mine_mur", "requin", "tourbillon", "algues", "torpilles", "coffres", "anguilles", "chicanes", "eboulement", "mur_mines"], {}),
 ]
 
+# Fiches « Nouveauté » (game.js, NOUVEAUTES) : montrées une seule fois, à l'arrivée du premier niveau
+# qui apporte la mécanique ; le jeu attend « OK ». Les surprises des premiers niveaux évitent donc
+# les mines et les requins avant leur fiche (SANS_PIEGES_MER).
+NOUVEAU_MER = {
+    1: ["plongee", "meduse"],
+    2: ["mine"],
+    3: ["requin"],
+    5: ["coffre"],
+    7: ["sas"],
+    10: ["lanterne"],
+    13: ["tourbillon"],
+}
+SANS_PIEGES_MER = {1: {"rideau", "mine", "requin", "requin_face"}, 2: {"requin", "requin_face"}}
+# Les rares aides restantes (texte bref en jeu)
 INTRO_MER = {
-    1: ["Plonge ! SAUT = une brasse. Sous la roche, pas d'air : surveille ta réserve", "Respire dans les colonnes de bulles et les poches d'air"],
-    2: ["Poisson-globe : il se gonfle et te repousse… parfois sur le corail !"],
-    3: ["Les courants te poussent : nage fort, ou laisse-toi porter"],
-    4: ["Méduse : passe quand elle ne brille pas (ou assomme-la)"],
-    5: ["L'épave du grand-père d'Archibald… Entre par une écoutille"],
-    6: ["Attention aux trous dans les rochers : il y a des anguilles"],
-    7: ["Les sas s'ouvrent et se ferment en rythme : quand ils clignotent, ils vont se fermer !"],
-    8: ["Mine ! Ne la touche pas : pousse-la d'un COUP de massue contre le mur fissuré"],
-    9: ["Un requin dort ici… Les petites grottes sont trop étroites pour lui"],
-    10: ["Il fait tout noir… Suis le poisson-lanterne, il t'attend"],
-    11: ["Les colonnes de bulles font remonter et redonnent de l'air"],
-    12: ["Les crabes ont une carapace dure : saute-leur dessus ou assomme-les"],
-    13: ["Tourbillon ! Il t'aspire et inverse tes commandes"],
-    14: ["Certains coffres ont des dents… Un COUP de massue les calme"],
-    15: ["Les algues ralentissent et cachent ce qui vit dessous"],
-    16: ["Sas : attends qu'il s'ouvre, puis fonce avant qu'il clignote"],
-    17: ["Le sous-marin d'Archibald tire des torpilles depuis le fond !"],
-    18: ["La fosse : on descend très profond, avec peu de bulles"],
-    19: ["Le palais englouti : tout l'océan réuni. Courage !"],
+    5: ["L'épave : entre par une écoutille"],
 }
 
 
@@ -2889,18 +2887,21 @@ def monde_abysses():
         num = i + 1
         profond = opts.pop("_profond", False) if isinstance(opts, dict) else False
         noir = opts.pop("_noir", False)
+        dabord = opts.pop("_dabord", None)
         h, fond = (30, 27) if profond else (22, FOND)
         o = Ocean(nom, type_, num, h=h, fond=fond)
         o.depart()
         for k, txt in enumerate(INTRO_MER.get(num, [])):
             o.astuce(txt, 4 + k * 14, max=0)
         cible = 150 if type_ == "histoire" else 195 if o.defi else 180
-        remplir_mer(o, motifs, cible, d0=1 if o.defi else 0)
+        remplir_mer(o, motifs, cible, d0=1 if o.defi else 0, dabord=dabord)
         o.porte()
         if noir:
             o.lanterne = True
         lv = o.fini()
         lv["fin"] = FIN_ABYSSES[num]
+        if num in NOUVEAU_MER:
+            lv["nouveau"] = NOUVEAU_MER[num]
         L.append(lv)
     L.append(boss_pieuvre())
     L[-1]["fin"] = FIN_ABYSSES[20]

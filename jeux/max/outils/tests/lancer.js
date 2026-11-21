@@ -65,6 +65,8 @@ async function main() {
     try {
       await page.goto(url);
       await page.waitForFunction(() => window.__temple && window.__temple.LEVELS.length > 0);
+      // les fiches « Nouveauté » attendent OK : on les saute, sauf dans les tests qui les vérifient
+      if (!t.fiches) await page.evaluate(() => { window.__sansNouveautes = true; });
       r = await t.run(page, contexte);
     } catch (e) {
       r = { ok: false, detail: "exception : " + (e && e.message ? e.message.split("\n")[0] : e) };

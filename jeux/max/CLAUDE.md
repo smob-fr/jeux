@@ -67,7 +67,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - `mesurePerf(n)` fait avancer `n` images et en donne le temps moyen.
   - `room` donne l'état du niveau en cours.
   - `apercuNiveau(i)` donne une image du niveau entier.
-- **Tests automatiques** (`outils/tests/`, 20 tests, environ 4 minutes) : les robots qui battent les 5 boss, chaque mécanique des 5 mondes, les 100 niveaux, les plateformes mobiles, le saut tactile, et le branchement sur le kit (`kit.test.js` : bannière, boutique, vidéo, interstitielle). Playwright vient de la racine du dépôt (`npm install` et `npx playwright install chromium` une seule fois, à la racine). Après `npm run build` : `node outils/tests/lancer.js` (ou `node outils/tests/lancer.js boss saut` pour n'en lancer qu'une partie ; code de sortie 1 en cas d'échec). `npm test` fait tout.
+- **Tests automatiques** (`outils/tests/`, 23 tests, environ 4 minutes) : les robots qui battent les 5 boss, chaque mécanique des 5 mondes, les 100 niveaux, les plateformes mobiles, le saut tactile, et le branchement sur le kit (`kit.test.js` : bannière, boutique, vidéo, interstitielle). Playwright vient de la racine du dépôt (`npm install` et `npx playwright install chromium` une seule fois, à la racine). Après `npm run build` : `node outils/tests/lancer.js` (ou `node outils/tests/lancer.js boss saut` pour n'en lancer qu'une partie ; code de sortie 1 en cas d'échec). `npm test` fait tout.
 
 ## Fonctionnalités
 
@@ -120,7 +120,7 @@ npm test                           # build, régénère les niveaux (levels.js d
 
 - **Prix** : l'ancien « Pack aventurier » coûtait 2,99 € (40 amulettes + chapeau), hors de la grille 0,99/1,99/4,99 €. Il passe à 1,99 € (25 amulettes + chapeau, une seule fois), et un coffre de 60 amulettes à 4,99 € est ajouté.
 - **Pas de vies, de bonus ni de cadeau du jour** : remplacés par les amulettes, les pièces, « Repartir d'ici ? » et l'aide automatique. C'est permis.
-- **Pas de rappels (notifications)** ni de tutoriel guidé avec main animée.
+- **Pas de rappels (notifications)** ni de tutoriel guidé avec main animée ; à la place, des fiches « Nouveauté » animées (monde 3 pour l'instant).
 - **Réglages** : l'écran Options n'a ni interrupteur de musique (il n'y a que des bruitages) ni « Effacer ma progression ».
 
 ## État d'avancement
@@ -139,6 +139,11 @@ npm test                           # build, régénère les niveaux (levels.js d
   - Abysses (monde 3) : en restant à la surface, il suffisait d'avancer. Un plafond de roche couvre maintenant l'eau ; on ne respire qu'aux bulles et dans quelques poches d'air (`Ocean.plongee`, `ECART_AIR`), réserve d'air 10 s. Le vérificateur ne compte plus d'air sous la roche.
   - Abysses trop calmes (« on avance sans problème, on s'ennuie ») : nouveaux passages (`mur_mines` rideaux de mines en slalom, `chicanes` rochers à oursins et coraux, `eboulement` blocs qui tombent de la roche), plus de requins, moins d'eau vide, et 4 nouvelles surprises (oursins qui jaillissent de la roche, éboulement, rideau de mines, requin de face). Pièges surprises : 9 à 20 par niveau (avant : 3 à 10). Une colonne de bulles est ajoutée là où 16 colonnes passent sans air (`bulles_manquantes`).
   - 3-8 (mines flottantes) : une mine perdue (touchée, ou poussée du mauvais côté) laissait un mur fissuré impossible à casser. Une mine de la carte revient à sa place 2,5 s après son explosion tant qu'un mur fissuré reste à ouvrir devant elle (`murFissureDevant`, action `remine`).
+  - Abysses, retours du 21 novembre :
+    - **Fiches « Nouveauté »** : à l'arrivée du premier niveau qui apporte une mécanique importante, une petite scène animée et deux phrases ; le jeu attend « OK, c'est parti ! » (bouton ou toucher, pas avant 2/3 s). Une seule fois par mécanique (`progress.nouveautes`). Liste `nouveau` du niveau, scènes dans `NOUVEAUTES` (`game.js`). Monde 3 : air sous la roche et méduse (3-1), mine (3-2), requin (3-3), coffre (3-5), sas (3-7), abysses noirs (3-10), tourbillon (3-13). Elles remplacent presque toutes les aides en texte du début des niveaux.
+    - Mines : le 3-2 commence par une mine devant un mur fissuré (on ne passe qu'en la poussant). Pas de mine ni de requin surprise avant leur fiche (`SANS_PIEGES_MER`).
+    - Moins de messages : plus de bulles d'Archibald « je ralentis… » (l'aide automatique ralentit en silence). Message de mort du requin cohérent (« Un COUP de massue l'assomme un moment ! »).
+    - 3-10 : un éboulement laissait un trou d'une case dans le plafond ; au-dessus de bulles, Max y restait coincé à la surface. Le bloc se détache maintenant sous la roche, qui reste intacte.
 - Commandes tactiles retravaillées le 10 novembre : saut fiable même sur un appui bref, grand bouton SAUT rectangulaire. À confirmer sur téléphone.
 
 ## Ce qui reste à faire
