@@ -172,10 +172,13 @@
     if (e.code === "KeyM") { toggleMute(); return; }
     if (e.code === "Enter" && game.mode === "title" && !overlays.titre.hidden) { ouvrirCarte(); return; }
     const n = keyMap[e.code];
+    if (game.mode === "nouveau" && (e.code === "Enter" || n)) { game.nvOk = true; e.preventDefault(); return; }
     if (n && (game.mode === "play" || game.mode === "card")) { setInput(n, true); e.preventDefault(); }
   });
   window.addEventListener("keyup", (e) => { const n = keyMap[e.code]; if (n) setInput(n, false); });
   window.addEventListener("blur", releaseAll);
+  // fiche « Nouveauté » : un toucher n'importe où vaut OK
+  window.addEventListener("pointerdown", () => { if (game.mode === "nouveau") game.nvOk = true; }, true);
   function releaseAll() {
     for (const k in input) input[k] = false;
     pointerOwner.clear();
@@ -745,7 +748,19 @@
     if (game.mode === "card") {
       pressed.jump = pressed.fire = pressed.tnt = false;
       game.cardT++;
-      if (game.cardT > 80) { game.mode = "play"; runTriggers(true); }
+      if (game.cardT > 80) {
+        const nv = nouveautesDuNiveau();
+        if (nv.length) { game.mode = "nouveau"; game.nv = nv; game.nvT = 0; game.nvOk = false; document.body.classList.add("fiche"); }
+        else { game.mode = "play"; runTriggers(true); }
+      }
+      return;
+    }
+    if (game.mode === "nouveau") {
+      // fiche « Nouveauté » : le jeu attend OK (un bouton ou un toucher), pas avant NV_ATTENTE images
+      game.nvT++;
+      const ok = game.nvOk || pressed.jump || pressed.fire || pressed.tnt;
+      pressed.jump = pressed.fire = pressed.tnt = false; game.nvOk = false;
+      if (ok && game.nvT > NV_ATTENTE) fermerNouveaute();
       return;
     }
     R.t++;
@@ -2668,7 +2683,11 @@
         if (--k.delay <= 0) {
           k.falling = true;
           const [x, y, w, h] = k.tiles;
-          for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { R.tiles[ty][tx] = "."; R.wobble.delete(tx + "," + ty); }
+          // plafond de roche des abysses : un éclat se détache mais la roche reste (sinon le trou
+          // d'une case gardait Max coincé, flottant à la surface sans pouvoir ressortir)
+          const plafond = R.def.eau != null && y + h === R.def.eau && y > 0 && R.tiles[y - 1][x] === "#";
+          if (plafond) { for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) R.wobble.delete(tx + "," + ty); k.y = (y + h) * T; }
+          else for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { R.tiles[ty][tx] = "."; R.wobble.delete(tx + "," + ty); }
           sfx.crumble();
         }
         continue;
@@ -2722,7 +2741,7 @@
       if (p.vy > 0.5 && p.y + p.h - e.y < 10) { stunEnemy(e, 0); p.vy = e.kind === "C" ? -7.2 : -4.6; p.spring = e.kind === "C"; continue; }
       if (e.kind === "k") { if (e.etat !== "fuite" && !(p.invuln > 0)) volParSinge(e); continue; }
       if (e.kind === "l" && e.out < 0.25) continue;
-      return kill(e.kind === "j" ? "Croqué par un bébé jaguar. Il est mignon, pourtant." : e.kind === "Z" ? "Le requin avait faim. Cache-toi dans les petites grottes !" : null);
+      return kill(e.kind === "j" ? "Croqué par un bébé jaguar. Il est mignon, pourtant." : e.kind === "Z" ? "Le requin avait faim. Un COUP de massue l'assomme un moment !" : null);
     }
     for (const e of R.enemies) if (e.kind === "e" && e.alive && !e.stun && e.zap && Math.hypot(p.x + 5 - (e.x + 5), p.y + 8 - (e.y + 5)) < 26) return kill("Bzzz ! La méduse t'a électrocuté.");
     if (R.def.monde === 5) dangersOr(p);
@@ -2819,6 +2838,7 @@
     resize();
     updateCamera(true);
     game.mode = "card"; game.cardT = 0;
+    document.body.classList.remove("fiche");
     game.paused = false;
     releaseAll();
   }
@@ -2836,8 +2856,7 @@
     game.mode = "play";
     runTriggers(true);
     if (keep && !R.say) R.say = keep;
-    if (fromDeath && R.deaths > 0 && R.deaths % 3 === 0 && R.assist <= 3)
-      R.say = { text: ["Bon… je relâche un peu mes pièges. Par pitié.", "Je ralentis encore tout. Ne le dis à personne.", "Là, même Gérard roule au ralenti. Allez, Max !"][R.assist - 1] || "Courage, Max !", t: 0, dur: 200 };
+    // l'aide automatique (R.assist) ralentit les pièges en silence : plus de bulle « je ralentis… »
     game.paused = false;
     showOverlay(null);
   }
@@ -3219,6 +3238,7 @@
     if (game.invert > 0) drawInvert();
     drawTimerHud();
     if (game.mode === "card") drawCard();
+    if (game.mode === "nouveau") drawNouveau();
     if (game.mode === "win") { ctx.fillStyle = `rgba(7,11,9,${Math.min(1, game.winT / 40)})`; ctx.fillRect(0, 0, view.w, view.h); }
   }
 
@@ -4777,6 +4797,238 @@
     ctx.globalAlpha = 1;
   }
 
+  /* ================= Fiches « Nouveauté » ================= */
+  // À l'arrivée d'un niveau qui apporte une mécanique importante (liste `nouveau` du niveau) :
+  // une petite scène animée, deux phrases, et le jeu attend « OK ». Chaque fiche n'est montrée
+  // qu'une fois (progress.nouveautes). Les scènes se dessinent dans un cadre de 200 × 84.
+  const SC_W = 200, SC_H = 84, NV_ATTENTE = 40;
+  // dessine avec un faux niveau (Max et ennemis de la scène), puis remet le vrai
+  function avecScene(t, joueur, fn) {
+    const vrai = R;
+    R = { t, hat: null, particles: [], player: Object.assign({}, vrai.player, { alive: true, invuln: 0, shield: 0, swim: true, grounded: false, stroke: 0, club: 0, vx: 0.5, vy: 0, anim: t * 0.12 }, joueur), sas: [], tourbillons: [], torpilles: [], lanterne: null, tiles: [] };
+    try { fn(); } finally { R = vrai; }
+  }
+  function scEau(sombre) {
+    const g = ctx.createLinearGradient(0, 0, 0, SC_H);
+    g.addColorStop(0, sombre ? "#071422" : "#145a7a"); g.addColorStop(1, sombre ? "#02060c" : "#0a2a44");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, SC_W, SC_H);
+  }
+  function scRoche(x, y, w, h) {
+    ctx.fillStyle = "#33414b"; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = "#46565f"; for (let i = x; i < x + w; i += 8) ctx.fillRect(i, y + h - 2, 5, 2);
+  }
+  function scBulles(t, x, bas, haut) {
+    ctx.fillStyle = "rgba(210,245,255,0.75)";
+    for (let i = 0; i < 7; i++) { const k = (t * 1.4 + i * 13) % (bas - haut); ctx.beginPath(); ctx.arc(x + 4 + Math.sin(i * 2.3 + t / 9) * 3, bas - k, 1.3 + (i % 3) * 0.6, 0, Math.PI * 2); ctx.fill(); }
+  }
+  function scTexte(txt, x, y, col) { ctx.font = `8px ${FONT_PIX}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = col || C.gold; ctx.fillText(txt, x, y); }
+  const lerp = (a, b, k) => a + (b - a) * Math.max(0, Math.min(1, k));
+
+  const NOUVEAUTES = {
+    plongee: {
+      titre: "SOUS LA ROCHE, PAS D'AIR",
+      texte: ["Ta réserve d'air dure 10 secondes (la barre au-dessus de Max).", "Respire dans les colonnes de bulles, puis file à la suivante !"],
+      scene(t) {
+        const T0 = t % 300, mx = lerp(4, 186, T0 / 260);
+        scEau(); scRoche(0, 0, SC_W, 12); scRoche(0, SC_H - 8, SC_W, 8);
+        scBulles(t, 100, SC_H - 8, 12); scBulles(t + 30, 100, SC_H - 8, 12);
+        ctx.fillStyle = "#5b6b74"; ctx.fillRect(98, SC_H - 10, 12, 3);
+        // la réserve baisse sous la roche et remonte dans les bulles
+        let o2 = 1; for (let k = 0; k < T0; k++) { const x = lerp(4, 186, k / 260); o2 = Math.abs(x + 5 - 104) < 9 ? Math.min(1, o2 + 0.03) : Math.max(0.05, o2 - 0.0062); }
+        avecScene(t, { x: mx, y: 40 + Math.sin(t / 16) * 3, face: 1 }, drawPlayer);
+        const bas = o2 < 0.3;
+        ctx.fillStyle = "rgba(6,10,8,0.75)"; ctx.fillRect(mx - 7, 27, 24, 5);
+        ctx.fillStyle = bas && Math.floor(t / 6) % 2 ? C.danger : bas ? "#ff9a7a" : "#7fd7e6"; ctx.fillRect(mx - 6, 28, 22 * o2, 3);
+        if (Math.abs(mx + 5 - 104) < 9) scTexte("AIR !", 104, 20, "#bff3ff");
+      },
+    },
+    meduse: {
+      titre: "LA MÉDUSE",
+      texte: ["Quand elle s'allume, elle électrise tout autour d'elle.", "Passe quand elle est éteinte, ou assomme-la d'un COUP de massue."],
+      scene(t) {
+        const ph = t % 220;
+        scEau(); scRoche(0, 0, SC_W, 10); scRoche(0, SC_H - 8, SC_W, 8);
+        const e = { kind: "e", x: 95, y: 34 + Math.sin(t * 0.025) * 6, w: 10, h: 10, t: t + 1000, charge: ph >= 60 && ph < 90, zap: ph >= 90 && ph < 170, alive: true };
+        // Max attend à distance pendant qu'elle grésille, puis passe quand elle s'éteint
+        const mx = ph < 50 ? lerp(8, 40, ph / 50) : ph < 170 ? 40 : lerp(40, 190, (ph - 170) / 45);
+        avecScene(t, { x: mx, y: 46 + Math.sin(t / 16) * 2, face: 1 }, () => { drawMeduse(e); drawPlayer(); });
+        if (e.zap) scTexte("BZZZ ! ATTENDS…", 100, 20, "#bff3ff");
+        else if (ph >= 170) scTexte("ÉTEINTE : PASSE !", 100, 20, "#9be7a6");
+      },
+    },
+    mine: {
+      titre: "LA MINE",
+      texte: ["Ne la touche jamais : elle explose !", "Donne-lui un COUP de massue : elle file droit devant et fait sauter le mur fissuré."],
+      scene(t) {
+        const T0 = t % 280;
+        scEau(); scRoche(0, 0, SC_W, 12); scRoche(0, SC_H - 8, SC_W, 8);
+        const boum = 122, mur = T0 < boum;
+        if (mur) {
+          // mur fissuré : il bloque le passage
+          ctx.fillStyle = "#6e5a48"; ctx.fillRect(168, 12, 20, SC_H - 20);
+          ctx.strokeStyle = "#2c2119"; ctx.lineWidth = 1; ctx.beginPath();
+          ctx.moveTo(172, 20); ctx.lineTo(178, 32); ctx.lineTo(174, 44); ctx.lineTo(182, 58); ctx.lineTo(177, 70);
+          ctx.moveTo(185, 26); ctx.lineTo(180, 38); ctx.moveTo(171, 52); ctx.lineTo(176, 62); ctx.stroke();
+        } else { ctx.fillStyle = "#33414b"; for (let i = 0; i < 4; i++) ctx.fillRect(168 + i * 5, SC_H - 11 + (i % 2), 4, 3); }
+        const mx = T0 < 70 ? lerp(8, 66, T0 / 70) : T0 < 140 ? 66 : lerp(66, 200, (T0 - 140) / 110);
+        const club = T0 >= 70 && T0 < 88 ? 88 - T0 : 0;
+        const mineX = T0 < 84 ? 92 : Math.min(156, 92 + (T0 - 84) * 1.8);
+        avecScene(t, { x: mx, y: 40 + Math.sin(t / 16) * 2, face: 1, club }, () => {
+          if (T0 < boum) drawEnemy({ kind: "M", x: mineX, y: 38 + (T0 < 84 ? Math.sin(t * 0.04) * 3 : 0), w: 12, h: 12, vx: T0 >= 84 ? 2 : 0, t, alive: true });
+          drawPlayer();
+        });
+        if (T0 >= boum && T0 < boum + 26) {
+          const k = (T0 - boum) / 26;
+          ctx.fillStyle = `rgba(255,179,71,${1 - k})`; ctx.beginPath(); ctx.arc(170, 44, 6 + k * 26, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = `rgba(255,240,200,${1 - k})`; ctx.beginPath(); ctx.arc(170, 44, 3 + k * 14, 0, Math.PI * 2); ctx.fill();
+          scTexte("BOUM !", 150, 20);
+        }
+        if (club) scTexte("COUP !", 80, 22);
+        if (T0 < 66) scTexte("TOUCHER = BOUM", 96, 24, "#ff9a7a");
+      },
+    },
+    requin: {
+      titre: "LE REQUIN",
+      texte: ["Il dort… jusqu'à ce que tu nages près de lui. Puis il te poursuit.", "Un COUP de massue l'assomme un moment : profites-en pour filer !"],
+      scene(t) {
+        const T0 = t % 280;
+        scEau(); scRoche(0, 0, SC_W, 10); scRoche(0, SC_H - 8, SC_W, 8);
+        const zx = T0 < 30 ? 150 : T0 < 86 ? lerp(150, 84, (T0 - 30) / 56) : lerp(84, 120, (T0 - 86) / 30);
+        const stun = T0 >= 86 && T0 < 230 ? 230 - T0 : 0;
+        const club = T0 >= 74 && T0 < 92 ? 92 - T0 : 0;
+        const mx = T0 < 120 ? 58 : lerp(58, 200, (T0 - 120) / 110), my = T0 < 120 ? 44 : lerp(44, 22, (T0 - 120) / 30);
+        avecScene(t, { x: mx, y: my + Math.sin(t / 16) * 2, face: 1, club }, () => {
+          drawEnemy({ kind: "Z", x: zx, y: 40, w: 28, h: 18, vx: T0 < 86 ? -1 : 1, t, alive: true, etat: T0 < 30 ? "dort" : "chasse", face: -1, stun, dirBack: -1 });
+          drawPlayer();
+        });
+        if (club) scTexte("COUP !", 76, 26);
+        if (T0 >= 30 && T0 < 74) scTexte("IL T'A VU !", 120, 22, "#ff9a7a");
+      },
+    },
+    coffre: {
+      titre: "LE COFFRE QUI MORD",
+      texte: ["Certains coffres ont des dents et mordent quand tu passes.", "Un COUP de massue le calme : il te laisse son trésor."],
+      scene(t) {
+        const T0 = t % 240;
+        scEau(); scRoche(0, 0, SC_W, 10); scRoche(0, SC_H - 8, SC_W, 8);
+        const ouv = T0 < 50 ? 0 : T0 < 90 ? (Math.sin(T0 / 3) * 0.5 + 0.5) : 0;
+        const club = T0 >= 76 && T0 < 94 ? 94 - T0 : 0;
+        const mx = lerp(20, 82, T0 / 70);
+        avecScene(t, { x: mx, y: SC_H - 23, face: 1, club, swim: false, grounded: true, vx: T0 < 70 ? 1 : 0 }, () => {
+          drawEnemy({ kind: "X", x: 102, y: SC_H - 20, w: 14, h: 12, t, alive: true, etat: "dort", ouv, stun: T0 >= 94 && T0 < 200 ? 200 - T0 : 0 });
+          drawPlayer();
+        });
+        if (T0 >= 50 && T0 < 76) scTexte("CROC !", 110, 30, "#ff9a7a");
+        if (T0 >= 110 && T0 < 200) { ctx.fillStyle = C.gold; ctx.beginPath(); ctx.arc(109, lerp(56, 36, (T0 - 110) / 30), 3, 0, Math.PI * 2); ctx.fill(); }
+      },
+    },
+    sas: {
+      titre: "LE SAS",
+      texte: ["La porte de métal s'ouvre et se ferme en rythme.", "Quand elle clignote en rouge, elle va se fermer : attends la suivante !"],
+      scene(t) {
+        const ph = t % 200, ferme = ph >= 120, alerte = ph >= 90 && ph < 120;
+        scEau(); scRoche(0, 0, SC_W, 18); scRoche(0, SC_H - 18, SC_W, 18);
+        ctx.fillStyle = "#59636b"; ctx.fillRect(94, 14, 14, 4); ctx.fillRect(94, SC_H - 18, 14, 4);
+        if (ferme) { ctx.fillStyle = "#6d7880"; ctx.fillRect(96, 18, 10, SC_H - 36); ctx.fillStyle = "#4a535a"; for (let y = 22; y < SC_H - 20; y += 8) ctx.fillRect(96, y, 10, 1); }
+        if (alerte && Math.floor(t / 5) % 2) { ctx.fillStyle = "rgba(255,90,60,0.4)"; ctx.fillRect(96, 18, 10, SC_H - 36); }
+        const mx = ph < 20 ? lerp(70, 180, ph / 20) : ph >= 130 ? lerp(10, 70, (ph - 130) / 50) : ph < 30 ? 180 : 70;
+        avecScene(t, { x: mx, y: 36 + Math.sin(t / 16) * 2, face: 1 }, drawPlayer);
+        if (alerte) scTexte("ÇA VA FERMER !", 100, 9, "#ff9a7a");
+        else if (ph < 90) scTexte("OUVERT : FONCE", 100, 9, "#9be7a6");
+      },
+    },
+    tourbillon: {
+      titre: "LE TOURBILLON",
+      texte: ["Il t'aspire vers son centre…", "… et inverse tes commandes : ◀ pousse à droite, ▶ pousse à gauche !"],
+      scene(t) {
+        scEau(); scRoche(0, 0, SC_W, 10); scRoche(0, SC_H - 8, SC_W, 8);
+        ctx.strokeStyle = "rgba(200,240,255,0.45)"; ctx.lineWidth = 1.5;
+        for (let k = 0; k < 3; k++) { ctx.beginPath(); for (let a = 0; a < 9; a += 0.2) { const r = 30 * (a / 9), aa = a + t * 0.06 + k * 2.1; const px = 100 + Math.cos(aa) * r, py = 44 + Math.sin(aa) * r; if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); } ctx.stroke(); }
+        const a = t * 0.05, r = 22 + Math.sin(t / 40) * 6;
+        avecScene(t, { x: 95 + Math.cos(a) * r, y: 37 + Math.sin(a) * r * 0.6, face: Math.sin(a) > 0 ? -1 : 1 }, drawPlayer);
+        const clig = Math.floor(t / 30) % 2;
+        scTexte(clig ? "◀ = ▶" : "▶ = ◀", 30, 20, "#ff9a7a");
+      },
+    },
+    lanterne: {
+      titre: "LES ABYSSES NOIRS",
+      texte: ["Ici, il fait tout noir.", "Suis le poisson-lanterne : il éclaire le chemin et t'attend."],
+      scene(t) {
+        const T0 = t % 260, lx = lerp(60, 190, T0 / 220), ly = 36 + Math.sin(t / 18) * 2, mx = lerp(20, 150, T0 / 220);
+        scEau(true);
+        const g = ctx.createRadialGradient(lx, ly, 2, lx, ly, 42); g.addColorStop(0, "rgba(255,246,176,0.35)"); g.addColorStop(1, "rgba(255,246,176,0)");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, SC_W, SC_H);
+        avecScene(t, { x: mx, y: 40 + Math.sin(t / 16) * 2, face: 1 }, () => {
+          dessinerLanterne({ x: lx, y: ly });
+          drawPlayer();
+        });
+      },
+    },
+  };
+  function dessinerLanterne(L) {
+    ctx.save(); ctx.translate(L.x, L.y);
+    ctx.fillStyle = "#3d2c4a"; ctx.beginPath(); ctx.ellipse(0, 0, 8, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-12, -4); ctx.lineTo(-12, 4); ctx.fill();
+    ctx.strokeStyle = "#3d2c4a"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(3, -4); ctx.quadraticCurveTo(8, -12, 11, -7); ctx.stroke();
+    ctx.fillStyle = "#fff6b0"; ctx.beginPath(); ctx.arc(11, -7, 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#f4f0e0"; ctx.fillRect(5, 1, 3, 1); ctx.fillStyle = "#fff"; ctx.fillRect(3, -2, 2, 2);
+    ctx.restore();
+  }
+  function nouveautesDuNiveau() {
+    if (window.__sansNouveautes) return [];
+    const vues = progress.nouveautes || {};
+    return (R.def.nouveau || []).filter((k) => NOUVEAUTES[k] && !vues[k]);
+  }
+  // fin de la fiche « Nouveauté » : on note qu'elle est vue, puis la suivante ou le jeu
+  function fermerNouveaute() {
+    progress.nouveautes = progress.nouveautes || {};
+    progress.nouveautes[game.nv.shift()] = 1;
+    saveProgress();
+    sfx.door();
+    if (game.nv.length) { game.nvT = 0; return; }
+    releaseAll();
+    document.body.classList.remove("fiche");
+    game.mode = "play"; runTriggers(true);
+  }
+  function drawNouveau() {
+    const n = NOUVEAUTES[game.nv && game.nv[0]];
+    if (!n) return;
+    const t = game.nvT, a = Math.min(1, t / 12);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = "rgba(4,8,12,0.8)"; ctx.fillRect(0, 0, view.w, view.h);
+    ctx.font = `8px ${FONT_TXT}`;
+    const pw = Math.min(view.w - 16, 380), maxW = pw - 20;
+    const lignes = n.texte.flatMap((l) => (ctx.measureText(l).width > maxW ? wrapText(l, maxW) : [l]));
+    const ph = Math.min(view.h - 10, 200), px = Math.round((view.w - pw) / 2), py = Math.round((view.h - ph) / 2);
+    ctx.fillStyle = "#0e1c24"; ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = C.gold; ctx.lineWidth = 1; ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = `8px ${FONT_PIX}`; ctx.fillStyle = C.jade; ctx.fillText("NOUVEAU !", view.w / 2, py + 10);
+    ctx.font = `16px ${FONT_PIX}`; ctx.fillStyle = C.text;
+    const tw = ctx.measureText(n.titre).width;
+    if (tw > pw - 16) ctx.font = `8px ${FONT_PIX}`;
+    ctx.fillText(n.titre, view.w / 2, py + 24);
+    // la scène animée
+    const bas = py + ph - 26 - lignes.length * 10, sy = py + 34, shMax = bas - sy - 4;
+    const s = Math.min((pw - 24) / SC_W, shMax / SC_H), sw = SC_W * s, sh = SC_H * s, sx = Math.round(view.w / 2 - sw / 2);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(sx, sy, sw, sh); ctx.clip();
+    ctx.translate(sx, sy); ctx.scale(s, s);
+    n.scene(reducedMotion ? 60 : t);
+    ctx.restore();
+    ctx.strokeStyle = "rgba(242,193,78,0.5)"; ctx.strokeRect(sx + 0.5, sy + 0.5, sw - 1, sh - 1);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = `8px ${FONT_TXT}`; ctx.fillStyle = C.hint;
+    lignes.forEach((l, i) => ctx.fillText(l, view.w / 2, bas + 4 + i * 10));
+    // bouton OK (n'importe quel bouton ou un toucher de l'écran)
+    const pret = t > NV_ATTENTE, bw = 120, bh = 16, bx = view.w / 2 - bw / 2, by = py + ph - 21;
+    ctx.fillStyle = pret ? C.gold : "#5a4a2a"; ctx.fillRect(bx, by, bw, bh);
+    ctx.font = `8px ${FONT_PIX}`; ctx.fillStyle = C.void;
+    ctx.fillText("OK, C'EST PARTI !", view.w / 2, by + bh / 2 + 0.5);
+    if (pret && !reducedMotion && Math.floor(t / 30) % 2) { ctx.strokeStyle = C.text; ctx.strokeRect(bx - 1.5, by - 1.5, bw + 3, bh + 3); }
+    ctx.globalAlpha = 1;
+  }
+
   /* ================= Accueil : l'explorateur fuit le rocher ================= */
   const homeDust = [];
   function drawHome() {
@@ -4982,6 +5234,7 @@
       if (name === "options") document.getElementById("btn-confidentialite").hidden = !Kit.Ads.privacyOptionsRequired;
     }
     document.body.classList.toggle("en-jeu", !name);
+    if (name) document.body.classList.remove("fiche");
     if (heros) heros.hidden = name !== "titre";
   }
 
