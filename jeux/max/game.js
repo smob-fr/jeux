@@ -512,8 +512,7 @@
       room.glacons = (def.glacons || []).map(([x, y]) => ({ x: x * T, y: y * T, y0: y * T, w: 2 * T, h: 3 * T, etat: "pend", vy: 0 }));
     }
     if (def.boss === "pieuvre") {
-      room.boss = { kind: "pieuvre", x: (COLS - 9) * T, y: 2 * T, w: 7 * T, h: 8 * T, etat: "attend", k: 120, hits: 0, t: 0, tent: null, pause: 0, encre: [] };
-      room.boss.coq = (def.coquillages || []).map(([x, y]) => ({ x: x * T - 2, y: y * T, y0: y * T, w: 20, h: 14, etat: "pend", vy: 0, k: 0 }));
+      room.boss = { kind: "pieuvre", x: (COLS - 9) * T, y: 2 * T, w: 7 * T, h: 8 * T, etat: "attend", k: 120, hits: 0, t: 0, tent: null, pause: 90, encre: [], mines: [], lance: 60 };
     }
     if (def.boss === "oiseau") {
       const cl = (def.cloches || []).map(([x, y]) => ({ x: x * T + 2, y: y * T, sonne: 0 }));
@@ -976,7 +975,7 @@
         for (const q of R.torpilles) if (!q.dead && overlap(hit, q)) { q.dead = true; burst(q.x + 3, q.y + 6, "#ffd36b", 12, 1.6); sfx.bonk(); }
         if (R.boss && !R.boss.kind && overlap(hit, gemRect(R.boss))) bossTouche();
         if (R.boss && R.boss.kind === "oiseau") for (const c of R.boss.cloches) if (overlap(hit, { x: c.x - 4, y: c.y - 6, w: 20, h: 22 })) sonnerCloche(c);
-        if (R.boss && R.boss.kind === "pieuvre") for (const c of R.boss.coq) if (c.etat === "pend" && overlap(hit, { x: c.x + 6, y: T, w: 6, h: c.y - T })) { c.etat = "tombe"; c.vy = 0; sfx.swing(); burst(c.x + 9, c.y - 6, "#2e8c56", 10, 1.2); }
+        if (R.boss && R.boss.kind === "pieuvre") for (const m of R.boss.mines) if (!m.renvoyee && overlap(hit, m)) renvoyerMine(m, p);
       }
     }
     if (pressed.tnt) {
@@ -1084,8 +1083,6 @@
   }
 
   /* ---------- Le Yéti grognon ---------- */
-  // La pieuvre géante : ses tentacules frappent le sol là où se trouve Max, puis restent coincées un moment.
-  // Il faut couper l'algue qui retient un coquillage géant pour qu'il tombe sur une tentacule coincée. Trois coups.
   /* ================= Royaume des nuages ================= */
   // ~ nuage, % nuage qui fond, : faux nuage (ne porte rien), * nuage-trampoline
   function creerCiel(c, x, y) {
@@ -1212,9 +1209,9 @@
     const d = Math.hypot(b.x + b.w / 2 - (c.x + 6), b.y + b.h / 2 - (c.y + 6));
     if (d < 64) {
       b.hits++; R.shake = 10; burst(b.x + b.w / 2, b.y + b.h / 2, "#ffe680", 24, 2.4);
-      if (b.hits >= 3) { b.etat = "dort"; b.k = 90; R.foudres = []; R.hint = { text: "BONG ! L'Oiseau-tonnerre est tout étourdi… il se pose et s'endort, la tête sous l'aile.", t: 0, dur: 260 }; }
-      else { b.etat = "sonne"; b.k = 130; R.hint = { text: b.hits === 1 ? "BONG ! Il est étourdi ! Encore deux cloches…" : "BONG ! Plus qu'une !", t: 0, dur: 160 }; }
-    } else if (!R.hint && b.hits === 0) R.hint = { text: "Trop tôt ! Sonne quand l'oiseau passe juste au-dessus de la cloche", t: 0, dur: 170 };
+      if (b.hits >= 3) { b.etat = "dort"; b.k = 90; R.foudres = []; R.hint = { text: "BONG ! L'Oiseau-tonnerre s'endort, la tête sous l'aile.", t: 0, dur: 260 }; }
+      else { b.etat = "sonne"; b.k = 130; R.hint = { text: b.hits === 1 ? "BONG ! Encore 2." : "BONG ! Plus qu'une !", t: 0, dur: 160 }; }
+    } else if (!R.hint && b.hits === 0) R.hint = { text: "Trop tôt ! Attends qu'il passe au-dessus.", t: 0, dur: 170 };
   }
   function drawOiseauTonnerre() {
     const b = R.boss, dort = b.etat === "dort", sonne = b.etat === "sonne";
@@ -1612,7 +1609,7 @@
         R.dynamites = R.dynamites.filter((d) => !(d.dans && Math.abs(d.x + 3 - (c.x + 8)) < 12));
         c.bouchee = true; b.hits++; for (const q of b.chem) q.t = 0;   // nouveau rythme : chaque cheminée refume avant de cracher R.shake = 14; sfx.boom(); burst(c.x + 8, c.y - 6, "#3a3a3a", 30, 2.5); burst(c.x + 8, c.y, C.hat, 20, 2);
         if (b.hits >= 3) { b.etat = "cale"; b.k = 0; R.grelons = []; R.dynamites = []; R.hint = { text: "BOUM ! BOUM ! BOUM ! La machine s'emballe…", t: 0, dur: 140 }; }
-        else { b.etat = "sonne"; b.k = 140; R.hint = { text: b.hits === 1 ? "BOUM ! Une cheminée bouchée ! Encore deux…" : "BOUM ! Plus qu'une cheminée !", t: 0, dur: 160 }; }
+        else { b.etat = "sonne"; b.k = 140; R.hint = { text: b.hits === 1 ? "BOUM ! Encore 2 cheminées." : "BOUM ! Plus qu'une !", t: 0, dur: 160 }; }
       }
     }
     // de la dynamite revient quand Max n'en a plus
@@ -1844,54 +1841,126 @@
     }
   }
 
+  // La pieuvre géante lance les mines d'Archibald vers Max. Un COUP de massue les lui renvoie
+  // (elles filent droit sur sa tête si Max la regarde) : 3 mines dans la tête, elle s'endort.
+  // Elle frappe aussi avec une tentacule annoncée par une ombre au sol, et crache de l'encre.
+  const teteP = (b) => ({ x: b.x + 10, y: b.y + 8, w: b.w - 20, h: 92 });
+  function renvoyerMine(m, p) {
+    const b = R.boss, h = teteP(b), cx = h.x + h.w / 2, cy = h.y + h.h / 2;
+    m.renvoyee = true; sfx.swing(); sfx.bonk(); burst(m.x + 6, m.y + 6, C.gold, 10, 1.4);
+    if (Math.sign(cx - p.x) === p.face) { const dx = cx - (m.x + 6), dy = cy - (m.y + 6), d = Math.hypot(dx, dy) || 1; m.vx = (dx / d) * 3.4; m.vy = (dy / d) * 3.4; }
+    else { m.vx = p.face * 3.4; m.vy = 0; }
+  }
+  function exploserMineP(m) {
+    m.done = true;
+    const cx = m.x + 6, cy = m.y + 6, p = R.player;
+    sfx.crumble(); sfx.flee(); R.shake = Math.max(R.shake, 8);
+    burst(cx, cy, "#ffb347", 24, 2.6); burst(cx, cy, "rgba(220,240,255,0.8)", 14, 1.5);
+    if (p.alive && Math.hypot(p.x + p.w / 2 - cx, p.y + p.h / 2 - cy) < 26) kill("Boum ! Ne touche pas les mines : renvoie-les d'un COUP de massue.");
+  }
   function updatePieuvre() {
     const b = R.boss, p = R.player;
     b.t++;
     const sol = (ROWS - 1) * T;
-    // coquillages
-    for (const c of b.coq) {
-      if (c.etat === "tombe") {
-        c.vy = Math.min(c.vy + 0.14, 3.4); c.y += c.vy;
-        const t = b.tent;
-        if (t && (t.etat === "coince" || t.etat === "frappe") && b.etat !== "dort" && Math.abs(c.x + 10 - t.x) < 20 && c.y + c.h > sol - 40) {
-          c.etat = "casse"; c.k = 420; burst(c.x + 10, c.y + 7, "#f2e6a0", 30, 3); R.shake = 12; sfx.boom();
-          b.hits++; t.etat = "remonte"; t.k = 20;
-          if (b.hits >= 3) { b.etat = "dort"; b.k = 70; b.tent = null; R.hint = { text: "La pieuvre a le tournis… elle s'endort dans sa grotte. La porte s'ouvre !", t: 0, dur: 260 }; }
-          else { b.etat = "sonne"; b.k = 150; R.hint = { text: b.hits === 1 ? "Bien visé ! Encore deux coquillages." : "Plus qu'un ! Elle commence à voir trente-six étoiles…", t: 0, dur: 180 }; }
-        } else if (c.y + c.h >= sol) { c.y = sol - c.h; c.etat = "casse"; c.k = 360; burst(c.x + 10, sol, "#f2e6a0", 14, 1.6); sfx.crumble(); }
-        if (p.alive && c.etat === "tombe" && overlap(p, c)) { c.etat = "casse"; c.k = 360; kill("Un coquillage géant sur la tête !"); }
-      } else if (c.etat === "casse" && b.etat !== "dort") { if (--c.k <= 0) { c.etat = "pend"; c.y = c.y0; burst(c.x + 10, c.y, "#2e8c56", 8, 1); } }
-    }
     // encre : un nuage noir qui gêne la vue
     for (const n of b.encre) { n.x += n.vx; n.r = Math.min(n.r + 0.4, n.rmax); n.life--; }
     b.encre = b.encre.filter((n) => n.life > 0);
+    // mines
+    const tete = teteP(b);
+    for (const m of b.mines) {
+      m.t++;
+      if (m.renvoyee) {
+        m.x += m.vx; m.y += m.vy;
+        if (overlap(m, tete)) {
+          m.done = true; burst(m.x + 6, m.y + 6, "#ffb347", 30, 3); burst(m.x + 6, m.y + 6, C.gold, 16, 2); R.shake = 12; sfx.boom();
+          if (b.etat === "combat" || b.etat === "attend") {
+            b.hits++; b.tent = null; b.pause = 80;
+            for (const o of b.mines) if (o !== m && !o.done) { o.done = true; burst(o.x + 6, o.y + 6, "rgba(220,240,255,0.8)", 10, 1.2); }
+            if (b.hits >= 3) { b.etat = "dort"; b.k = 70; b.encre = []; R.hint = { text: "La pieuvre voit trente-six étoiles… elle s'endort.", t: 0, dur: 200 }; }
+            else { b.etat = "sonne"; b.k = 150; R.hint = { text: b.hits === 1 ? "En plein dans la tête ! Encore 2." : "Plus qu'une !", t: 0, dur: 140 }; }
+          }
+          continue;
+        }
+        if (rectHitsSolid(m.x, m.y, m.w, m.h)) exploserMineP(m);
+        continue;
+      }
+      // la mine dérive vers Max, de plus en plus vite à chaque coup reçu
+      const v = (0.7 + 0.12 * b.hits) * R.slow, dx = p.x + p.w / 2 - (m.x + 6), dy = p.y + p.h / 2 - (m.y + 6), d = Math.hypot(dx, dy) || 1;
+      m.vx += ((dx / d) * v - m.vx) * 0.03; m.vy += ((dy / d) * v - m.vy) * 0.03;
+      m.x += m.vx; m.y += m.vy;
+      if (m.y < R.eau + 2) m.y = R.eau + 2;
+      if (rectHitsSolid(m.x, m.y, m.w, m.h) || m.t > 900) { exploserMineP(m); continue; }
+      if (p.alive && overlap(p, { x: m.x + 2, y: m.y + 2, w: m.w - 4, h: m.h - 4 })) exploserMineP(m);
+    }
+    b.mines = b.mines.filter((m) => !m.done);
     switch (b.etat) {
       case "attend": if (--b.k <= 0) b.etat = "combat"; return;
-      case "sonne": if (--b.k <= 0) b.etat = "combat"; if (R.t % 8 === 0) R.particles.push({ x: b.x + b.w / 2 + (Math.random() - 0.5) * 40, y: b.y + 10, vx: 0, vy: -0.4, s: 3, life: 30, color: C.gold, g: 0 }); break;
+      case "sonne": if (--b.k <= 0) b.etat = "combat"; if (R.t % 8 === 0) R.particles.push({ x: b.x + b.w / 2 + (Math.random() - 0.5) * 40, y: b.y + 10, vx: 0, vy: -0.4, s: 3, life: 30, color: C.gold, g: 0 }); return;
       case "dort":
         if (b.k > 0 && --b.k === 0) lacherFragment(b);
         if (R.t % 50 === 0) R.particles.push({ zzz: true, x: b.x + b.w / 2, y: b.y - 2, vx: 0.2, vy: -0.4, s: 6, life: 70, color: C.text, g: 0 });
         return;
     }
-    if (b.etat === "combat" && b.t % Math.max(260, 420 - b.hits * 60) === 0) {
-      for (let i = 0; i < 3; i++) b.encre.push({ x: b.x - 10 - i * 30, y: b.y + 30 + (Math.random() - 0.5) * 60, vx: -0.5 - Math.random() * 0.4, r: 8, rmax: 34 + Math.random() * 14, life: 260 });
+    // elle lance une mine (deux à la fois au dernier round)
+    const enVol = b.mines.filter((m) => !m.renvoyee).length;
+    if (enVol < (b.hits >= 2 ? 2 : 1) && --b.lance <= 0) {
+      const cx = b.x + b.w / 2 - 34, cy = b.y + 70;
+      b.mines.push({ x: cx - 6, y: cy - 6, w: 12, h: 12, vx: -1.2, vy: 0.3, t: 0, renvoyee: false });
+      b.lance = Math.round((150 - 25 * b.hits) * (1 + 0.25 * R.assist)); b.bouche = 20;
+      burst(cx, cy, "rgba(60,20,60,0.7)", 10, 1.2); sfx.place();
+    }
+    if (b.bouche > 0) b.bouche--;
+    if (b.hits >= 1 && b.t % 380 === 0) {
+      for (let i = 0; i < 3; i++) b.encre.push({ x: b.x - 10 - i * 30, y: b.y + 30 + (Math.random() - 0.5) * 60, vx: -0.5 - Math.random() * 0.4, r: 8, rmax: 30 + Math.random() * 12, life: 200 });
       sfx.flee();
     }
-    // tentacule
+    // tentacule : son ombre au sol annonce où elle va frapper
     let t = b.tent;
     if (!t) {
-      if (b.etat !== "combat") return;
       if (--b.pause > 0) return;
       const cible = Math.max(3 * T, Math.min(b.x - 2 * T, p.x + p.w / 2));
-      t = b.tent = { x: cible, etat: "vise", k: Math.round((62 - b.hits * 8) * (1 + 0.25 * R.assist)), bout: 0 };
+      t = b.tent = { x: cible, etat: "vise", k: Math.round((70 - b.hits * 8) * (1 + 0.25 * R.assist)), bout: 0 };
       sfx.god();
     }
     if (t.etat === "vise") { t.bout = Math.min(1, t.bout + 0.04); if (--t.k <= 0) { t.etat = "frappe"; t.k = 8; } }
     else if (t.etat === "frappe") {
-      if (--t.k <= 0) { t.etat = "coince"; t.k = Math.round(230 * (1 + 0.2 * R.assist)); R.shake = 10; sfx.boom(); burst(t.x, sol, "rgba(220,240,255,0.8)", 20, 2.2); }
+      if (--t.k <= 0) { t.etat = "coince"; t.k = 50; R.shake = 10; sfx.boom(); burst(t.x, sol, "rgba(220,240,255,0.8)", 20, 2.2); }
       if (p.alive && Math.abs(p.x + p.w / 2 - t.x) < 13) return kill("La tentacule ! Regarde son ombre au sol et écarte-toi.");
-    } else if (t.etat === "coince") { if (t.k === Math.round(230 * (1 + 0.2 * R.assist)) - 1 && R.hint == null && b.hits === 0) R.hint = { text: "La tentacule est coincée ! Coupe l'algue d'un coquillage au-dessus (COUP)", t: 0, dur: 220 }; if (--t.k <= 0) { t.etat = "remonte"; t.k = 30; } }
-    else if (t.etat === "remonte") { if (--t.k <= 0) { b.tent = null; b.pause = 50; } }
+    } else if (t.etat === "coince") { if (--t.k <= 0) { t.etat = "remonte"; t.k = 30; } }
+    else if (t.etat === "remonte") { if (--t.k <= 0) { b.tent = null; b.pause = Math.round((220 - 30 * b.hits) * (1 + 0.25 * R.assist)); } }
+  }
+  // repère de combat : une flèche qui rebondit au-dessus de ce qu'il faut viser, et un mot
+  function drawRepere(x, y, txt, couleur) {
+    const k = reducedMotion ? 0 : Math.sin(R.t / 6) * 3, a = 0.55 + 0.45 * Math.abs(Math.sin(R.t / 10));
+    ctx.globalAlpha = a; ctx.fillStyle = couleur || C.gold;
+    ctx.beginPath(); ctx.moveTo(x - 5, y - 9 + k); ctx.lineTo(x + 5, y - 9 + k); ctx.lineTo(x, y - 2 + k); ctx.closePath(); ctx.fill();
+    if (txt) { ctx.font = `7px ${FONT_PIX}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillText(txt, x, y - 11 + k); }
+    ctx.globalAlpha = 1;
+  }
+  // Repères pendant les combats : ce qu'il faut faire, au moment où il faut le faire
+  function drawReperesBoss() {
+    const b = R.boss, p = R.player;
+    if (!p || !p.alive || b.etat === "dort" || game.mode !== "play") return;
+    if (!b.kind) {   // Jaguar de pierre
+      if (b.etat === "sonne" && !b.touche) { const g = gemRect(b); drawRepere(g.x + g.w / 2, b.y - 8, "SAUTE !"); }
+      else if (b.etat === "gratte" && R.vines.length && !p.vine) {
+        let best = null, bd = 1e9;
+        for (const v of R.vines) { const vx = v.ax + Math.sin(v.ang) * v.L, d = Math.abs(vx - p.x); if (d < bd) { bd = d; best = [vx, v.ay + Math.cos(v.ang) * v.L]; } }
+        if (best) drawRepere(best[0], best[1] - 4, "LIANE !", "#9be7a6");
+      }
+    } else if (b.kind === "yeti") {
+      if (b.etat === "saute" && b.vy > 0.5 && p.grounded && Math.abs(p.x + p.w / 2 - (b.x + b.w / 2)) < 90) drawRepere(p.x + p.w / 2, p.y - 6, "SAUTE !", C.danger);
+    } else if (b.kind === "pieuvre") {
+      for (const m of b.mines) if (!m.renvoyee && Math.hypot(p.x - m.x, p.y - m.y) < 110) {
+        ctx.strokeStyle = "rgba(255,120,80,0.9)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(m.x + 6, m.y + 6, 10, 0, Math.PI * 2); ctx.stroke();
+        drawRepere(m.x + 6, m.y - 6, "COUP !");
+      }
+    } else if (b.kind === "oiseau") {
+      if (b.etat === "vole") for (const c of b.cloches) if (Math.hypot(b.x + b.w / 2 - (c.x + 6), b.y + b.h / 2 - (c.y + 6)) < 64) drawRepere(c.x + 6, c.y - 24, "COUP !");
+    } else if (b.kind === "fouisseur") {
+      const c = b.etat === "combat" && (game.ammo.tnt > 0 || R.dynamites.some((d) => !d.dans)) ? b.chem.find((q) => !q.bouchee && !q.warn && !q.feu) : null;
+      if (c) drawRepere(c.x + 8, c.y - 4, "TNT");
+    }
   }
   function drawPieuvre() {
     const b = R.boss, sol = (ROWS - 1) * T;
@@ -1910,6 +1979,7 @@
         else { const px = Math.max(-4, Math.min(4, (R.player.x - (cx + ex)) / 40)); ctx.fillStyle = "#2a1020"; ctx.fillRect(cx + ex - 3 + px, cy + 5, 6, 7); }
       }
     }
+    if (b.bouche > 0 || (!dort && !sonne && b.mines.length === 0 && b.lance < 25)) { ctx.fillStyle = "#3a1030"; ctx.beginPath(); ctx.ellipse(cx - 2, cy + 26, 10, 6, 0, 0, Math.PI * 2); ctx.fill(); }
     if (sonne && R.t % 20 < 10) drawStars(cx, cy - 46, 60);
     // tentacule active : ombre au sol pendant la visée, puis le coup
     const t = b.tent;
@@ -1925,16 +1995,13 @@
       ctx.fillStyle = "#e7b3d6"; for (let y = 20; y < bas - 4; y += 12) { ctx.beginPath(); ctx.arc(t.x - 4 + w * 0.5, y, 2.4, 0, Math.PI * 2); ctx.fill(); }
       if (t.etat === "coince") { ctx.fillStyle = "rgba(255,240,180,0.6)"; ctx.fillRect(t.x - 10, sol - 3, 20, 3); }
     }
-    // coquillages et algues
-    for (const c of b.coq) {
-      if (c.etat === "pend") {
-        ctx.strokeStyle = "#2e8c56"; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(c.x + 10, T); ctx.quadraticCurveTo(c.x + 10 + Math.sin(R.t / 25 + c.x) * 4, (T + c.y) / 2, c.x + 10, c.y); ctx.stroke();
-      }
-      if (c.etat !== "casse") {
-        ctx.fillStyle = "#f2e6a0"; ctx.beginPath(); ctx.moveTo(c.x, c.y + c.h); ctx.lineTo(c.x + 10, c.y); ctx.lineTo(c.x + 20, c.y + c.h); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = "#c9a25a"; ctx.lineWidth = 1; for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.moveTo(c.x + 10, c.y + 1); ctx.lineTo(c.x + i * 4, c.y + c.h); ctx.stroke(); }
-      }
+    // mines lancées (une traînée dorée quand Max les renvoie) ; repère « COUP ! » sur la mine qui approche
+    const p = R.player;
+    for (const m of b.mines) {
+      if (m.renvoyee) for (let i = 1; i < 4; i++) { ctx.fillStyle = `rgba(255,210,90,${0.35 - i * 0.08})`; ctx.beginPath(); ctx.arc(m.x + 6 - m.vx * i * 3, m.y + 6 - m.vy * i * 3, 5 - i, 0, Math.PI * 2); ctx.fill(); }
+      // halo rouge qui clignote : on la voit de loin, même dans l'eau sombre
+      ctx.fillStyle = `rgba(255,90,60,${m.renvoyee ? 0.15 : 0.18 + 0.12 * Math.sin(m.t / 5)})`; ctx.beginPath(); ctx.arc(m.x + 6, m.y + 6, 12, 0, Math.PI * 2); ctx.fill();
+      drawEnemy({ kind: "M", x: m.x, y: m.y, w: 12, h: 12, vx: m.vx || 1, t: m.t, alive: true });
     }
     for (const n of b.encre) { ctx.fillStyle = `rgba(12,6,20,${Math.min(0.92, n.life / 60)})`; ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2); ctx.fill(); }
   }
@@ -1985,8 +2052,8 @@
       if (b.etat !== "dort" && overlap(gl, { x: b.x + 4, y: b.y, w: b.w - 8, h: b.h })) {
         gl.etat = "cassee"; burst(gl.x + gl.w / 2, b.y, "#cfeaff", 30, 3); R.shake = 10; sfx.bonk();
         b.hits++;
-        if (b.hits >= 3) { b.etat = "dort"; b.k = 60; R.rocks = []; R.boules = []; R.hint = { text: "Le Yéti grognon s'endort en ronflant… La porte s'ouvre !", t: 0, dur: 240 }; }
-        else { b.etat = "sonne"; b.k = 150; R.hint = { text: b.hits === 1 ? "En plein sur la tête ! Encore deux stalactites." : "Plus qu'une ! Il est de plus en plus grognon…", t: 0, dur: 180 }; }
+        if (b.hits >= 3) { b.etat = "dort"; b.k = 60; R.rocks = []; R.boules = []; R.hint = { text: "Le Yéti grognon s'endort en ronflant…", t: 0, dur: 240 }; }
+        else { b.etat = "sonne"; b.k = 150; R.hint = { text: b.hits === 1 ? "En plein sur la tête ! Encore 2." : "Plus qu'une !", t: 0, dur: 180 }; }
       } else if (gl.y > (ROWS - 1) * T - gl.h) { gl.etat = "cassee"; burst(gl.x + gl.w / 2, (ROWS - 1) * T, "#cfeaff", 20, 2); }
       if (p.alive && gl.etat === "tombe" && overlap(p, gl)) return kill("Une énorme stalactite !");
     }
@@ -2090,7 +2157,6 @@
             R.rocks.push({ x: rx, y: T, w: 10, h: 10, vy: 0, warn: 40 + i * 18 });
           }
           if (b.hits === 2) bossPics();
-          if (!progress.bossVu) { progress.bossVu = true; saveProgress(); R.hint = { text: "Il est sonné ! Frappe la pierre de jade sur son front (massue, ou saute-lui sur la tête)", t: 0, dur: 260 }; }
         }
         break;
       }
@@ -2142,11 +2208,11 @@
       R.rocks = [];
       for (const s of R.bossSpikes) setTiles(s.x, s.y, s.w, 1, ".", false);
       R.bossSpikes = [];
-      R.hint = { text: "Le Jaguar de pierre s'endort… pour mille ans. La porte s'ouvre !", t: 0, dur: 240 };
+      R.hint = { text: "Le Jaguar de pierre s'endort… pour mille ans.", t: 0, dur: 240 };
       b.k = 60;   // la porte apparaît une seconde plus tard
     } else {
       b.etat = "reveil"; b.k = 50; b.face = -b.face;
-      R.hint = { text: b.hits === 1 ? "Touché ! Encore deux fois." : "Touché ! Une dernière fois… attention, il s'énerve !", t: 0, dur: 160 };
+      R.hint = { text: b.hits === 1 ? "Touché ! Encore 2." : "Touché ! Plus qu'une !", t: 0, dur: 160 };
     }
     return true;
   }
@@ -2976,8 +3042,10 @@
     const keep = fromDeath ? R.say : null;
     R = buildRoom(game.level);
     updateCamera(true);
-    game.mode = "play";
-    runTriggers(true);
+    // boss : après 3 chutes, on remontre sa fiche (le combat reprend après « OK »)
+    const fiche = fromDeath && R.def.boss && R.deaths > 0 && R.deaths % 3 === 0 && !window.__sansNouveautes ? (R.def.nouveau || []) : [];
+    if (fiche.length) { game.mode = "nouveau"; game.nv = fiche.slice(); game.nvT = 0; game.nvOk = false; game.nvRevue = true; document.body.classList.add("fiche"); }
+    else { game.mode = "play"; runTriggers(true); }
     if (keep && !R.say) R.say = keep;
     // l'aide automatique (R.assist) ralentit les pièges en silence : plus de bulle « je ralentis… »
     game.paused = false;
@@ -3350,6 +3418,7 @@
     if (R.eau != null) drawEau();
     drawFlood();
     drawTiles(true); // faux murs par-dessus le joueur
+    if (R.boss) drawReperesBoss();   // par-dessus l'eau et le décor : toujours lisibles
     drawParticles();
     drawTorchLight();
     ctx.setTransform(k, 0, 0, k, 0, 0);
@@ -4927,9 +4996,9 @@
   // qu'une fois (progress.nouveautes). Les scènes se dessinent dans un cadre de 200 × 84.
   const SC_W = 200, SC_H = 84, NV_ATTENTE = 40;
   // dessine avec un faux niveau (Max et ennemis de la scène), puis remet le vrai
-  function avecScene(t, joueur, fn) {
+  function avecScene(t, joueur, fn, extra) {
     const vrai = R;
-    R = { t, hat: null, particles: [], player: Object.assign({}, vrai.player, { alive: true, invuln: 0, shield: 0, swim: true, grounded: false, stroke: 0, club: 0, vx: 0.5, vy: 0, anim: t * 0.12 }, joueur), sas: [], tourbillons: [], torpilles: [], lanterne: null, tiles: [] };
+    R = Object.assign({ t, hat: null, particles: [], player: Object.assign({}, vrai.player, { alive: true, invuln: 0, shield: 0, swim: true, grounded: false, stroke: 0, club: 0, vx: 0.5, vy: 0, anim: t * 0.12 }, joueur), sas: [], tourbillons: [], torpilles: [], lanterne: null, tiles: [], rocks: [], glacons: [], eau: null }, extra);
     try { fn(); } finally { R = vrai; }
   }
   function scEau(sombre) {
@@ -5089,6 +5158,132 @@
       },
     },
   };
+  function scSol(c1, c2) { ctx.fillStyle = c1; ctx.fillRect(0, SC_H - 6, SC_W, 6); ctx.fillStyle = c2; ctx.fillRect(0, SC_H - 6, SC_W, 1); }
+  function scFond(c1, c2) { const g = ctx.createLinearGradient(0, 0, 0, SC_H); g.addColorStop(0, c1); g.addColorStop(1, c2); ctx.fillStyle = g; ctx.fillRect(0, 0, SC_W, SC_H); }
+  Object.assign(NOUVEAUTES, {
+    boss_jaguar: {
+      titre: "LE JAGUAR DE PIERRE",
+      texte: ["Quand il gratte le sol, accroche-toi à une liane : il charge et fonce dans le mur.", "Sonné, il voit des étoiles : saute-lui sur la tête ! 3 fois."],
+      scene(t) {
+        const T0 = t % 300, sol = SC_H - 6;
+        scFond("#2a3326", "#141a12"); scSol("#5b5a48", "#8a8870"); ctx.fillStyle = "#4a4a3c"; ctx.fillRect(SC_W - 10, 0, 10, SC_H);
+        ctx.strokeStyle = "#3f7a2e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(104, 0); ctx.lineTo(104, 24); ctx.stroke();
+        const etat = T0 < 50 ? "gratte" : T0 < 110 ? "charge" : T0 < 250 ? "sonne" : "attend";
+        const jx = T0 < 50 ? 12 : T0 < 110 ? lerp(12, SC_W - 72, (T0 - 50) / 60) : SC_W - 72;
+        const boss = { x: jx, y: sol - 41, w: 60, h: 41, face: 1, etat, hits: 0, k: 120, t, touche: false };
+        // Max pendu à la liane, puis il saute sur la tête du jaguar sonné
+        let mx = 99, my = 22, gr = false;
+        if (T0 >= 130 && T0 < 165) { const k = (T0 - 130) / 35; mx = lerp(99, jx + 26, k); my = 22 - Math.sin(k * Math.PI) * 18 + k * (sol - 41 - 15 - 22); }
+        else if (T0 >= 165 && T0 < 250) { mx = jx + 26; my = sol - 41 - 15; gr = true; }
+        avecScene(t, { x: mx, y: my, face: 1, swim: false, grounded: gr, vx: 0 }, () => { drawBoss(); drawPlayer(); }, { boss });
+        if (T0 < 50) scTexte("IL GRATTE : LIANE !", 100, 34, "#ff9a7a");
+        else if (T0 < 110) scTexte("CHARGE !", 60, 20, "#ff9a7a");
+        else if (T0 < 165) scTexte("SONNÉ : SAUTE !", 70, 12, "#9be7a6");
+        else if (T0 < 190) scTexte("TOUCHÉ !", 150, 12);
+      },
+    },
+    boss_yeti: {
+      titre: "LE YÉTI GROGNON",
+      texte: ["Attire-le sous une grosse stalactite (la flèche bleue).", "Quand il saute, saute aussi : il retombe, et la stalactite lui tombe sur la tête ! 3 fois."],
+      scene(t) {
+        const T0 = t % 300, sol = SC_H - 6;
+        scFond("#3d6c9c", "#a8c8e2"); scSol("#e8f0f8", "#ffffff");
+        const yx = T0 < 70 ? lerp(150, 104, T0 / 70) : 104;
+        let yy = sol - 44, etat = "marche";
+        if (T0 >= 70 && T0 < 100) etat = "prepare";
+        else if (T0 >= 100 && T0 < 140) { etat = "saute"; yy -= Math.sin(((T0 - 100) / 40) * Math.PI) * 22; }
+        else if (T0 >= 140 && T0 < 160) etat = "frappe";
+        else if (T0 >= 160 && T0 < 280) etat = "sonne";
+        const glY = T0 < 140 ? 0 : Math.min(sol - 44 - 18, (T0 - 140) * 3);
+        const gl = { x: 112, y: glY, w: 24, h: 22, etat: T0 < 140 ? "pend" : "tombe", proche: T0 < 140 && T0 > 60 };
+        const glacons = T0 < 160 ? [gl] : [];
+        const boss = { x: yx, y: yy, w: 40, h: 44, face: -1, etat, hits: 0, k: 120, t };
+        // Max saute au moment où le yéti retombe (sinon l'onde de choc le renverse)
+        const sautM = T0 >= 128 && T0 < 156 ? Math.sin(((T0 - 128) / 28) * Math.PI) * 18 : 0;
+        avecScene(t, { x: 50, y: sol - 15 - sautM, face: 1, swim: false, grounded: !sautM, vx: 0 }, () => { drawYeti(); drawPlayer(); }, { boss, glacons });
+        if (T0 >= 140 && T0 < 156) { ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.beginPath(); ctx.ellipse(124, sol, (T0 - 140) * 5, 3, 0, 0, Math.PI * 2); ctx.stroke(); }
+        if (T0 < 100) scTexte("ATTIRE-LE DESSOUS", 60, 14, "#2a3a4a");
+        else if (T0 < 156) scTexte("SAUTE !", 56, 40, "#c0392b");
+        else if (T0 < 200) scTexte("BONG !", 60, 14, "#2a3a4a");
+      },
+    },
+    boss_pieuvre: {
+      titre: "LA PIEUVRE GÉANTE",
+      texte: ["Elle te lance des mines. Renvoie-les d'un COUP de massue : elles filent droit sur sa tête !", "Écarte-toi de l'ombre de ses tentacules. 3 mines, et elle dort."],
+      scene(t) {
+        const T0 = t % 260;
+        scEau(); scRoche(0, SC_H - 8, SC_W, 8);
+        // la pieuvre (dessin réduit)
+        const px = 172, py = 34 + Math.sin(t / 30) * 2, sonne = T0 >= 118 && T0 < 220;
+        ctx.fillStyle = "#7a3b6e"; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(px - 18 + i * 9, py + 26, 4, 16, (i - 2) * 0.2, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = "#8e4880"; ctx.beginPath(); ctx.ellipse(px, py, 24, 22, 0, 0, Math.PI * 2); ctx.fill();
+        for (const ex of [-9, 7]) { ctx.fillStyle = "#f4ecd8"; ctx.beginPath(); ctx.ellipse(px + ex, py + 4, 5, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#2a1020"; ctx.fillRect(px + ex - 3, py + 2, 3, 4); }
+        if (sonne) avecScene(t, {}, () => drawStars(px, py - 26, 60));
+        // la mine : lancée vers Max, renvoyée d'un coup de massue
+        let mx = null, my = 0, ren = false;
+        if (T0 >= 10 && T0 < 80) { mx = lerp(150, 62, (T0 - 10) / 70); my = lerp(40, 50, (T0 - 10) / 70); }
+        else if (T0 >= 80 && T0 < 118) { ren = true; mx = lerp(62, px - 6, (T0 - 80) / 38); my = lerp(50, py, (T0 - 80) / 38); }
+        const club = T0 >= 70 && T0 < 88 ? 88 - T0 : 0;
+        avecScene(t, { x: 40, y: 46 + Math.sin(t / 16) * 2, face: 1, club }, () => {
+          if (mx != null) {
+            if (ren) for (let i = 1; i < 4; i++) { ctx.fillStyle = `rgba(255,210,90,${0.35 - i * 0.08})`; ctx.beginPath(); ctx.arc(mx + 6 - i * 4, my + 6 + i, 5 - i, 0, Math.PI * 2); ctx.fill(); }
+            drawEnemy({ kind: "M", x: mx, y: my, w: 12, h: 12, vx: 1, t, alive: true });
+          }
+          drawPlayer();
+        });
+        if (T0 >= 118 && T0 < 140) { const k = (T0 - 118) / 22; ctx.fillStyle = `rgba(255,179,71,${1 - k})`; ctx.beginPath(); ctx.arc(px - 4, py, 6 + k * 18, 0, Math.PI * 2); ctx.fill(); }
+        if (T0 < 66) scTexte("UNE MINE ARRIVE…", 90, 12, "#ff9a7a");
+        else if (T0 < 100) scTexte("COUP !", 70, 30);
+        else if (T0 < 160) scTexte("EN PLEIN DANS LA TÊTE !", 100, 12, "#9be7a6");
+      },
+    },
+    boss_oiseau: {
+      titre: "L'OISEAU-TONNERRE",
+      texte: ["Attends à côté d'une cloche. Quand l'oiseau passe juste au-dessus, sonne-la d'un COUP !", "Le BONG l'assomme. Fuis l'ombre des éclairs. 3 fois."],
+      scene(t) {
+        const T0 = t % 260;
+        scFond("#5a6db0", "#c8d4f2");
+        ctx.fillStyle = "#fff"; for (const [x, w] of [[54, 70]]) { ctx.beginPath(); ctx.ellipse(x + w / 2, SC_H - 14, w / 2, 8, 0, 0, Math.PI * 2); ctx.fill(); }
+        const bell = { x: 96, y: SC_H - 44, sonne: T0 >= 92 && T0 < 132 ? 132 - T0 : 0 };
+        const touche = T0 >= 92;
+        const bx = touche ? 84 + Math.sin(T0 / 9) * 4 : lerp(-50, 84, T0 / 92), by = touche ? 6 + Math.sin(T0 / 6) * 2 + Math.min(10, (T0 - 92) * 0.1) : 6;
+        const boss = { x: bx, y: by, w: 44, h: 30, face: 1, etat: touche ? "sonne" : "vole", hits: 0, t, cloches: [bell], nid: [-200, -200] };
+        const club = T0 >= 84 && T0 < 102 ? 102 - T0 : 0;
+        avecScene(t, { x: 78, y: SC_H - 37, face: 1, swim: false, grounded: true, vx: 0, club }, () => { drawOiseauTonnerre(); if (touche && T0 < 220) drawStars(bx + 22, by - 2, 60); drawPlayer(); }, { boss });
+        if (T0 < 70) scTexte("PAS ENCORE…", 150, 60, "#2a2f4a");
+        else if (T0 < 92) scTexte("MAINTENANT !", 150, 60, "#c0392b");
+        else if (T0 < 150) scTexte("BONG !", 150, 60, "#2a2f4a");
+      },
+    },
+    boss_fouisseur: {
+      titre: "LE FOUISSEUR D'ARCHIBALD",
+      texte: ["Monte sur la machine et lâche une TNT (bouton TNT) dans une cheminée ouverte.", "Fumée noire = le feu va jaillir : écarte-toi ! 3 cheminées."],
+      scene(t) {
+        const T0 = t % 260, sol = SC_H - 6;
+        scFond("#4a1a0c", "#1a0804"); scSol("#6b4a2a", "#e2a640");
+        // la machine et ses trois cheminées
+        ctx.fillStyle = "#5a3a2a"; ctx.fillRect(40, 40, 140, sol - 40); ctx.fillStyle = "#8c5a2a"; ctx.fillRect(40, 40, 140, 3);
+        const ch = [70, 110, 150];
+        ch.forEach((x, i) => {
+          const bouchee = i === 0 && T0 >= 150;
+          ctx.fillStyle = "#2a2a2a"; ctx.fillRect(x, 22, 14, 18); ctx.fillStyle = "#e2a640"; ctx.fillRect(x - 2, 22, 18, 3);
+          if (bouchee) { ctx.fillStyle = "#6b6b6b"; ctx.fillRect(x + 1, 22, 12, 4); }
+          if (i === 2 && T0 % 120 < 50) { ctx.fillStyle = "rgba(30,30,30,0.6)"; ctx.beginPath(); ctx.arc(x + 7, 14 - (T0 % 50) * 0.2, 6 + (T0 % 50) * 0.1, 0, Math.PI * 2); ctx.fill(); }
+        });
+        // Max monte sur le toit, lâche la TNT dans la première cheminée
+        const mx = T0 < 60 ? lerp(4, 52, T0 / 60) : 52, my = T0 < 40 ? sol - 15 : T0 < 60 ? lerp(sol - 15, 25, (T0 - 40) / 20) : 25;
+        avecScene(t, { x: mx, y: my, face: 1, swim: false, grounded: true, vx: T0 < 60 ? 1 : 0 }, drawPlayer);
+        if (T0 >= 70 && T0 < 140) {
+          const k = Math.min(1, (T0 - 70) / 30), dx = lerp(62, 74, k), dy = lerp(30, 40, k);
+          ctx.fillStyle = "#c0392b"; ctx.fillRect(dx, dy, 5, 8); ctx.fillStyle = "#ffd36b"; if (T0 % 6 < 3) ctx.fillRect(dx + 2, dy - 3, 2, 3);
+        }
+        if (T0 >= 140 && T0 < 170) { const k = (T0 - 140) / 30; ctx.fillStyle = `rgba(255,179,71,${1 - k})`; ctx.beginPath(); ctx.arc(77, 24, 6 + k * 20, 0, Math.PI * 2); ctx.fill(); scTexte("BOUM !", 77, 8); }
+        if (T0 < 60) scTexte("MONTE SUR LE TOIT", 110, 10, "#ffd36b");
+        else if (T0 < 140) scTexte("TNT DANS LA CHEMINÉE", 110, 10, "#ffd36b");
+        if (T0 % 120 < 50) scTexte("FUMÉE = DANGER", 157, 60, "#ff9a7a");
+      },
+    },
+  });
   function dessinerLanterne(L) {
     ctx.save(); ctx.translate(L.x, L.y);
     ctx.fillStyle = "#3d2c4a"; ctx.beginPath(); ctx.ellipse(0, 0, 8, 5, 0, 0, Math.PI * 2); ctx.fill();

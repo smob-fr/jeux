@@ -65,30 +65,19 @@ module.exports = [
     },
   },
   {
-    nom: "Boss 3 — la pieuvre géante",
+    nom: "Boss 3 — la pieuvre géante (renvoyer ses mines)",
     async run(page) {
-      return verdict(await combat(page, "pieuvre", function (t, R, f, T) {
-        const P = R.player, B = R.boss, tt = B.tent, px = P.x + P.w / 2, inp = t.input;
-        // s'écarter de l'ombre ; quand la tentacule est coincée, couper l'algue du coquillage au-dessus
-        if (tt && tt.etat === "vise") {
-          const dx = px - tt.x;
-          if (Math.abs(dx) < 34) { if ((dx < 0 && tt.x > 4 * T) || tt.x > B.x - 4 * T) inp.left = true; else inp.right = true; }
-        } else if (tt && tt.etat === "coince") {
-          const c = B.coq.find((c) => c.etat === "pend" && Math.abs(c.x + 10 - tt.x) < 20);
-          if (c) {
-            const cx = c.x + 10 + (px < c.x + 10 ? -12 : 12);
-            if (px < cx - 3) inp.right = true; else if (px > cx + 3) inp.left = true;
-            if (P.y > c.y - 30) inp.jump = R.t % 12 === 0;
-            if (Math.abs(px - cx) < 6 && P.y < c.y - 10) { P.face = px < c.x + 10 ? 1 : -1; inp.fire = R.t % 20 === 0; }
-          }
-        } else {
-          const dispo = B.coq.filter((c) => c.etat === "pend");
-          if (dispo.length) { const c = dispo.reduce((a, c) => (Math.abs(c.x + 10 - px) < Math.abs(a.x + 10 - px) ? c : a)); if (px < c.x + 8) inp.right = true; else if (px > c.x + 12) inp.left = true; }
-        }
-        // remonter respirer
-        if (R.o2 < 0.35 || (P.y > 3 * T && R.o2 < 0.6 && !(tt && tt.etat === "coince"))) inp.jump = R.t % 10 === 0;
-        if (inp.jump) t.pressed.jump = true;
-        if (inp.fire) t.pressed.fire = true;
+      return verdict(await combat(page, "pieuvre", function (t, R, f, T, etat) {
+        const P = R.player, B = R.boss, tt = B.tent, inp = t.input;
+        R.o2 = 1;   // le robot ne remonte pas respirer
+        // s'écarter de l'ombre d'une tentacule
+        if (tt && (tt.etat === "vise" || tt.etat === "frappe") && Math.abs(P.x + P.w / 2 - tt.x) < 30) { P.x = tt.x + (tt.x > 8 * T ? -44 : 30); P.vy = 0; return; }
+        // attendre la mine à gauche de sa trajectoire, face à la pieuvre, et la renvoyer d'un coup
+        const m = B.mines.find((q) => !q.renvoyee);
+        if (!m) return;
+        if (m.x < P.x + P.w + 30 && m.x > P.x) { P.face = 1; if (P.club <= 0) { inp.fire = true; t.pressed.fire = true; } }
+        else if (m.x - P.x > 60) { P.x += Math.min(1.2, (m.x - 40) - P.x > 0 ? 1.2 : 0); P.y += Math.sign(m.y - P.y) * 0.8; P.vy = 0; P.face = 1; }
+        else if (m.x <= P.x) { P.x = m.x - 26; P.y = m.y - 2; P.vy = 0; P.face = 1; }
       }));
     },
   },

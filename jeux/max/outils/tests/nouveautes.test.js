@@ -56,3 +56,30 @@ module.exports = [
     },
   },
 ];
+module.exports.push({
+  nom: "Boss : sa fiche au début du combat, revue après 3 chutes",
+  fiches: true,
+  async run(page) {
+    const r = await page.evaluate(() => {
+      const t = __temple, i = t.LEVELS.findIndex((l) => l.id === "aby-20");
+      t.progress.tester = true; t.progress.nouveautes = {}; t.progress.intros = { 2: 1 };
+      t.playFrom(i);
+      for (let k = 0; k < 90; k++) t.mesurePerf(1);
+      const fiche = t.game.mode + ":" + (t.game.nv || []).join();
+      for (let k = 0; k < 50; k++) t.mesurePerf(1);
+      t.pressed.jump = true; t.mesurePerf(1);
+      const apres = t.game.mode;
+      // trois chutes : la fiche revient
+      const revue = [];
+      for (let n = 0; n < 3; n++) {
+        const R = t.room; R.player.invuln = 0; R.player.shield = 0;
+        R.boss.mines.push({ x: R.player.x, y: R.player.y, w: 12, h: 12, vx: 0, vy: 0, t: 0, renvoyee: false });
+        for (let k = 0; k < 400 && t.game.mode !== "nouveau" && (n < 2 ? t.room === R : true); k++) t.mesurePerf(1);
+        revue.push(t.game.mode);
+        if (t.game.mode === "dead" || t.game.mode === "relance") break;
+      }
+      return { fiche, apres, revue: revue.join(","), morts: t.room.deaths };
+    });
+    return { ok: r.fiche === "nouveau:boss_pieuvre" && r.apres === "play" && /nouveau/.test(r.revue), detail: JSON.stringify(r) };
+  },
+});

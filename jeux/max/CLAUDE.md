@@ -67,7 +67,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - `mesurePerf(n)` fait avancer `n` images et en donne le temps moyen.
   - `room` donne l'état du niveau en cours.
   - `apercuNiveau(i)` donne une image du niveau entier.
-- **Tests automatiques** (`outils/tests/`, 25 tests, environ 4 minutes) : les robots qui battent les 5 boss, chaque mécanique des 5 mondes, les 100 niveaux, les plateformes mobiles, le saut tactile, et le branchement sur le kit (`kit.test.js` : bannière, boutique, vidéo, interstitielle). Playwright vient de la racine du dépôt (`npm install` et `npx playwright install chromium` une seule fois, à la racine). Après `npm run build` : `node outils/tests/lancer.js` (ou `node outils/tests/lancer.js boss saut` pour n'en lancer qu'une partie ; code de sortie 1 en cas d'échec). `npm test` fait tout.
+- **Tests automatiques** (`outils/tests/`, 26 tests, environ 4 minutes) : les robots qui battent les 5 boss, chaque mécanique des 5 mondes, les 100 niveaux, les plateformes mobiles, le saut tactile, et le branchement sur le kit (`kit.test.js` : bannière, boutique, vidéo, interstitielle). Playwright vient de la racine du dépôt (`npm install` et `npx playwright install chromium` une seule fois, à la racine). Après `npm run build` : `node outils/tests/lancer.js` (ou `node outils/tests/lancer.js boss saut` pour n'en lancer qu'une partie ; code de sortie 1 en cas d'échec). `npm test` fait tout.
 
 ## Fonctionnalités
 
@@ -83,7 +83,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - Boss : le Yéti grognon.
 - **Monde 3, les abysses** : on plonge sous un plafond de roche et on va de bulle en bulle (10 s d'air, sources d'air tous les 20 à 32 colonnes) ; seuls le départ, l'île refuge du milieu (drapeau) et l'arrivée sont à l'air libre.
   - Mécaniques : méduses, crabes, anguilles, poissons-globes, requin, mines à pousser, sas, tourbillons, coffres qui mordent, torpilles, algues, abysses noirs avec un poisson-lanterne.
-  - Boss : la pieuvre géante.
+  - Boss : la pieuvre géante, qu'on assomme en lui renvoyant ses mines d'un coup de massue.
 - **Monde 4, le royaume des nuages** : il n'y a pas de sol.
   - Mécaniques : nuages qui fondent, faux nuages, trampolines, nuages voyageurs, arcs-en-ciel, orage annoncé par une ombre, ballons, moulins, cerfs-volants, pluie, grêle, nuages souffleurs, oiseaux, petits éclairs vivants.
   - Boss : l'Oiseau-tonnerre, qu'on assomme en sonnant les cloches au bon moment.
@@ -150,6 +150,10 @@ npm test                           # build, régénère les niveaux (levels.js d
   - Récit d'ouverture : avant le premier niveau de chaque monde, l'histoire s'affiche une fois (`#ecran-intro`, `montrerIntro`, textes `INTROS_MONDES` dans `niveaux.py`, champ `intro` du niveau ; `progress.intros`). Les récits de fin des niveaux 5, 10 et 20 parlent des fragments au lieu des morceaux de carte.
   - Carte des mondes : l'Œil et ses fragments trouvés remplacent la rose des vents. Écran de fin : l'Œil entier entre Max et Archibald, et l'épilogue.
   - 1-19 (le sablier) : le sable était trop loin. Crue « collante » : elle ne reste jamais à plus de 5 cases sous les pieds de Max (+2 cases à chaque palier de l'aide automatique) ; paramètre `colle` de l'action `flood`.
+- **Boss plus clairs** (retours du 24 novembre) :
+  - Chaque boss a sa fiche animée au début du combat (`boss_jaguar`, `boss_yeti`, `boss_pieuvre`, `boss_oiseau`, `boss_fouisseur` dans `NOUVEAUTES`), revue après 3 chutes (`restartRoom`). Elles remplacent les aides en texte du début des combats.
+  - Repères pendant le combat (`drawReperesBoss`, `drawRepere`) : « SAUTE ! » sur le Jaguar sonné et « LIANE ! » quand il gratte, « SAUTE ! » quand le Yéti retombe, « COUP ! » sur la mine qui approche et sur la cloche quand l'oiseau passe, « TNT » sur la cheminée à viser. Messages de coup raccourcis (« Encore 2. »).
+  - **Nouvelle pieuvre** : elle lance des mines qui dérivent vers Max ; un COUP de massue la renvoie droit sur sa tête (si Max la regarde). 3 mines dans la tête et elle s'endort. Elle frappe toujours avec une tentacule annoncée par son ombre, et crache de l'encre après le premier coup. Les coquillages ont disparu.
 - Commandes tactiles retravaillées le 10 novembre : saut fiable même sur un appui bref, grand bouton SAUT rectangulaire. À confirmer sur téléphone.
 
 ## Ce qui reste à faire
@@ -160,7 +164,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - le combat contre l'Oiseau-tonnerre ;
   - le Fouisseur.
 - **Confirmer sur un vrai téléphone** que le bouton SAUT ne rate plus aucun appui, et que le jeu reste fluide dans les mondes 4 et 5.
-- **Boss** : fiches animées et repères pour les 5 boss, nouvelle pieuvre (renvoyer les mines) ; combat final en 3 manches (Fouisseur, poursuite, duel contre Archibald). Validés avec le propriétaire le 24 novembre, à faire.
+- **Combat final en 3 manches** (Fouisseur, poursuite, duel contre Archibald) : validé avec le propriétaire le 24 novembre, à faire.
 - **Musique** : il n'y a que des bruitages synthétisés. Le cadrage prévoit une musique par monde.
 - **Version des stores** (appli) : pubs et achats sont branchés par le kit, avec des identifiants de test (`jeu.json`). Restent les vrais identifiants, les produits dans les stores, le verrouillage en paysage et l'essai sur téléphone (checklist de `docs/publication.md`).
 - ~~Tests automatiques en intégration continue~~ : fait, par le workflow `tests.yml` du dépôt commun.
