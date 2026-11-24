@@ -202,6 +202,10 @@
   .recit-portrait { width: 80px; height: 96px; image-rendering: pixelated; background: rgba(236,220,180,.08); border: 1px solid rgba(236,220,180,.25); border-radius: 6px; }
   .recit-bulle { margin: 0; font-family: var(--f-carnet); font-size: 18px; line-height: 1.5; color: var(--parchemin); background: rgba(236,220,180,.07); border-left: 3px solid var(--or); padding: 10px 14px; border-radius: 0 6px 6px 0; }
   .recit-badge { display: inline-block; margin: 0 0 8px; font-family: var(--f-pix); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; background: #3d6c8c; color: #fff; padding: 2px 8px; border-radius: 4px; }
+  .intro-titre { margin: 0 0 10px; }
+  .fin-trio { display: flex; justify-content: center; align-items: flex-end; gap: 18px; margin: 6px 0 10px; }
+  .fin-trio img { image-rendering: pixelated; }
+  .fin-oeil { filter: drop-shadow(0 0 12px rgba(120,255,190,.6)); }
   .recit-morts { font-family: var(--f-pix); font-size: 12px; color: var(--terne); }
 
   /* ---------- Carte des mondes ---------- */
@@ -361,6 +365,21 @@
   <p id="mondes-msg" class="mo-msg" role="status" hidden></p>
 </section>
 
+<section id="ecran-intro" class="panneau recit-fin" hidden>
+  <div class="carte recit-carte">
+    <p class="surtitre" id="intro-surtitre">Monde 1</p>
+    <h2 id="intro-titre" class="intro-titre"></h2>
+    <div class="recit-ligne">
+      <img id="intro-oeil" class="recit-portrait" alt="L'Œil de Jade et ses fragments" width="80" height="96">
+      <div>
+        <p class="recit-badge">Histoire</p>
+        <p class="recit-bulle" id="intro-texte"></p>
+      </div>
+    </div>
+    <div class="actions"><button id="btn-intro-suite" class="bouton" type="button">C'est parti ▶</button><span class="recit-morts" id="intro-fragments"></span></div>
+  </div>
+</section>
+
 <section id="ecran-recit" class="panneau recit-fin" hidden>
   <div class="carte recit-carte">
     <p class="surtitre" id="recit-surtitre">Niveau terminé</p>
@@ -500,7 +519,11 @@
 <section id="ecran-fin" class="panneau" hidden>
   <div class="carte">
     <p class="surtitre">LES 100 NIVEAUX SONT TERMINÉS</p>
-    <h2>L'Œil de Jade est à toi !</h2>
+    <h2>L'Œil de Jade est réuni !</h2>
+    <div class="fin-trio">
+      <img id="fin-max" alt="Max" width="60" height="72"><img id="fin-oeil" class="fin-oeil" alt="L'Œil de Jade" width="100" height="120"><img id="fin-archibald" alt="Archibald" width="60" height="72">
+    </div>
+    <p class="recit-bulle">Au cœur du volcan, Max et Archibald soulèvent ensemble l'Œil de Jade. Il brille de toutes ses couleurs : le soleil, la glace, le corail, l'orage et le feu. Archibald essuie une larme… ou de la suie : « Mon grand-père avait raison. Ensemble, ou pas du tout. »</p>
     <p class="citation" id="fin-mot"></p>
     <dl class="stats">
       <div><dt>Morts au total</dt><dd id="fin-morts">0</dd></div>

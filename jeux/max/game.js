@@ -697,7 +697,7 @@
       case "invert": game.invert = v[0]; sfx.invert(); R.shake = Math.max(R.shake, 3); break;
       case "dark": R.dark = !!v[0]; sfx.flee(); break;
       case "wobble": { const k = v[0] + "," + v[1]; R.wobble.add(k); sfx.crumble(); setTimeout(() => R && R.wobble.delete(k), (v[2] || 60) * 16); break; }
-      case "flood": R.flood = { kind: v[0], speed: v[1] * (1 - 0.15 * R.assist), level: (v[2] != null ? v[2] : ROWS) * T, top: v[0] === "plafond" }; if (R.flood.top) R.flood.level = Math.min(v[2] || 0, 1) * T - T;   // un plafond qui descend part toujours du haut R.shake = 6; sfx.crumble(); break;
+      case "flood": R.flood = { kind: v[0], speed: v[1] * (1 - 0.15 * R.assist), level: (v[2] != null ? v[2] : ROWS) * T, top: v[0] === "plafond", colle: v[3] || 0 }; if (R.flood.top) R.flood.level = Math.min(v[2] || 0, 1) * T - T;   // un plafond qui descend part toujours du haut R.shake = 6; sfx.crumble(); break;
       case "timer": R.timer = Math.round(v[0] * 60 * (1 + 0.2 * R.assist)); break;
       case "press": R.tiles[v[1]][v[0]] = "-"; sfx.place(); break;
       case "gate": sfx.door(); R.shake = Math.max(R.shake, 3); break;
@@ -743,7 +743,7 @@
 
   /* ================= Mise à jour ================= */
   function update() {
-    if (game.mode === "title" || game.mode === "end") { game.homeT++; return; }
+    if (game.mode === "title" || game.mode === "end" || game.mode === "intro") { game.homeT++; return; }
     if (game.paused || game.mode === "relance" || game.mode === "recit") return;
     if (game.mode === "card") {
       pressed.jump = pressed.fire = pressed.tnt = false;
@@ -789,6 +789,7 @@
     if (R.boss) { if (R.boss.kind === "yeti") updateYeti(); else if (R.boss.kind === "pieuvre") updatePieuvre(); else if (R.boss.kind === "oiseau") updateOiseauTonnerre(); else if (R.boss.kind === "fouisseur") updateFouisseur(); else updateBoss(); }
     updateCrushers();
     updateFlood();
+    if (R.fragment) updateFragment();
     updateTilesFx();
     updateDoor();
     updateEnemies();
@@ -1182,7 +1183,7 @@
     if (b.etat === "attend") { if (--b.k <= 0) b.etat = "vole"; }
     if (b.etat === "dort") {
       b.x += (b.nid[0] - b.x) * 0.04; b.y += (b.nid[1] - b.y) * 0.04;
-      if (b.k > 0 && --b.k === 0) doAction(["showdoor"]);
+      if (b.k > 0 && --b.k === 0) lacherFragment(b);
       if (R.t % 50 === 0) R.particles.push({ zzz: true, x: b.x + b.w / 2, y: b.y - 2, vx: 0.2, vy: -0.4, s: 6, life: 70, color: C.text, g: 0 });
       return;
     }
@@ -1660,30 +1661,112 @@
       if (!o.pris) {
         o.y += (o.cible - o.y) * 0.03;
         if (o.t % 6 === 0) R.particles.push({ x: o.x + (Math.random() - 0.5) * 18, y: o.y + (Math.random() - 0.5) * 18, vx: 0, vy: -0.3, s: 2, life: 30, color: Math.random() < 0.5 ? C.jade : "#fff6c0", g: 0 });
-        if (o.t === 90) R.hint = { text: "L'Œil de Jade ! Saute pour l'attraper !", t: 0, dur: 260 };
+        if (o.t === 90) R.hint = { text: "Le dernier fragment de l'Œil ! Saute pour l'attraper !", t: 0, dur: 260 };
         if (o.t > 60 && p.alive && Math.abs(p.x + p.w / 2 - o.x) < 13 && p.y < o.y + 10 && p.y + p.h > o.y - 10) {
           o.pris = true; o.t = 0; burst(o.x, o.y, C.jade, 40, 3); burst(o.x, o.y, C.gold, 20, 2); sfx.pick(); setTimeout(() => sfx.door(), 150);
-          R.hint = { text: "Max brandit l'Œil de Jade ! Archibald, tout noir de suie : « Ensemble, alors ? »", t: 0, dur: 300 };
+          progress.fragments = fragmentsTrouves() | 16; saveProgress();
+          R.hint = { text: "Les cinq fragments s'assemblent : l'Œil de Jade ! Archibald, tout noir de suie : « Ensemble, alors ? »", t: 0, dur: 300 };
         }
-      } else if (o.t === 90) doAction(["showdoor"]);
+      } else if (o.t === 70) { burst(p.x + p.w / 2, p.y - 14, C.jade, 40, 3); burst(p.x + p.w / 2, p.y - 14, "#fff6c0", 24, 2); sfx.door(); }
+      else if (o.t === 130) doAction(["showdoor"]);
     }
   }
-  function drawOeilDeJade(cx, cy, k) {
-    const t = R.t;
+  // L'Œil de Jade est brisé en 5 fragments (un par monde) : 5 parts de 72°, la première en haut.
+  // masque = fragments présents (bit k = monde k+1) ; fantome = dessine en sombre les fragments manquants.
+  const FRAGMENTS = [
+    { nom: "du Soleil", couleur: "#f2c14e" }, { nom: "de Glace", couleur: "#bfe3ff" }, { nom: "de Corail", couleur: "#ff8a7a" },
+    { nom: "d'Orage", couleur: "#c9a0ff" }, { nom: "de Feu", couleur: "#ff7a2a" },
+  ];
+  const angleFragment = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+  function drawOeilDeJade(cx, cy, k, masque = 31, fantome = false, halo = true) {
+    const t = R ? R.t : 0, entier = masque === 31;
     ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k);
-    // halo et rayons
-    const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 30); g.addColorStop(0, "rgba(120,255,190,0.55)"); g.addColorStop(1, "rgba(120,255,190,0)");
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(255,246,192,0.35)"; ctx.lineWidth = 1.5;
-    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + t / 60; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 10, Math.sin(a) * 10); ctx.lineTo(Math.cos(a) * (20 + 4 * Math.sin(t / 10 + i)), Math.sin(a) * (20 + 4 * Math.sin(t / 10 + i))); ctx.stroke(); }
-    // monture d'or en forme d'œil
-    ctx.fillStyle = C.gold; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(0, -11, 11, 0); ctx.quadraticCurveTo(0, 11, -11, 0); ctx.fill();
-    ctx.fillStyle = C.jadeDark; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.quadraticCurveTo(0, -8, 8, 0); ctx.quadraticCurveTo(0, 8, -8, 0); ctx.fill();
-    // la pierre de jade, à facettes
+    // halo, et rayons quand l'Œil est entier
+    const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 30); g.addColorStop(0, `rgba(120,255,190,${entier ? 0.55 : 0.3})`); g.addColorStop(1, "rgba(120,255,190,0)");
+    if (halo) { ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill(); }
+    if (entier && halo) {
+      ctx.strokeStyle = "rgba(255,246,192,0.35)"; ctx.lineWidth = 1.5;
+      for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + t / 60; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 10, Math.sin(a) * 10); ctx.lineTo(Math.cos(a) * (20 + 4 * Math.sin(t / 10 + i)), Math.sin(a) * (20 + 4 * Math.sin(t / 10 + i))); ctx.stroke(); }
+    }
+    for (let i = 0; i < 5; i++) {
+      const la = !!(masque & (1 << i));
+      if (!la && !fantome) continue;
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 16, angleFragment(i), angleFragment(i + 1)); ctx.closePath(); ctx.clip();
+      if (la) dessinOeil(); else { ctx.globalAlpha *= 0.5; dessinOeil(true); }
+      ctx.restore();
+    }
+    // fêlures entre les fragments (tant que l'Œil n'est pas réuni)
+    if (!entier) {
+      ctx.save(); ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(0, -11, 11, 0); ctx.quadraticCurveTo(0, 11, -11, 0); ctx.clip();
+      ctx.strokeStyle = "rgba(20,40,30,0.9)"; ctx.lineWidth = 0.7;
+      for (let i = 0; i < 5; i++) {
+        if (!(masque & (1 << i)) && !(masque & (1 << ((i + 4) % 5))) && !fantome) continue;
+        const a = angleFragment(i); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 12, Math.sin(a) * 12); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  function dessinOeil(sombre) {
+    // monture d'or en forme d'œil, et la pierre de jade à facettes
+    ctx.fillStyle = sombre ? "#3a3428" : C.gold; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.quadraticCurveTo(0, -11, 11, 0); ctx.quadraticCurveTo(0, 11, -11, 0); ctx.fill();
+    ctx.fillStyle = sombre ? "#1c2420" : C.jadeDark; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.quadraticCurveTo(0, -8, 8, 0); ctx.quadraticCurveTo(0, 8, -8, 0); ctx.fill();
+    if (sombre) return;
     ctx.fillStyle = C.jade; ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#9ff0c6"; ctx.beginPath(); ctx.moveTo(-3, -1); ctx.lineTo(0, -4); ctx.lineTo(1, -1); ctx.closePath(); ctx.fill();
     ctx.fillStyle = "#fff"; ctx.fillRect(-2, -3, 1.5, 1.5);
-    ctx.restore();
+  }
+  // un fragment seul, centré sur (x, y), avec la lueur de son monde
+  function drawFragment(x, y, i, k) {
+    const a = angleFragment(i + 0.5), f = FRAGMENTS[i];
+    const g = ctx.createRadialGradient(x, y, 1, x, y, 16 * k); g.addColorStop(0, f.couleur + "aa"); g.addColorStop(1, f.couleur + "00");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 16 * k, 0, Math.PI * 2); ctx.fill();
+    drawOeilDeJade(x - Math.cos(a) * 6 * k, y - Math.sin(a) * 6 * k, k, 1 << i);
+  }
+  // fragments déjà trouvés : ceux de la sauvegarde, plus ceux des boss déjà battus (anciennes sauvegardes)
+  function fragmentsTrouves() {
+    let m = progress.fragments || 0;
+    const nm = window.MondesUI ? MondesUI.NIV : 20;
+    for (let k = 0; k < 5; k++) if (progress.best[k * nm + nm - 1] != null) m |= 1 << k;
+    return m;
+  }
+  const nbFragments = (m) => [0, 1, 2, 3, 4].filter((k) => m & (1 << k)).length;
+  // boss assommé : son fragment de l'Œil sort du boss et vient flotter près de Max, à hauteur de main
+  // (là où Max se tient, donc toujours accessible : sol, liane, nuage ou eau)
+  function lacherFragment(b) {
+    const i = Math.max(0, (R.def.monde || 1) - 1), p = R.player, bx = b.x + b.w / 2;
+    const cx = Math.max(24, Math.min(W - 24, p.x + p.w / 2 + Math.sign(bx - p.x || 1) * 40));
+    R.fragment = { i, x: bx, y: b.y + b.h / 2, cx, cy: p.y + p.h / 2 - 2, t: 0, pris: false };
+    burst(R.fragment.x, R.fragment.y, FRAGMENTS[i].couleur, 30, 2.5); sfx.door();
+    R.hint = { text: `Un fragment de l'Œil de Jade ! Va le chercher.`, t: 0, dur: 200 };
+  }
+  function updateFragment() {
+    const f = R.fragment, p = R.player;
+    if (!f) return;
+    f.t++;
+    if (!f.pris) {
+      f.x += (f.cx - f.x) * 0.03; f.y += (f.cy - f.y) * 0.03;
+      if (f.t % 6 === 0) R.particles.push({ x: f.x + (Math.random() - 0.5) * 16, y: f.y + (Math.random() - 0.5) * 16, vx: 0, vy: -0.3, s: 2, life: 30, color: Math.random() < 0.5 ? C.jade : FRAGMENTS[f.i].couleur, g: 0 });
+      if (f.t > 40 && p.alive && Math.abs(p.x + p.w / 2 - f.x) < 14 && p.y < f.y + 12 && p.y + p.h > f.y - 12) {
+        f.pris = true; f.t = 0;
+        progress.fragments = fragmentsTrouves() | (1 << f.i); saveProgress();
+        burst(f.x, f.y, C.jade, 40, 3); burst(f.x, f.y, FRAGMENTS[f.i].couleur, 20, 2); sfx.pick(); setTimeout(() => sfx.door(), 150);
+        const n = nbFragments(progress.fragments);
+        R.hint = { text: `Fragment ${FRAGMENTS[f.i].nom} : ${n} sur 5 !`, t: 0, dur: 220 };
+      }
+    } else if (f.t === 110) doAction(["showdoor"]);
+  }
+  function drawFragmentNiveau() {
+    const f = R.fragment;
+    if (!f) return;
+    if (!f.pris) { drawFragment(f.x, f.y + Math.sin(f.t / 15) * 3, f.i, Math.min(1.3, f.t / 25)); return; }
+    // ramassé : l'Œil (avec les fragments déjà trouvés) s'affiche au-dessus de Max, le nouveau fragment brille
+    if (f.t > 160) return;
+    const p = R.player, a = Math.min(1, f.t / 10, (160 - f.t) / 20);
+    ctx.globalAlpha = a;
+    drawOeilDeJade(p.x + p.w / 2, p.y - 20, 1.1, fragmentsTrouves(), true);
+    ctx.globalAlpha = 1;
   }
   function drawFouisseur(partie) {
     const b = R.boss, fin = b.fin || 0;
@@ -1716,8 +1799,17 @@
     }
     const o = b.oeil;
     if (o) {
-      if (o.pris) { const p = R.player; drawOeilDeJade(p.x + p.w / 2, p.y - 12 + Math.sin(R.t / 8) * 1.5, 0.8); }
-      else drawOeilDeJade(o.x, o.y + Math.sin(o.t / 15) * 3, Math.min(1, o.t / 30));
+      const p = R.player, ox = p.x + p.w / 2, oy = p.y - 14 + Math.sin(R.t / 8) * 1.5;
+      if (!o.pris) drawFragment(o.x, o.y + Math.sin(o.t / 15) * 3, 4, Math.min(1.3, o.t / 25));
+      else if (o.t < 70) {
+        // les quatre autres fragments sortent du sac de Max et viennent se coller au dernier
+        const k = o.t / 70, ease = k * k * (3 - 2 * k);
+        drawOeilDeJade(ox, oy, 1, 16);
+        for (let i = 0; i < 4; i++) {
+          const a = angleFragment(i + 0.5), r = (1 - ease) * 46;
+          drawOeilDeJade(ox + Math.cos(a) * r, oy + Math.sin(a) * r, 1, 1 << i);
+        }
+      } else drawOeilDeJade(ox, oy, 1);
     }
   }
   function drawFouisseurCorps() {
@@ -1777,7 +1869,7 @@
       case "attend": if (--b.k <= 0) b.etat = "combat"; return;
       case "sonne": if (--b.k <= 0) b.etat = "combat"; if (R.t % 8 === 0) R.particles.push({ x: b.x + b.w / 2 + (Math.random() - 0.5) * 40, y: b.y + 10, vx: 0, vy: -0.4, s: 3, life: 30, color: C.gold, g: 0 }); break;
       case "dort":
-        if (b.k > 0 && --b.k === 0) doAction(["showdoor"]);
+        if (b.k > 0 && --b.k === 0) lacherFragment(b);
         if (R.t % 50 === 0) R.particles.push({ zzz: true, x: b.x + b.w / 2, y: b.y - 2, vx: 0.2, vy: -0.4, s: 6, life: 70, color: C.text, g: 0 });
         return;
     }
@@ -1881,7 +1973,7 @@
       case "frappe": if (--b.k <= 0) b.etat = "marche"; break;
       case "sonne": if (--b.k <= 0) { b.etat = "marche"; } break;
       case "dort":
-        if (b.k > 0 && --b.k === 0) doAction(["showdoor"]);
+        if (b.k > 0 && --b.k === 0) lacherFragment(b);
         if (R.t % 50 === 0) R.particles.push({ zzz: true, x: b.x + b.w / 2, y: b.y - 2, vx: 0.2, vy: -0.4, s: 6, life: 70, color: C.text, g: 0 });
         break;
     }
@@ -2006,7 +2098,7 @@
         if (--b.k <= 0) { b.etat = "reveil"; b.k = 30; b.face = -b.face; }
         break;
       case "dort":
-        if (b.k > 0 && --b.k === 0) doAction(["showdoor"]);
+        if (b.k > 0 && --b.k === 0) lacherFragment(b);
         if (R.t % 50 === 0) R.particles.push({ zzz: true, x: b.x + b.w / 2, y: b.y - 2, vx: 0.2, vy: -0.4, s: 6, life: 70, color: C.text, g: 0 });
         break;
     }
@@ -2189,6 +2281,13 @@
     const f = R.flood;
     if (!f || game.mode !== "play") return;
     f.level += f.top ? f.speed : -f.speed;
+    // crue « collante » (1-19, le sablier) : elle ne reste jamais à plus de `colle` cases sous les pieds de Max,
+    // donc chaque hésitation compte (2 cases de marge en plus à chaque palier de l'aide automatique)
+    const p = R.player;
+    if (f.colle && !f.top && p && p.alive) {
+      const ecart = f.level - (p.y + p.h), max = (f.colle + 2 * R.assist) * T;
+      if (ecart > max) f.level -= (ecart - max) * 0.04;
+    }
     if (!f.top && f.level < 0) f.level = 0;
   }
   function updateTimer() {
@@ -2822,10 +2921,34 @@
     if (isTouch) enterFullscreen();
     game.timer = 0;
     startLevel(Math.max(0, Math.min(LEVELS.length - 1, i)));
-    showOverlay(null);
+    if (game.mode !== "intro") showOverlay(null);
   }
 
+  // Premier niveau d'un monde : on raconte d'abord l'histoire (une fois), le jeu commence après « C'est parti ».
+  function montrerIntro(i) {
+    const d = LEVELS[i], nm = window.MondesUI ? MondesUI.NIV : 20, k = Math.floor(i / nm);
+    const MO = window.MondesUI && MondesUI.MONDES[k];
+    game.mode = "intro"; game.introLevel = i; R = null;
+    releaseAll(); resize();
+    document.getElementById("intro-surtitre").textContent = `Monde ${k + 1}${MO ? " · " + MO.nom : ""}`;
+    document.getElementById("intro-titre").textContent = d.intro.titre;
+    document.getElementById("intro-texte").textContent = d.intro.texte;
+    const n = nbFragments(fragmentsTrouves());
+    document.getElementById("intro-fragments").textContent = n ? `Fragments de l'Œil : ${n} sur 5` : "L'Œil de Jade : 5 fragments à trouver";
+    document.getElementById("intro-oeil").src = lesSprites().oeil(fragmentsTrouves());
+    showOverlay("intro");
+    setTimeout(() => document.getElementById("btn-intro-suite").focus(), 50);
+  }
+  document.getElementById("btn-intro-suite").addEventListener("click", () => {
+    if (game.mode !== "intro") return;
+    const i = game.introLevel, k = Math.floor(i / (window.MondesUI ? MondesUI.NIV : 20));
+    progress.intros = progress.intros || {}; progress.intros[k] = 1; saveProgress();
+    showOverlay(null); startLevel(i);
+  });
+
   function startLevel(i) {
+    const vues = progress.intros || {}, nm = window.MondesUI ? MondesUI.NIV : 20;
+    if (LEVELS[i].intro && !vues[Math.floor(i / nm)] && !window.__sansNouveautes) { montrerIntro(i); return; }
     game.level = i;
     Kit.Stats.debut("level", i + 1, { id: LEVELS[i].id, morts: 0, relances: 0, amulettes: 0, restarts: 0 });
     game.cpLevel = -1;   // nouvelle tentative depuis le menu : on repart du début
@@ -3185,7 +3308,7 @@
     ctx.fillStyle = C.void;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (game.mode === "title" && !overlays.titre.hidden) return; // l'accueil est une illustration en fond de page
-    if (game.mode === "title" || game.mode === "end" || !R) { drawHome(); return; }
+    if (game.mode === "title" || game.mode === "end" || game.mode === "intro" || !R) { drawHome(); return; }
     const k = scale * dpr;
     if (game.mode !== "card") updateCamera(false);
     let sx = 0, sy = 0;
@@ -3220,6 +3343,7 @@
     drawBeams();
     drawSecrets();
     if (R.boss) { if (R.boss.kind === "yeti") drawYeti(); else if (R.boss.kind === "pieuvre") drawPieuvre(); else if (R.boss.kind === "oiseau") drawOiseauTonnerre(); else if (R.boss.kind === "fouisseur") drawFouisseur("dessus"); else drawBoss(); }
+    drawFragmentNiveau();
     drawWinds();
     if (R.def.monde >= 4) drawCiel();
     if (R.def.monde === 5) drawOr();
@@ -5223,6 +5347,7 @@
     pause: document.getElementById("ecran-pause"),
     fin: document.getElementById("ecran-fin"),
     recit: document.getElementById("ecran-recit"),
+    intro: document.getElementById("ecran-intro"),
   };
   // Bannière publicitaire (kit) : seulement sur les menus, hors partie (jamais en jeu ni en pause).
   // Pas sur l'accueil : en paysage, elle cacherait les boutons dessinés sur l'illustration.
@@ -5239,7 +5364,7 @@
   }
 
   function togglePause() {
-    if (game.mode === "title" || game.mode === "end" || game.mode === "relance" || game.mode === "recit") return;
+    if (game.mode === "title" || game.mode === "end" || game.mode === "relance" || game.mode === "recit" || game.mode === "intro") return;
     const ua = document.getElementById("btn-utiliser-amulette");
     ua.hidden = !R || !R.player || R.player.shield > 0 || (progress.amulettes || 0) <= 0;
     ua.textContent = `✦ Activer une amulette (${progress.amulettes || 0})`;
@@ -5287,6 +5412,10 @@
 
   function fmtTime(frames) { const s = Math.floor(frames / 60); return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, "0")} s`; }
   function showEnd() {
+    const sp = lesSprites();
+    document.getElementById("fin-max").src = sp.max;
+    document.getElementById("fin-oeil").src = sp.oeil(31);
+    document.getElementById("fin-archibald").src = sp.archibald;
     document.getElementById("fin-morts").textContent = String(progress.deaths);
     const arr = game.deathsByRoom, mx = Math.max(...arr), worst = arr.indexOf(mx);
     document.getElementById("fin-pire").textContent = mx > 0 ? `${LEVELS[worst].name} (${mx})` : "aucune, bravo";
@@ -5410,6 +5539,8 @@
     sprites = {
       max: sprite(() => { R = { t: 0, hat: null, player: { x: 5, y: 7, w: 10, h: 15, vx: 0, vy: 0, face: 1, grounded: true, alive: true, anim: 0, club: 0, shield: 0, invuln: 0 } }; drawPlayer(); }),
       archibald: sprite(() => { R = { t: 0 }; drawRival({ x: 4, y: 7, state: "wait", t: 0, face: -1 }); }),
+      // l'Œil de Jade avec les fragments trouvés (masque), les autres en ombre
+      oeil(m) { const c = sprites._oeil || (sprites._oeil = {}); return c[m] || (c[m] = sprite(() => { R = { t: 0 }; drawOeilDeJade(10, 12, 0.8, m, true, false); })); },
     };
     return sprites;
   }
@@ -5425,7 +5556,7 @@
     releaseAll(); resize();
     MondesUI.afficherMonde(MondesUI.mondeDe(i));
   }
-  if (window.MondesUI) MondesUI.init({ progress, LEVELS, playFrom, showOverlay, goHome, get sprites() { return lesSprites(); } });
+  if (window.MondesUI) MondesUI.init({ progress, LEVELS, playFrom, showOverlay, goHome, fragments: fragmentsTrouves, get sprites() { return lesSprites(); } });
   document.getElementById("btn-jouer").addEventListener("click", ouvrirCarte);
   document.getElementById("btn-niveaux").addEventListener("click", ouvrirCarte);
   document.getElementById("btn-carte-pause").addEventListener("click", quitterVersMonde);
@@ -5569,5 +5700,5 @@
   };
   document.getElementById("btn-statistiques").addEventListener("click", () => { Kit.Stats.activer(statsSauvegarde.data.stats === false); majStatsBouton(); });
   majStatsBouton();
-  window.__temple = { Kit, mesurePerf, game, get room() { return R; }, LEVELS, input, pressed, startLevel, playFrom, goHome, progress, apercuNiveau, camera: () => updateCamera(true) };
+  window.__temple = { Kit, mesurePerf, game, get room() { return R; }, LEVELS, input, pressed, startLevel, playFrom, goHome, showEnd, progress, apercuNiveau, camera: () => updateCamera(true) };
 })();

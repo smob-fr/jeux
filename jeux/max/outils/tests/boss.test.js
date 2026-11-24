@@ -18,16 +18,19 @@ function combat(page, kind, robot, max = 9000) {
       if (!R.door.hidden) break;
       Object.assign(t.input, { left: false, right: false, jump: false, fire: false });
       robot(t, R, f, T, etat);
+      // boss assommé : son fragment de l'Œil flotte devant la porte, on va le chercher
+      const fr = R.fragment;
+      if (fr && !fr.pris && fr.t > 45) { const P = R.player; P.x = fr.x - P.w / 2; P.y = fr.y - P.h / 2; P.vy = 0; P.vine = null; }
       const h = R.boss.hits;
       t.mesurePerf(1);
       if (t.room.boss && t.room.boss.hits > h) coups.push(f);
     }
-    return { porte: !t.room.door.hidden, images: f, coups, morts, msg };
+    return { porte: !t.room.door.hidden, images: f, coups, morts, msg, fragments: t.progress.fragments || 0 };
   }, [kind, robot.toString().replace(/^[^{]*{|}$/g, ""), max]);
 }
 const verdict = (r, mortsMax = 0) => ({
   ok: r.porte && r.morts <= mortsMax,
-  detail: `${r.porte ? "porte ouverte" : "porte FERMÉE"} en ${r.images} images, coups ${r.coups.join("/") || "aucun"}, ${r.morts} mort(s)${r.morts ? " (« " + r.msg + " »)" : ""}`,
+  detail: `${r.porte ? "porte ouverte" : "porte FERMÉE"} en ${r.images} images, fragments ${r.fragments.toString(2)}, coups ${r.coups.join("/") || "aucun"}, ${r.morts} mort(s)${r.morts ? " (« " + r.msg + " »)" : ""}`,
 });
 
 module.exports = [
