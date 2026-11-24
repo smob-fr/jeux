@@ -101,33 +101,68 @@ module.exports = [
     },
   },
   {
-    nom: "Boss 5 — le Fouisseur d'Archibald, puis l'Œil de Jade",
+    nom: "Boss 5 — combat final en 3 manches : Fouisseur, poursuite, duel contre Archibald",
     async run(page) {
-      return verdict(await combat(page, "fouisseur", function (t, R, f, T) {
-        const P = R.player, B = R.boss;
-        if (B.etat === "cale") {
-          // la machine s'effondre : attraper l'Œil de Jade (saut sous lui)
-          const o = B.oeil;
-          if (o && !o.pris && o.t > 70) { const dx = o.x - (P.x + P.w / 2); if (Math.abs(dx) > 3) t.input[dx > 0 ? "right" : "left"] = true; else if (P.grounded) { t.input.jump = true; t.pressed.jump = true; } }
-          else if (P.y < 12 * T) { P.x = 25 * T; P.y = 14 * T + 1; P.vy = 0; }
-          return;
-        }
-        // de la dynamite dans la première cheminée encore ouverte, en dehors de la fumée et du feu
-        const c = B.chem.find((q) => !q.bouchee);
-        const rocher = R.grelons.find((q) => Math.abs(q.x + 3 - (P.x + P.w / 2)) < 14);
-        if (t.game.ammo.tnt <= 0 && !R.dynamites.some((d) => !d.dans)) {
-          const it = R.pickups.find((q) => q.kind === "tnt" && !q.taken);
-          if (it) { P.x = it.x - 1; P.y = 14 * T + 1; P.vy = 0; } else if (P.y < 12 * T) { P.x = 15 * T; P.y = 14 * T + 1; P.vy = 0; }
-        } else if (c && B.etat === "combat") {
-          const surC = Math.abs(P.x + P.w / 2 - (c.x + 8)) < 6 && P.y + P.h <= c.y + 1;
-          if (!c.warn && !c.feu && !R.dynamites.some((d) => !d.dans) && !rocher) {
-            if (!surC) { P.x = c.x + 3; P.y = c.y - P.h - 0.5; P.vy = 0; } else t.pressed.tnt = true;
-          } else if (P.y + P.h <= c.y + 1 || rocher) {
-            // à l'abri sur le toit, entre deux cheminées
-            P.x = rocher ? P.x + (rocher.x > P.x ? -20 : 20) : c.x + (3 * T * (c === B.chem[2] ? -1 : 1)) / 2 + 2; P.y = 9 * T - P.h - 0.5; P.vy = 0;
+      const r = await page.evaluate(() => {
+        const t = __temple, T = 16;
+        t.progress.tester = true; t.playFrom(t.LEVELS.length - 1); t.game.mode = "play"; t.game.cardT = 99;
+        let morts = 0, msg = "", f = 0;
+        const manches = [];
+        const mort = () => { if (t.game.mode === "dead") { morts++; msg = t.room.say ? t.room.say.text : ""; while (t.game.mode === "dead") t.mesurePerf(1); return true; } return false; };
+        // ---- manche 1 : TNT dans les cheminées quand le couvercle est ouvert
+        for (; f < 9000 && (t.game.manche || 0) === 0; f++) {
+          if (mort()) continue;
+          if (t.game.mode === "card") { t.mesurePerf(1); continue; }
+          const R = t.room, P = R.player, B = R.boss;
+          Object.assign(t.input, { left: false, right: false, jump: false, fire: false });
+          if (B.etat === "combat") {
+            const c = B.chem.find((q) => !q.bouchee);
+            const rocher = R.grelons.find((q) => Math.abs(q.x + 3 - (P.x + P.w / 2)) < 14);
+            if (t.game.ammo.tnt <= 0 && !R.dynamites.some((d) => !d.dans)) {
+              const it = R.pickups.find((q) => q.kind === "tnt" && !q.taken);
+              if (it) { P.x = it.x - 1; P.y = 14 * T + 1; P.vy = 0; } else if (P.y < 12 * T) { P.x = 15 * T; P.y = 14 * T + 1; P.vy = 0; }
+            } else if (c && c.ouvert && !R.dynamites.some((d) => !d.dans) && !rocher) {
+              const surC = Math.abs(P.x + P.w / 2 - (c.x + 8)) < 6 && P.y + P.h <= c.y + 1;
+              if (!surC) { P.x = c.x + 3; P.y = c.y - P.h - 0.5; P.vy = 0; } else t.pressed.tnt = true;
+            } else if (c) { P.x = c.x + (c === B.chem[2] ? -24 : 26); P.y = 9 * T - P.h - 0.5; P.vy = 0; }
           }
+          // esquiver les pierres en fusion (leur ombre les annonce)
+          const pierre = R.grelons.find((q) => Math.abs(q.x + 3 - (P.x + P.w / 2)) < 14 && (q.warn > 0 || q.y < P.y));
+          if (pierre) P.x += pierre.x > P.x ? -20 : 20;
+          t.mesurePerf(1);
         }
-      }, 6000));
+        manches.push(f);
+        // ---- manche 2 : la poursuite (le robot monte d'une case par seconde jusqu'à la porte)
+        for (let k = 0; k < 600 && t.game.mode !== "play"; k++) t.mesurePerf(1);
+        const R2 = t.room, lave = !!(R2.flood && R2.flood.kind === "lave"), foreuse = !!R2.def.poursuite;
+        const d = R2.door; R2.player.x = d.x + 1; R2.player.y = d.y + 6; R2.player.vy = 0;
+        for (let k = 0; k < 30 && (t.game.manche || 0) === 1; k++) t.mesurePerf(1);
+        manches.push(f);
+        // ---- manche 3 : le duel (le robot esquive en se replaçant, puis saute sur la cabine posée)
+        for (let k = 0; k < 600 && t.game.mode !== "play"; k++) t.mesurePerf(1);
+        let g = 0, porte = false;
+        for (; g < 9000; g++) {
+          if (mort()) continue;
+          const R = t.room;
+          if (!R || !R.boss || R.boss.kind !== "archibald" || t.game.mode === "win" || !R.door.hidden) { porte = porte || !!(R && R.door && !R.door.hidden) || t.game.mode === "win"; break; }
+          const P = R.player, B = R.boss;
+          if (B.oeil && !B.oeil.pris && B.oeil.t > 60) { P.x = B.oeil.x - 5; P.y = B.oeil.y - 7; P.vy = 0; }
+          else if (B.etat === "surchauffe") { if (!B.robotPose) { B.robotPose = true; P.x = B.x + B.w / 2 - 5; P.y = B.y - P.h - 20; P.vy = 0; } }
+          else if (B.etat !== "vaincu") {
+            B.robotPose = false;
+            // à l'abri : le robot triche, il se replace à un endroit sans danger (plates-formes ou sol)
+            const sur = (x) => !B.proj.some((q) => ((q.type === "glacon" || q.type === "eclair") && Math.abs((q.type === "eclair" ? q.x * T + 8 : q.x + 4) - (x + 5)) < 24)
+              || (q.type === "rocher" && Math.abs(q.x - (x + 5)) < 48) || (q.type === "mine" && Math.abs(q.x - x) < 48));
+            if (!sur(P.x)) {
+              const place = [[8, 10], [34, 10], [16, 15], [22, 15], [28, 15], [4, 15], [40, 15]].find(([x]) => sur(x * T));
+              if (place) { P.x = place[0] * T; P.y = place[1] * T - P.h - 0.5; P.vy = 0; }
+            }
+          }
+          t.mesurePerf(1);
+        }
+        return { manches, duel: g, porte, morts, msg, lave, foreuse, fragments: t.progress.fragments || 0, oeil: ((t.progress.fragments || 0) & 16) > 0 };
+      });
+      return { ok: r.porte && r.morts === 0 && r.lave && r.foreuse && r.oeil, detail: JSON.stringify(r) };
     },
   },
 ];

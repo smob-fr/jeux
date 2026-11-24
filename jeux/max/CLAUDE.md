@@ -89,7 +89,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - Boss : l'Oiseau-tonnerre, qu'on assomme en sonnant les cloches au bon moment.
 - **Monde 5, la cité d'or**
   - Mécaniques : lave, tapis roulants, jets de feu, wagonnet, pluie de magma, dalles qui fondent, engrenages, pistons, vapeur, effondrement, compte à rebours ; golems (deux coups), salamandres, gardiens d'or, robots d'alarme.
-  - Boss : le Fouisseur d'Archibald. Après le combat, la machine explose, le dernier fragment sort des débris et l'Œil de Jade se reconstitue.
+  - Combat final en 3 manches : le Fouisseur d'Archibald (TNT dans les cheminées quand le couvercle s'ouvre), la poursuite dans la lave, puis le duel contre la cabine d'Archibald. À la fin, le dernier fragment roule aux pieds de Max et l'Œil de Jade se reconstitue.
 - **Pas d'armes.** On saute sur les ennemis ou on les assomme d'un coup de massue, et la dynamite ouvre les murs fissurés. Les boss sont assommés, jamais tués.
 - **Pièges surprises à la Level Devil** dans chaque ligne droite : sol qui s'ouvre, pics qui jaillissent, bloc qui tombe, piège qui change de place après une mort, requin qui surgit, nuage qui fond…
 - **Histoire racontée en fin de niveau** par Archibald, avec de l'humour.
@@ -154,6 +154,10 @@ npm test                           # build, régénère les niveaux (levels.js d
   - Chaque boss a sa fiche animée au début du combat (`boss_jaguar`, `boss_yeti`, `boss_pieuvre`, `boss_oiseau`, `boss_fouisseur` dans `NOUVEAUTES`), revue après 3 chutes (`restartRoom`). Elles remplacent les aides en texte du début des combats.
   - Repères pendant le combat (`drawReperesBoss`, `drawRepere`) : « SAUTE ! » sur le Jaguar sonné et « LIANE ! » quand il gratte, « SAUTE ! » quand le Yéti retombe, « COUP ! » sur la mine qui approche et sur la cloche quand l'oiseau passe, « TNT » sur la cheminée à viser. Messages de coup raccourcis (« Encore 2. »).
   - **Nouvelle pieuvre** : elle lance des mines qui dérivent vers Max ; un COUP de massue la renvoie droit sur sa tête (si Max la regarde). 3 mines dans la tête et elle s'endort. Elle frappe toujours avec une tentacule annoncée par son ombre, et crache de l'encre après le premier coup. Les coquillages ont disparu.
+- **Combat final en 3 manches** (5-20, retours du 24 novembre). Le niveau a une liste `manches` (`niveaux.py` : `boss_fouisseur`, `manche_poursuite`, `manche_duel`) ; `buildRoom` fusionne la manche `game.manche` avec le niveau, `mancheSuivante` passe à la suivante (carte de titre, puis la fiche de la manche). Une chute fait recommencer la manche en cours.
+  1. **Le Fouisseur**, plus dur : chaque cheminée a un couvercle qui ne se soulève (en vert) qu'un moment, juste avant la fumée ; une TNT lâchée sur un couvercle fermé rebondit. 3 cheminées : la machine explose, la cabine d'Archibald s'enfuit.
+  2. **La poursuite** : montée verticale (40 cases de haut), la lave monte avec la foreuse (crue collante, 5 cases), pierres en fusion annoncées par leur ombre (`updatePoursuite`, `drawForeuse`).
+  3. **Le duel** (`updateArchibald`, `drawCabine`) : la cabine pendue à un bras attaque avec les pièges des mondes (rochers qui roulent, puis glaçons et éclairs, puis mines qu'on peut lui renvoyer). Après chaque attaque, elle surchauffe et se pose : Max saute dessus (ou un COUP). 3 coups : Archibald sort, le dernier fragment roule et l'Œil se reconstitue. Pendant le duel, la caméra garde la cabine à l'écran.
 - Commandes tactiles retravaillées le 10 novembre : saut fiable même sur un appui bref, grand bouton SAUT rectangulaire. À confirmer sur téléphone.
 
 ## Ce qui reste à faire
@@ -164,7 +168,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - le combat contre l'Oiseau-tonnerre ;
   - le Fouisseur.
 - **Confirmer sur un vrai téléphone** que le bouton SAUT ne rate plus aucun appui, et que le jeu reste fluide dans les mondes 4 et 5.
-- **Combat final en 3 manches** (Fouisseur, poursuite, duel contre Archibald) : validé avec le propriétaire le 24 novembre, à faire.
+- **Combat final** : à valider en jeu (difficulté de la poursuite et du duel).
 - **Musique** : il n'y a que des bruitages synthétisés. Le cadrage prévoit une musique par monde.
 - **Version des stores** (appli) : pubs et achats sont branchés par le kit, avec des identifiants de test (`jeu.json`). Restent les vrais identifiants, les produits dans les stores, le verrouillage en paysage et l'essai sur téléphone (checklist de `docs/publication.md`).
 - ~~Tests automatiques en intégration continue~~ : fait, par le workflow `tests.yml` du dépôt commun.
