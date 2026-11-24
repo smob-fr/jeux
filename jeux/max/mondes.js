@@ -139,8 +139,9 @@
     }
     // titre
     s.push(`<g transform="translate(800 70)"><path d="M-300 -26 h600 l-26 26 l26 26 h-600 l26 -26z" fill="url(#mo-ruban)" filter="url(#mo-ombre-p)"/><path d="M-330 -14 h40 v40 h-40 l14 -20z M330 -14 h-40 v40 h40 l-14 -20z" fill="#5a1a10"/><text y="10" class="mo-titre" text-anchor="middle">La route de l'Œil de Jade</text></g>`);
-    // rose des vents
-    s.push(`<g transform="translate(1500 250)" opacity=".9"><circle r="46" fill="#f3e2b8" stroke="#7a5a2e" stroke-width="2.5"/><circle r="36" fill="none" stroke="#7a5a2e" stroke-width="1"/><path d="M0 -42 L9 0 L0 42 L-9 0Z" fill="#8c2a12"/><path d="M-42 0 L0 9 L42 0 L0 -9Z" fill="#3b2a1a"/><text y="-52" class="mo-petit" text-anchor="middle">N</text></g>`);
+    // l'Œil de Jade : les fragments déjà trouvés (un par monde), les autres en ombre
+    const frag = api.fragments ? api.fragments() : 0, nf = [0, 1, 2, 3, 4].filter((k) => frag & (1 << k)).length;
+    s.push(`<g transform="translate(1490 250)" aria-label="L'Œil de Jade : ${nf} fragment${nf > 1 ? "s" : ""} sur 5"><circle r="62" fill="#f3e2b8" stroke="#7a5a2e" stroke-width="2.5" filter="url(#mo-ombre-p)"/><circle r="54" fill="#1d2a24" opacity=".85"/><image href="${api.sprites.oeil(frag)}" x="-50" y="-60" width="100" height="120" preserveAspectRatio="xMidYMid meet" style="image-rendering:pixelated"/><g transform="translate(0 86)"><rect x="-74" y="-18" width="148" height="28" rx="6" fill="#fff7df" stroke="#3b2a1a" stroke-width="1.5"/><text y="2" class="mo-etiq" text-anchor="middle">Œil de Jade : ${nf}/5</text></g></g>`);
     // médaillons
     MONDES.forEach((m, k) => {
       const ouv = mondeOuvert(k), n = finis(k), fait = n === NIV;

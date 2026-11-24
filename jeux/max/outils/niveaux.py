@@ -462,9 +462,10 @@ class Niveau:
         """Compte à rebours sur tout le niveau (calculé une fois le niveau construit)."""
         self.opts["_timer"] = marge
 
-    def crue(self, nature="eau", vitesse=0.16, texte=None):
+    def crue(self, nature="eau", vitesse=0.16, texte=None, colle=0):
         depart = 0 if nature == "plafond" else self.h + 4   # le plafond part du haut, l'eau de bien plus bas (temps de réaction)
-        self.t([["flood", nature, vitesse, depart]] + ([["say", texte]] if texte else []))
+        # colle : la crue ne reste jamais à plus de `colle` cases sous Max (crue tendue, voir game.js)
+        self.t([["flood", nature, vitesse, depart] + ([colle] if colle else [])] + ([["say", texte]] if texte else []))
 
     def sprint(self):
         x0 = self.pics(2); self.plat(1); self.fosse(3, "vide"); self.plat(1); self.pics(2); self.plat(1)
@@ -1837,12 +1838,12 @@ FIN_INCA = {
     2: "Archibald referme une porte derrière lui. « Une porte qui fuit, c'est pratique. Je l'ai dressée moi-même. »",
     3: "Archibald compte ses momies : « Une, deux… Hé ! Qui a assommé Ramsès ? »",
     4: "Archibald caresse son rocher : « Gérard, tu as été parfait. Max a juste été… plus rapide. »",
-    5: "Histoire. Archibald déplie une vieille carte : « L'Œil de Jade est caché tout au fond du temple, derrière le Jaguar de pierre. Il ne se réveille que pour les intrus. Donc pour toi. »",
+    5: "Histoire. Archibald déplie le carnet de son grand-père : « L'Œil de Jade a été brisé en cinq fragments, cachés aux quatre coins du monde. Le premier dort au fond de ce temple, sous la patte du Jaguar de pierre. » Il referme le carnet. « Évidemment, je ne t'ai rien dit. »",
     6: "Archibald, vexé : « Mes fausses dalles étaient parfaites ! Tu as dû tricher. »",
     7: "Archibald retire une flèche de son chapeau. « Mes archers sont un peu maladroits, aujourd'hui. »",
     8: "Archibald, de loin : « Gérard a cassé un mur ? Il faudra que je le dédommage. »",
     9: "Archibald soupire : « Trois murs, un seul faux. Tu as choisi le bon. Évidemment. »",
-    10: "Histoire. Au fond du puits, une fresque montre un jaguar géant qui garde une pierre verte. Archibald l'a déjà photographiée. « Le Jaguar de pierre ne dort que d'un œil, Max. Et cet œil, c'est le mien. »",
+    10: "Histoire. Au fond du puits, une fresque montre un jaguar géant couché sur un éclat de pierre verte. Archibald l'a déjà photographiée. « Le Jaguar de pierre ne dort que d'un œil, Max. Et ce fragment, ce sera le mien. »",
     11: "Archibald époussette sa veste. « Ce temple tombe en ruine. Ce n'est pas moi, je le jure. Enfin, pas tout. »",
     12: "Archibald, suspendu à une liane : « Toi aussi, tu aimes te balancer ? On a au moins ça en commun. »",
     13: "Archibald se cogne au plafond. « Aïe. Bon, d'accord, ce piège-là était bête. »",
@@ -1852,7 +1853,7 @@ FIN_INCA = {
     17: "Archibald s'éloigne en sifflotant. « Les momies te passent le bonjour. Les écraseurs aussi. »",
     18: "Archibald regarde sa montre. « Encore à l'heure ? Tu commences à m'agacer. »",
     19: "Archibald, couvert de sable : « La salle du Jaguar est juste derrière. S'il te plaît, ne le réveille pas trop fort. »",
-    20: "Le Jaguar de pierre ronfle comme un volcan. Archibald, caché derrière un pilier, applaudit à moitié. « Bravo… Mais l'Œil n'est pas ici ! Le Jaguar gardait seulement un morceau de carte. Rendez-vous dans les neiges de l'Himalaya ! »",
+    20: "Le Jaguar de pierre ronfle comme un volcan. Max tient le premier fragment de l'Œil de Jade : le fragment du Soleil ! Archibald, caché derrière un pilier, applaudit à moitié. « Un sur cinq… Le deuxième est caché dans les neiges de l'Himalaya. Et cette fois, j'arrive le premier ! »",
 }
 
 
@@ -2114,7 +2115,7 @@ def monde_inca():
     # 19 — Le sablier (grande épreuve) : le sable monte, on grimpe par ressorts, cordes et liane
     n = I("Le sablier", "action", h=50, sol=48)
     n.motifs = None
-    n.depart(4); n.crue("sable", 0.2)
+    n.depart(4); n.crue("sable", 0.22, colle=5)   # retour du testeur : trop tranquille ; le sable colle aux talons de Max
     grimpe(n, 3, ressorts=(1,), ennemis=(0,)); n.plat(2, ennemi="j"); n.corde(5); n.plat(3, ennemi="b")
     n.liane(7, 4); n.plat(3); grimpe(n, 2, ressorts=(1,), ennemis=(1,)); n.plat(2, ennemi="j"); n.corde(5); n.plat(3)
     n.liane(7, 4); n.plat(3); grimpe(n, 2, ressorts=(0,)); n.salle_secrete("bloc_faux")
@@ -2826,7 +2827,7 @@ FIN_ABYSSES = {
     7: "Archibald contemple une statue engloutie : « Une cité entière sous l'eau. Et pas un seul panneau pour indiquer la sortie. »",
     8: "Archibald, tout noir de suie : « J'ai poussé la mine du mauvais côté. Ça arrive aux meilleurs. »",
     9: "Archibald, caché dans une grotte : « Le requin ? Un vieil ami. Il m'a juste… un peu poursuivi. »",
-    10: "Histoire. Dans le noir, le poisson-lanterne éclaire une fresque : un palais englouti, gardé par une pieuvre géante, et l'Œil de Jade gravé sur sa porte. Archibald, derrière Max : « Ah. Une pieuvre. Évidemment. »",
+    10: "Histoire. Dans le noir, le poisson-lanterne éclaire une fresque : un palais englouti, gardé par une pieuvre géante, et un fragment de l'Œil gravé sur sa porte. Archibald, derrière Max : « Ah. Une pieuvre. Évidemment. »",
     11: "Archibald remonte dans une colonne de bulles : « Ascenseur sous-marin ! Sans musique d'ascenseur, hélas. »",
     12: "Archibald a un crabe accroché au nez : « Tout va bien. On fait connaissance. »",
     13: "Archibald, qui tourne encore sur lui-même : « Où est le haut ? Pourquoi la mer est au plafond ? »",
@@ -2836,7 +2837,7 @@ FIN_ABYSSES = {
     17: "Archibald sort de son sous-marin, tout penaud : « Ce n'étaient que des torpilles d'entraînement ! Enfin, presque. »",
     18: "Archibald, tout au fond de la fosse : « Il fait noir, il fait froid, et j'ai oublié mon goûter. »",
     19: "Archibald, devant la porte du palais : « La pieuvre est derrière. Tu passes en premier ? Je te couvre. De loin. »",
-    20: "La pieuvre géante ronfle dans sa grotte, entourée de bulles. Derrière elle, dans un coquillage, le troisième morceau de carte ! Archibald : « Il mène… au-dessus des nuages ? » Rendez-vous dans le royaume des nuages !",
+    20: "La pieuvre géante ronfle dans sa grotte, entourée de bulles. Max serre le fragment de Corail : trois sur cinq ! Archibald, trempé jusqu'aux os : « Le quatrième est… au-dessus des nuages ? Mais qui cache des choses là-haut ? » Rendez-vous dans le royaume des nuages !",
 }
 
 NIVEAUX_MER = [
@@ -2879,6 +2880,16 @@ SANS_PIEGES_MER = {1: {"rideau", "mine", "requin", "requin_face"}, 2: {"requin",
 INTRO_MER = {
     5: ["L'épave : entre par une écoutille"],
 }
+
+
+# L'histoire qui ouvre chaque monde : affichée avant son premier niveau, une seule fois (game.js, montrerIntro).
+INTROS_MONDES = [
+    ("L'Œil brisé", "Il y a cinquante ans, deux explorateurs ont trouvé l'Œil de Jade, puis l'ont brisé en cinq fragments, chacun caché dans un monde et gardé par une créature. Le professeur Archibald veut les réunir avant toi. Le premier dort au fond d'un temple inca, sous la patte du Jaguar de pierre."),
+    ("Le fragment de Glace", "Un fragment brille dans ton sac. Le deuxième est caché tout en haut de l'Himalaya, dans la caverne du Yéti. Archibald est déjà parti… en pantoufles. Couvre-toi bien : le froid fait baisser ta jauge, réchauffe-toi près des braseros."),
+    ("Le fragment de Corail", "Deux fragments ! Le troisième repose au fond de l'océan, dans le palais englouti d'une pieuvre géante. Sous la roche, pas d'air : tu iras de bulle en bulle. Prends ton souffle, Max."),
+    ("Le fragment d'Orage", "Trois fragments. Le quatrième est au-dessus des nuages, dans le nid de l'Oiseau-tonnerre. Là-haut, il n'y a pas de sol : seulement des nuages, et certains fondent sous les pieds. Archibald a loué un ballon. Toi, tu sauteras."),
+    ("Le fragment de Feu", "Quatre fragments ! Le dernier est au cœur du volcan, dans la cité d'or. Archibald y a construit une machine énorme pour creuser jusqu'à lui. Sans le dernier fragment, l'Œil ne sera jamais entier… et sans toi, Archibald non plus ne le trouvera pas."),
+]
 
 
 def monde_abysses():
@@ -3339,7 +3350,7 @@ FIN_NUAGES = {
     2: "Archibald, les pieds mouillés : « Mon nuage a fondu. Comme une glace à la vanille. En moins bon. »",
     3: "Archibald, sur un nuage qui s'éloigne : « Je ne pars pas, Max. C'est le nuage qui part. Au revoir ! »",
     4: "Archibald, les cheveux tout droits : « La foudre ne tombe jamais deux fois au même endroit. Sauf ici. Trois fois. »",
-    5: "Histoire. Au palais céleste, un gardien de marbre parle enfin : « L'Œil de Jade a été caché au cœur du volcan, pour que personne ne le prenne seul. » Archibald note tout dans son carnet… à l'envers.",
+    5: "Histoire. Au palais céleste, un gardien de marbre parle enfin : « Le dernier fragment de l'Œil est au cœur du volcan. On les a séparés pour que personne ne les réunisse seul. » Archibald note tout dans son carnet… à l'envers.",
     6: "Archibald, assis sur un arc-en-ciel qui disparaît : « Il était là il y a une seconde, je te jure ! »",
     7: "Archibald s'envole accroché à un ballon : « Max ! Comment on descend ?! MAX ! »",
     8: "Archibald, couvert de plumes : « Les oiseaux migrateurs ne respectent pas les priorités. »",
@@ -3354,7 +3365,7 @@ FIN_NUAGES = {
     17: "Archibald, des grêlons plein la moustache : « On dirait des glaçons. Il ne manque que la limonade. »",
     18: "Archibald, tout essoufflé en haut de l'escalier céleste : « Qui a construit un escalier SANS ascenseur ? »",
     19: "Archibald, caché derrière le nid : « L'Oiseau-tonnerre dort là-haut. Tu sonnes les cloches, je… je surveille. »",
-    20: "L'Oiseau-tonnerre dort, la tête sous l'aile. Dans son nid, le dernier morceau de la carte ! Archibald : « Il mène… au cœur du volcan. À la cité d'or ! » Rendez-vous dans la cité d'or !",
+    20: "L'Oiseau-tonnerre dort, la tête sous l'aile. Dans son nid, Max ramasse le fragment d'Orage. Les quatre fragments se mettent à briller dans son sac : ils montrent tous le volcan d'or. Archibald : « Le dernier est là-bas. Et cette fois, j'ai une machine ! » Rendez-vous dans la cité d'or !",
 }
 
 NIVEAUX_CIEL = [
@@ -3609,7 +3620,7 @@ FIN_OR = {
     2: "Archibald souffle sur ses bottes qui fument : « La lave, c'est comme le chocolat chaud. Ça a l'air bon, mais ça brûle. »",
     3: "Archibald, les sourcils roussis : « Ma moustache ! Ma belle moustache ! Il en reste la moitié. »",
     4: "Archibald sort du wagonnet, tout ébouriffé : « Encore ! Encore un tour ! Non. En fait non. »",
-    5: "Histoire. Dans la salle des trésors, Archibald trouve la dernière pièce de sa carte. Elle montre le cœur du volcan… et une phrase de son grand-père : « Ensemble, ou pas du tout. » Il range vite la carte dans sa poche.",
+    5: "Histoire. Dans la salle des trésors, Archibald retrouve la dernière page du carnet de son grand-père. Elle montre le cœur du volcan… et une phrase : « Ensemble, ou pas du tout. » Il range vite la page dans sa poche.",
     6: "Archibald court à reculons sur un tapis : « J'avance ! Je recule ! Je ne sais plus ! »",
     7: "Archibald, assis sur un golem endormi : « Il ronfle. Comme mon oncle Gérard. »",
     8: "Archibald, avec une casserole sur la tête : « Un chapeau, c'est bien. Une casserole, c'est mieux. »",
@@ -3624,7 +3635,7 @@ FIN_OR = {
     17: "Archibald, au milieu de ses robots : « Ils sont gentils, en vrai. Ils sonnent juste un peu fort. »",
     18: "Archibald, couvert de poussière : « Tout s'est effondré. Sauf mon moral. Enfin, un peu mon moral aussi. »",
     19: "Archibald, devant une énorme machine à vapeur : « Tu aimes mon Fouisseur ? Il creuse jusqu'à l'Œil de Jade ! Recule, Max ! »",
-    20: "Le Fouisseur cale dans un nuage de suie. Archibald en sort, tout noir, et tousse : « D'accord, d'accord… Tu as gagné. » Il sourit enfin : « On le prend ensemble, l'Œil de Jade ? » Max hoche la tête. Ensemble, ils ouvrent le cœur du volcan. FIN… pour l'instant !",
+    20: "Le Fouisseur cale dans un nuage de suie. Le dernier fragment roule aux pieds de Max, et les cinq morceaux s'assemblent dans ses mains : l'Œil de Jade, enfin entier ! Archibald sort de la ferraille, tout noir, et tousse : « Mon grand-père disait : ensemble, ou pas du tout… » Max lui tend la main. Ensemble, ils soulèvent l'Œil de Jade.",
 }
 
 
@@ -3684,7 +3695,7 @@ FIN_HIMALAYA = {
     2: "Archibald glisse sur les fesses : « Cette glace est très bien. Je l'ai cirée moi-même. »",
     3: "Archibald, de l'autre côté du gouffre : « Le pont ? Il tenait très bien. Pour une personne. »",
     4: "Archibald, tout blanc : « J'ai juste éternué. Je ne savais pas qu'une montagne était aussi susceptible. »",
-    5: "Histoire. Les moines du monastère ont vu passer Archibald : il cherche le deuxième morceau de la carte, caché au sommet, dans la caverne du Yéti. « Ne réveillez pas le Yéti », disent-ils. Archibald n'écoute jamais les moines.",
+    5: "Histoire. Les moines du monastère ont vu passer Archibald : il cherche le deuxième fragment de l'Œil, caché au sommet, dans la caverne du Yéti. « Ne réveillez pas le Yéti », disent-ils. Archibald n'écoute jamais les moines.",
     6: "Archibald se gratte la tête : « Une stalactite m'est tombée dessus. Je l'ai prise pour un compliment. »",
     7: "Archibald, coincé dans une crevasse : « Ne me regarde pas. Je cherchais… un caillou. »",
     8: "Archibald court plus vite que d'habitude : « Les loups sont de mon côté ! Enfin, je crois. »",
@@ -3699,7 +3710,7 @@ FIN_HIMALAYA = {
     17: "Archibald, sous un bloc de glace : « Je vais très bien. Je me rafraîchis. »",
     18: "Archibald, retourné comme un parapluie : « Le vent change tout le temps ! C'est de la triche ! »",
     19: "Archibald, à l'entrée de la caverne : « Le Yéti dort. Vas-y en premier, toi. Moi, je… surveille. »",
-    20: "Le Yéti ronfle, une bosse sur la tête. Archibald, qui s'était caché, attrape le deuxième morceau de carte… Max le lui reprend. « La carte mène sous la mer ! » souffle Archibald. Rendez-vous dans les abysses !",
+    20: "Le Yéti ronfle, une bosse sur la tête. Archibald tend la main vers le fragment de Glace… trop tard, Max l'a déjà dans son sac ! « Bon. Le troisième fragment est sous la mer, d'après le carnet. Tu sais nager, toi ? » Rendez-vous dans les abysses !",
 }
 
 
@@ -4598,6 +4609,8 @@ def main():
         pieces(lv)
     # Mondes 3 à 5 : les essais des abysses, puis les anciens niveaux restants (les plus difficiles)
     # identifiants stables : la sauvegarde suit chaque niveau même s'il change de place
+    for monde, (titre, texte) in zip((inca, him, mer, nua, cite), INTROS_MONDES):
+        monde[0]["intro"] = {"titre": titre, "texte": texte}
     for i, lv in enumerate(inca): lv["id"] = f"inca-{i+1}"
     for i, lv in enumerate(him): lv["id"] = f"him-{i+1}"
     for i, lv in enumerate(mer): lv["id"] = f"aby-{i+1}"

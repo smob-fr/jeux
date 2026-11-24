@@ -67,7 +67,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - `mesurePerf(n)` fait avancer `n` images et en donne le temps moyen.
   - `room` donne l'état du niveau en cours.
   - `apercuNiveau(i)` donne une image du niveau entier.
-- **Tests automatiques** (`outils/tests/`, 23 tests, environ 4 minutes) : les robots qui battent les 5 boss, chaque mécanique des 5 mondes, les 100 niveaux, les plateformes mobiles, le saut tactile, et le branchement sur le kit (`kit.test.js` : bannière, boutique, vidéo, interstitielle). Playwright vient de la racine du dépôt (`npm install` et `npx playwright install chromium` une seule fois, à la racine). Après `npm run build` : `node outils/tests/lancer.js` (ou `node outils/tests/lancer.js boss saut` pour n'en lancer qu'une partie ; code de sortie 1 en cas d'échec). `npm test` fait tout.
+- **Tests automatiques** (`outils/tests/`, 25 tests, environ 4 minutes) : les robots qui battent les 5 boss, chaque mécanique des 5 mondes, les 100 niveaux, les plateformes mobiles, le saut tactile, et le branchement sur le kit (`kit.test.js` : bannière, boutique, vidéo, interstitielle). Playwright vient de la racine du dépôt (`npm install` et `npx playwright install chromium` une seule fois, à la racine). Après `npm run build` : `node outils/tests/lancer.js` (ou `node outils/tests/lancer.js boss saut` pour n'en lancer qu'une partie ; code de sortie 1 en cas d'échec). `npm test` fait tout.
 
 ## Fonctionnalités
 
@@ -89,7 +89,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - Boss : l'Oiseau-tonnerre, qu'on assomme en sonnant les cloches au bon moment.
 - **Monde 5, la cité d'or**
   - Mécaniques : lave, tapis roulants, jets de feu, wagonnet, pluie de magma, dalles qui fondent, engrenages, pistons, vapeur, effondrement, compte à rebours ; golems (deux coups), salamandres, gardiens d'or, robots d'alarme.
-  - Boss : le Fouisseur d'Archibald. Après le combat, la machine explose et l'Œil de Jade sort des débris.
+  - Boss : le Fouisseur d'Archibald. Après le combat, la machine explose, le dernier fragment sort des débris et l'Œil de Jade se reconstitue.
 - **Pas d'armes.** On saute sur les ennemis ou on les assomme d'un coup de massue, et la dynamite ouvre les murs fissurés. Les boss sont assommés, jamais tués.
 - **Pièges surprises à la Level Devil** dans chaque ligne droite : sol qui s'ouvre, pics qui jaillissent, bloc qui tombe, piège qui change de place après une mort, requin qui surgit, nuage qui fond…
 - **Histoire racontée en fin de niveau** par Archibald, avec de l'humour.
@@ -144,6 +144,12 @@ npm test                           # build, régénère les niveaux (levels.js d
     - Mines : le 3-2 commence par une mine devant un mur fissuré (on ne passe qu'en la poussant). Pas de mine ni de requin surprise avant leur fiche (`SANS_PIEGES_MER`).
     - Moins de messages : plus de bulles d'Archibald « je ralentis… » (l'aide automatique ralentit en silence). Message de mort du requin cohérent (« Un COUP de massue l'assomme un moment ! »).
     - 3-10 : un éboulement laissait un trou d'une case dans le plafond ; au-dessus de bulles, Max y restait coincé à la surface. Le bloc se détache maintenant sous la roche, qui reste intacte.
+- **Histoire des fragments** (retours du 24 novembre) :
+  - L'Œil de Jade est brisé en 5 fragments, un par monde (Soleil, Glace, Corail, Orage, Feu). Chaque boss assommé lâche son fragment (`lacherFragment`), qui vient flotter près de Max ; une fois ramassé, la porte s'ouvre. Après le Fouisseur, les cinq fragments s'assemblent au-dessus de Max. Sauvegarde : `progress.fragments` (masque), complété par les boss déjà battus (`fragmentsTrouves`).
+  - Dessin : `drawOeilDeJade(x, y, k, masque, fantome)` découpe l'Œil en 5 parts de 72° ; `lesSprites().oeil(masque)` en fait une image (carte des mondes, récit d'ouverture, écran de fin).
+  - Récit d'ouverture : avant le premier niveau de chaque monde, l'histoire s'affiche une fois (`#ecran-intro`, `montrerIntro`, textes `INTROS_MONDES` dans `niveaux.py`, champ `intro` du niveau ; `progress.intros`). Les récits de fin des niveaux 5, 10 et 20 parlent des fragments au lieu des morceaux de carte.
+  - Carte des mondes : l'Œil et ses fragments trouvés remplacent la rose des vents. Écran de fin : l'Œil entier entre Max et Archibald, et l'épilogue.
+  - 1-19 (le sablier) : le sable était trop loin. Crue « collante » : elle ne reste jamais à plus de 5 cases sous les pieds de Max (+2 cases à chaque palier de l'aide automatique) ; paramètre `colle` de l'action `flood`.
 - Commandes tactiles retravaillées le 10 novembre : saut fiable même sur un appui bref, grand bouton SAUT rectangulaire. À confirmer sur téléphone.
 
 ## Ce qui reste à faire
@@ -154,7 +160,7 @@ npm test                           # build, régénère les niveaux (levels.js d
   - le combat contre l'Oiseau-tonnerre ;
   - le Fouisseur.
 - **Confirmer sur un vrai téléphone** que le bouton SAUT ne rate plus aucun appui, et que le jeu reste fluide dans les mondes 4 et 5.
-- **Écran de fin du jeu** : il ne montre pas encore l'Œil de Jade et la fin de l'histoire (Max et Archibald ensemble). Pour l'instant, la fin passe par le récit du dernier niveau.
+- **Boss** : fiches animées et repères pour les 5 boss, nouvelle pieuvre (renvoyer les mines) ; combat final en 3 manches (Fouisseur, poursuite, duel contre Archibald). Validés avec le propriétaire le 24 novembre, à faire.
 - **Musique** : il n'y a que des bruitages synthétisés. Le cadrage prévoit une musique par monde.
 - **Version des stores** (appli) : pubs et achats sont branchés par le kit, avec des identifiants de test (`jeu.json`). Restent les vrais identifiants, les produits dans les stores, le verrouillage en paysage et l'essai sur téléphone (checklist de `docs/publication.md`).
 - ~~Tests automatiques en intégration continue~~ : fait, par le workflow `tests.yml` du dépôt commun.
