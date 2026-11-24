@@ -384,7 +384,9 @@
   }
 
   function buildRoom(index) {
-    const def = LEVELS[index];
+    // combat final en manches : la manche en cours remplace la carte et le boss du niveau
+    const base = LEVELS[index];
+    const def = base.manches ? Object.assign({}, base, base.manches[Math.min(game.manche || 0, base.manches.length - 1)]) : base;
     const act = ACTS[def.act] || ACTS[0];
     const pal = def.palette || (act ? act.palette : "jungle");
     P = PALETTES[pal] || PALETTES.jungle;
@@ -524,6 +526,10 @@
       const [mx, my, mw, mh] = def.machine;
       room.boss = { kind: "fouisseur", x: mx * T, y: my * T, w: mw * T, h: mh * T, etat: "attend", k: 120, hits: 0, t: 0, recharge: 0, caisse: def.caisse,
         chem: (def.cheminees || []).map(([x, y], i) => ({ x: x * T, y: y * T, ph: i * 30, bouchee: false, boum: 0 })) };
+    }
+    if (def.boss === "archibald") {
+      // le duel : la cabine de la machine, pendue à un bras, au-dessus de l'arène
+      room.boss = { kind: "archibald", x: (COLS - 14) * T, y: 6.5 * T, w: 48, h: 40, haut: 6.5 * T, etat: "attend", k: 100, hits: 0, t: 0, proj: [], vx: 0 };
     }
     if (def.boss === "jaguar") room.boss = { x: (COLS - 10) * T, y: (ROWS - 1) * T - 41, w: 60, h: 41, face: -1, etat: "attend", k: 110, hits: 0, vx: 0, t: 0 };
     room.mirror = def.mirror ? { axis: def.mirror * T } : null;   // ligne de l'eau : le reflet est symétrique par rapport à elle
@@ -785,7 +791,8 @@
     updateFlames();
     updateBeams();
     updateSecrets();
-    if (R.boss) { if (R.boss.kind === "yeti") updateYeti(); else if (R.boss.kind === "pieuvre") updatePieuvre(); else if (R.boss.kind === "oiseau") updateOiseauTonnerre(); else if (R.boss.kind === "fouisseur") updateFouisseur(); else updateBoss(); }
+    if (R.boss) { if (R.boss.kind === "yeti") updateYeti(); else if (R.boss.kind === "pieuvre") updatePieuvre(); else if (R.boss.kind === "oiseau") updateOiseauTonnerre(); else if (R.boss.kind === "fouisseur") updateFouisseur(); else if (R.boss.kind === "archibald") updateArchibald(); else updateBoss(); }
+    if (R.def.poursuite) updatePoursuite();
     updateCrushers();
     updateFlood();
     if (R.fragment) updateFragment();
@@ -976,6 +983,11 @@
         if (R.boss && !R.boss.kind && overlap(hit, gemRect(R.boss))) bossTouche();
         if (R.boss && R.boss.kind === "oiseau") for (const c of R.boss.cloches) if (overlap(hit, { x: c.x - 4, y: c.y - 6, w: 20, h: 22 })) sonnerCloche(c);
         if (R.boss && R.boss.kind === "pieuvre") for (const m of R.boss.mines) if (!m.renvoyee && overlap(hit, m)) renvoyerMine(m, p);
+        if (R.boss && R.boss.kind === "archibald") {
+          const b = R.boss;
+          for (const q of b.proj) if (q.type === "mine" && !q.renvoyee && overlap(hit, q)) renvoyerVers(q, p, b);
+          if (b.etat === "surchauffe" && overlap(hit, b)) toucherCabine(b);
+        }
       }
     }
     if (pressed.tnt) {
@@ -1069,6 +1081,7 @@
     for (const gz of R.geysers) if (gz.on && p.alive && p.x + p.w > gz.x * T + 1 && p.x < gz.x * T + 15 && p.y + p.h > (gz.y - 6) * T && p.y + p.h <= gz.y * T + 2) { p.vy = Math.min(p.vy, -7.4); p.spring = true; p.grounded = false; }
     const d = R.door;
     if (d && !d.moving && !d.hidden && overlap(p, { x: d.x + 3, y: d.y + 4, w: d.w - 6, h: d.h - 4 })) {
+      if (R.def.manches && (game.manche || 0) < R.def.manches.length - 1) return mancheSuivante();
       game.mode = "win"; game.winT = 0; sfx.door();
     }
     if (p.y > H + 20) kill(null, "fall");
@@ -1602,9 +1615,19 @@
       if (b.etat === "combat") c.t = (c.t || 0) + 1;
       const per = Math.max(150, 230 - 30 * b.hits), ph = ((c.t || 0) + c.ph) % per;
       c.warn = ph >= per - 100 && ph < per - 45; c.feu = ph >= per - 45 && b.etat === "combat";
-      if (c.feu && p.alive && p.x + p.w > c.x - 6 && p.x < c.x + 22 && p.y + p.h > c.y - 4 * T && p.y < c.y + 4) kill("La cheminée crache du feu ! Attends la fumée noire, puis lâche la dynamite.");
-      // une dynamite posée sur la cheminée tombe dedans
-      for (const d of R.dynamites) if (!d.dans && Math.abs(d.x + 3 - (c.x + 8)) < 10 && d.y + d.h >= c.y - 4 && d.y + d.h <= c.y + 6) { d.dans = true; d.fuse = 9999; c.boum = 40; sfx.place(); }
+      // le couvercle ne s'ouvre qu'un moment, juste avant la fumée : c'est là qu'il faut lâcher la TNT
+      c.ouvert = b.etat === "combat" && ph >= per - 175 && ph < per - 100;
+      c.lid = Math.max(0, Math.min(1, (c.lid || 0) + (c.ouvert ? 0.15 : -0.15)));
+      if (c.feu && p.alive && p.x + p.w > c.x - 6 && p.x < c.x + 22 && p.y + p.h > c.y - 4 * T && p.y < c.y + 4) kill("La cheminée crache du feu ! Fumée noire = écarte-toi.");
+      // une dynamite posée sur la cheminée tombe dedans… si le couvercle est ouvert ; sinon elle rebondit
+      for (const d of R.dynamites) {
+        if (d.dans || Math.abs(d.x + 3 - (c.x + 8)) >= 10 || d.y + d.h < c.y - 4 || d.y + d.h > c.y + 6) continue;
+        if (c.ouvert || c.warn) { d.dans = true; d.fuse = 9999; c.boum = 40; sfx.place(); }
+        else if (!(d.rebond > 0)) {
+          d.vx = d.x + 3 < c.x + 8 ? -1.6 : 1.6; d.vy = -3; d.rebond = 24; sfx.bonk();
+          if (!R.hint) R.hint = { text: "Couvercle fermé ! Attends qu'il s'ouvre.", t: 0, dur: 140 };
+        }
+      }
       if (c.boum > 0 && --c.boum === 0) {
         R.dynamites = R.dynamites.filter((d) => !(d.dans && Math.abs(d.x + 3 - (c.x + 8)) < 12));
         c.bouchee = true; b.hits++; for (const q of b.chem) q.t = 0;   // nouveau rythme : chaque cheminée refume avant de cracher R.shake = 14; sfx.boom(); burst(c.x + 8, c.y - 6, "#3a3a3a", 30, 2.5); burst(c.x + 8, c.y, C.hat, 20, 2);
@@ -1646,12 +1669,12 @@
     }
     if (f >= 100) b.affaisse = Math.min(1, (f - 100) / 45);
     if (f % 9 === 0) R.particles.push({ x: b.x + Math.random() * b.w, y: b.y + (b.affaisse || 0) * (b.h - 2 * T), vx: 0, vy: -0.5, s: 5, life: 60, color: "rgba(60,60,60,0.5)", g: -0.01 });
-    if (f === 150) R.hint = { text: "Pfffff… Le Fouisseur est en morceaux. Mais… qu'est-ce qui brille sous la ferraille ?", t: 0, dur: 200 };
-    if (f === 175) {
-      const sol = b.y + b.h;
-      b.oeil = { x: b.x - 2 * T, y: sol - 2 * T, cible: sol - 50, pris: false, t: 0 };   // il jaillit devant l'épave, à portée de saut
-      burst(b.oeil.x, b.oeil.y, C.jade, 30, 2.5); sfx.door();
-    }
+    if (f === 110) R.say = { text: "Ma machine ! Pas grave : la foreuse marche encore. Elle va creuser… sous tes pieds !", t: 0, dur: 200 };
+    if (f === 230) mancheSuivante();
+    oeilFinal(b, p);
+  }
+  // le dernier fragment sort des débris ; Max l'attrape et les cinq fragments s'assemblent (fin du duel)
+  function oeilFinal(b, p) {
     const o = b.oeil;
     if (o) {
       o.t++;
@@ -1786,15 +1809,13 @@
       ctx.fillStyle = "#2a2a2a"; ctx.fillRect(-7, -T, 14, 2 * T); ctx.fillStyle = "#e2a640"; ctx.fillRect(-9, -T, 18, 3);
       ctx.restore();
     }
-    if (fin > 160) {
-      // Archibald sort de la ferraille, couvert de suie, et tousse
-      const ax = b.x - 6 * T, ay = b.y + b.h - 16, tou = Math.floor(R.t / 30) % 3 === 0;
-      ctx.fillStyle = "#3a3a3a"; ctx.fillRect(ax, ay + 4, 10, 12); ctx.fillStyle = "#4a4040"; ctx.fillRect(ax + 1, ay - 2, 8, 7);
-      ctx.fillStyle = "#2a2020"; ctx.fillRect(ax - 1, ay - 4, 12, 2); ctx.fillRect(ax + 2, ay - 8, 6, 4);
-      ctx.fillStyle = "#fff"; ctx.fillRect(ax + 2, ay + (tou ? 0 : 1), 2, tou ? 1 : 2); ctx.fillRect(ax + 6, ay + (tou ? 0 : 1), 2, tou ? 1 : 2);
-      if (tou && R.t % 30 === 0) R.particles.push({ x: ax + 9, y: ay + 3, vx: 0.4, vy: -0.3, s: 4, life: 40, color: "rgba(60,60,60,0.6)", g: -0.01 });
+    if (fin > 100) {
+      // la cabine d'Archibald se détache et file vers le haut : rendez-vous au duel
+      drawCabine({ x: b.x + b.w / 2 - 24, y: b.y - 8 - (fin - 100) * 1.4, w: 48, h: 40, t: R.t, etat: "remonte", hits: 0 }, false);
     }
-    const o = b.oeil;
+    drawOeilFinal(b.oeil);
+  }
+  function drawOeilFinal(o) {
     if (o) {
       const p = R.player, ox = p.x + p.w / 2, oy = p.y - 14 + Math.sin(R.t / 8) * 1.5;
       if (!o.pris) drawFragment(o.x, o.y + Math.sin(o.t / 15) * 3, 4, Math.min(1.3, o.t / 25));
@@ -1832,6 +1853,13 @@
       if (c.vole) continue;
       ctx.fillStyle = c.bouchee ? "#2a2a2a" : "#7a4a2a"; ctx.fillRect(c.x + 1, c.y, 14, b.y - c.y);
       ctx.fillStyle = "#e2a640"; ctx.fillRect(c.x - 1, c.y, 18, 3);
+      if (!c.bouchee) {
+        // couvercle : il se soulève quand la cheminée est ouverte (c'est le moment de la TNT)
+        const l = c.lid || 0;
+        ctx.save(); ctx.translate(c.x - 1, c.y); ctx.rotate(-l * 1.2);
+        ctx.fillStyle = l > 0.5 ? "#9be7a6" : "#8a8f96"; ctx.fillRect(0, -3, 18, 3); ctx.fillStyle = "#4a4f56"; ctx.fillRect(7, -5, 4, 2);
+        ctx.restore();
+      }
       if (c.warn && R.t % 4 === 0) R.particles.push({ x: c.x + 8 + (Math.random() - 0.5) * 6, y: c.y - 2, vx: (Math.random() - 0.5) * 0.4, vy: -1, s: 5, life: 40, color: "rgba(40,40,40,0.7)", g: -0.01 });
       if (c.feu) {
         const gr = ctx.createLinearGradient(0, c.y, 0, c.y - 4 * T); gr.addColorStop(0, "#fff1a0"); gr.addColorStop(0.5, "#ff7a2a"); gr.addColorStop(1, "rgba(229,72,30,0)");
@@ -1839,6 +1867,178 @@
       }
       if (c.boum > 0) { ctx.fillStyle = C.hat; ctx.fillRect(c.x + 6, c.y - 3 + Math.sin(R.t) * 1, 4, 3); }
     }
+  }
+
+  /* ---------- Combat final, manche 3 : le duel contre Archibald ---------- */
+  // La cabine de la machine est pendue à un bras. Elle attaque avec les pièges des mondes visités :
+  // rochers qui roulent, glaçons et éclairs annoncés par une ombre, mines (qu'on peut lui renvoyer).
+  // Après chaque attaque, elle surchauffe et descend au sol : Max lui saute dessus (ou un COUP). 3 fois.
+  const ATTAQUES_DUEL = ["rocher", "ciel", "mines"];
+  const solDuel = () => (ROWS - 2) * T;
+  function renvoyerVers(q, p, b) {
+    q.renvoyee = true; sfx.swing(); sfx.bonk(); burst(q.x + 6, q.y + 6, C.gold, 10, 1.4);
+    const dx = b.x + b.w / 2 - (q.x + 6), dy = b.y + b.h / 2 - (q.y + 6), d = Math.hypot(dx, dy) || 1;
+    if (Math.sign(dx) === p.face) { q.vx = (dx / d) * 3.4; q.vy = (dy / d) * 3.4; } else { q.vx = p.face * 3.4; q.vy = 0; }
+  }
+  function toucherCabine(b) {
+    if (b.etat === "vaincu" || b.touche > 0) return;
+    b.hits++; b.touche = 30; R.shake = 12; sfx.boom(); burst(b.x + b.w / 2, b.y + 6, C.gold, 24, 2.4); burst(b.x + b.w / 2, b.y + 10, "#ff7a2a", 14, 2);
+    b.proj = [];
+    if (b.hits >= 3) {
+      b.etat = "vaincu"; b.k = 0;
+      R.say = { text: "D'accord, d'accord… Tu as gagné, Max. Le dernier fragment… il est à toi.", t: 0, dur: 220 };
+    } else {
+      b.etat = "remonte"; b.k = 40;
+      R.say = { text: b.hits === 1 ? "Aïe ! Ma cabine toute neuve ! Tu vas voir, j'ai rapporté des souvenirs du ciel…" : "Grr ! Il me reste des mines. Plein de mines !", t: 0, dur: 170 };
+      R.hint = { text: b.hits === 1 ? "Touché ! Encore 2." : "Plus qu'une !", t: 0, dur: 120 };
+    }
+  }
+  function updateArchibald() {
+    const b = R.boss, p = R.player, sol = solDuel();
+    b.t++;
+    if (b.touche > 0) b.touche--;
+    for (const q of b.proj) {
+      q.t = (q.t || 0) + 1;
+      if (q.type === "rocher") {
+        q.x += q.vx; q.rot = (q.rot || 0) + q.vx / q.r;
+        if (solidAt(q.x + Math.sign(q.vx) * q.r, sol - q.r)) { q.done = true; burst(q.x, sol - q.r, P.stoneTop, 12, 1.6); sfx.crumble(); }
+        if (p.alive && Math.hypot(p.x + p.w / 2 - q.x, p.y + p.h / 2 - (sol - q.r)) < q.r + 5) kill("Un rocher qui roule ! Saute par-dessus.");
+      } else if (q.type === "glacon") {
+        if (q.warn > 0) { q.warn--; continue; }
+        q.vy = Math.min(q.vy + 0.3, 7); q.y += q.vy;
+        if (q.y + 12 >= sol) { q.done = true; burst(q.x + 4, sol, "#cfeaff", 8, 1.4); sfx.crumble(); }
+        if (p.alive && overlap(p, { x: q.x, y: q.y, w: 8, h: 12 })) kill("Un glaçon ! Son ombre l'annonçait.");
+      } else if (q.type === "eclair") {
+        if (q.warn > 0) { q.warn--; if (q.warn === 0) { q.on = 18; sfx.boom(); R.shake = Math.max(R.shake, 4); } continue; }
+        if (--q.on <= 0) q.done = true;
+        if (p.alive && p.x + p.w > q.x * T + 2 && p.x < q.x * T + T - 2) kill("Foudroyé ! Regarde l'ombre au sol.");
+      } else if (q.type === "mine") {
+        if (q.renvoyee) {
+          q.x += q.vx; q.y += q.vy;
+          if (overlap(q, b) && b.etat !== "vaincu") { q.done = true; burst(q.x + 6, q.y + 6, "#ffb347", 26, 2.6); toucherCabine(b); continue; }
+          if (rectHitsSolid(q.x, q.y, q.w, q.h)) { q.done = true; burst(q.x + 6, q.y + 6, "#ffb347", 16, 2); sfx.crumble(); }
+          continue;
+        }
+        const v = 0.75 * R.slow, dx = p.x + p.w / 2 - (q.x + 6), dy = p.y + p.h / 2 - (q.y + 6), d = Math.hypot(dx, dy) || 1;
+        q.vx += ((dx / d) * v - q.vx) * 0.03; q.vy += ((dy / d) * v - q.vy) * 0.03; q.x += q.vx; q.y += q.vy;
+        if (rectHitsSolid(q.x, q.y, q.w, q.h) || q.t > 700) { q.done = true; burst(q.x + 6, q.y + 6, "#ffb347", 14, 2); sfx.crumble(); if (p.alive && Math.hypot(p.x - q.x, p.y - q.y) < 26) kill("Boum ! Renvoie les mines d'un COUP de massue."); continue; }
+        if (p.alive && overlap(p, { x: q.x + 2, y: q.y + 2, w: q.w - 4, h: q.h - 4 })) { q.done = true; burst(q.x + 6, q.y + 6, "#ffb347", 24, 2.6); sfx.boom(); kill("Boum ! Renvoie les mines d'un COUP de massue."); }
+      }
+    }
+    b.proj = b.proj.filter((q) => !q.done);
+    const lent = 1 + 0.25 * R.assist;
+    switch (b.etat) {
+      case "attend":
+        if (b.k === 100) R.say = { text: "Tu veux le dernier fragment ? Il est dans ma poche. Viens le chercher !", t: 0, dur: 180 };
+        if (--b.k <= 0) { b.etat = "attaque"; b.k = Math.round(420 * lent); b.n = 0; }
+        break;
+      case "attaque": {
+        // la cabine suit Max de loin, et lâche les pièges d'un des mondes visités
+        const cible = Math.max(6 * T, Math.min((COLS - 8) * T, p.x + p.w / 2 - b.w / 2 + 70 * (p.x < W / 2 ? 1 : -1)));
+        b.x += Math.sign(cible - b.x) * Math.min(Math.abs(cible - b.x), 0.8);
+        b.y = b.haut + Math.sin(b.t / 30) * 4;
+        const genre = ATTAQUES_DUEL[b.hits], n = b.n++;
+        if (genre === "rocher" && n % Math.round(120 * lent) === 30) {
+          const dir = p.x + p.w / 2 < b.x + b.w / 2 ? -1 : 1, x0 = dir < 0 ? b.x + b.w + 10 : b.x - 10;
+          b.proj.push({ type: "rocher", x: Math.max(2 * T, Math.min(W - 2 * T, x0)), r: 9, vx: dir * 1.7 * R.slow });
+          sfx.boom(); if (!b.ditRocher) { b.ditRocher = true; R.hint = { text: "Un rocher ! Saute par-dessus.", t: 0, dur: 120 }; }
+        }
+        if (genre === "ciel") {
+          if (n % Math.round(45 * lent) === 10) b.proj.push({ type: "glacon", x: p.x + p.w / 2 - 4 + (Math.random() - 0.5) * 50, y: T, vy: 0, warn: 50 });
+          if (n % Math.round(140 * lent) === 70) { b.proj.push({ type: "eclair", x: Math.floor((p.x + p.w / 2) / T), warn: 60, on: 0 }); sfx.god(); }
+        }
+        if (genre === "mines" && n % Math.round(150 * lent) === 20 && b.proj.filter((q) => q.type === "mine" && !q.renvoyee).length < 2) {
+          b.proj.push({ type: "mine", x: b.x + b.w / 2 - 6, y: b.y + b.h, w: 12, h: 12, vx: 0, vy: 0.6, renvoyee: false }); sfx.place();
+          if (!b.ditMine) { b.ditMine = true; R.hint = { text: "Ses mines aussi se renvoient d'un COUP !", t: 0, dur: 140 }; }
+        }
+        if (--b.k <= 0) { b.etat = "descend"; b.k = 50; sfx.god(); b.proj = b.proj.filter((q) => q.type === "rocher" || q.type === "mine"); }   // l'attaque s'arrête quand la cabine descend
+        break;
+      }
+      case "descend":
+        // la cabine surchauffe et descend : son ombre au sol prévient (dessous, on se fait écraser)
+        b.y += (sol - 26 - b.y) * 0.12;
+        if (--b.k <= 0) { b.y = sol - 26; b.etat = "surchauffe"; b.k = Math.round(200 * lent); R.shake = 8; sfx.boom(); burst(b.x + b.w / 2, sol, "rgba(200,200,200,0.7)", 16, 2); if (!b.ditChaud) { b.ditChaud = true; R.hint = { text: "La cabine surchauffe : saute dessus !", t: 0, dur: 150 }; } }
+        if (p.alive && b.k < 25 && overlap(p, { x: b.x + 4, y: Math.min(b.y + b.h - 6, sol - 10), w: b.w - 8, h: 10 })) kill("Écrasé par la cabine ! Son ombre l'annonçait.");
+        break;
+      case "surchauffe":
+        if (R.t % 5 === 0) R.particles.push({ x: b.x + 6 + Math.random() * (b.w - 12), y: b.y, vx: (Math.random() - 0.5) * 0.4, vy: -0.9, s: 4, life: 36, color: "rgba(230,230,230,0.6)", g: -0.01 });
+        // Max lui saute sur le toit
+        if (p.alive && p.vy > 0 && p.x + p.w > b.x + 2 && p.x < b.x + b.w - 2 && p.y + p.h >= b.y - 2 && p.y + p.h <= b.y + 10) { p.vy = -5.5; p.grounded = false; toucherCabine(b); break; }
+        if (--b.k <= 0) { b.etat = "remonte"; b.k = 40; }
+        break;
+      case "remonte":
+        b.y += (b.haut - b.y) * 0.08;
+        if (--b.k <= 0) { b.etat = "attaque"; b.k = Math.round(420 * lent); b.n = 0; }
+        break;
+      case "vaincu": {
+        // la cabine se pose, Archibald sort ; le dernier fragment roule aux pieds de Max
+        const f = ++b.k;
+        b.y += (sol - 26 - b.y) * 0.1;
+        if (f % 12 === 0 && f < 60) burst(b.x + Math.random() * b.w, b.y + Math.random() * b.h, "rgba(70,70,70,0.8)", 8, 1.4);
+        if (f === 90) { b.oeil = { x: b.x - 2 * T, y: sol - 2 * T, cible: sol - 30, pris: false, t: 0 }; burst(b.oeil.x, b.oeil.y, C.jade, 30, 2.5); sfx.door(); }
+        oeilFinal(b, p);
+        break;
+      }
+    }
+  }
+  function drawCabine(b, bras = true) {
+    const x = Math.round(b.x), y = Math.round(b.y), w = b.w, h = b.h, chaud = b.etat === "surchauffe", vaincu = b.etat === "vaincu";
+    ctx.save();
+    if (bras) { ctx.beginPath(); ctx.rect(x - 40, -50, w + 80, solDuel() + 50); ctx.clip(); }   // posée, elle s'enfonce dans le sol
+    if (bras && !vaincu) { ctx.fillStyle = "#4a4f56"; ctx.fillRect(x + w / 2 - 3, 0, 6, y); ctx.fillStyle = "#e2a640"; for (let k = 8; k < y; k += 16) ctx.fillRect(x + w / 2 - 3, k, 6, 2); }
+    if (b.etat === "descend") { ctx.fillStyle = `rgba(0,0,0,${0.25 + 0.2 * Math.sin(R.t / 3)})`; ctx.beginPath(); ctx.ellipse(x + w / 2, solDuel() - 1, w / 2, 3, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = chaud ? (Math.floor(R.t / 6) % 2 ? "#c0392b" : "#8e2a20") : "#6a6f76";
+    ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + 12); ctx.quadraticCurveTo(x, y, x + 12, y); ctx.lineTo(x + w - 12, y); ctx.quadraticCurveTo(x + w, y, x + w, y + 12); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#e2a640"; ctx.fillRect(x, y + h - 5, w, 3); ctx.fillRect(x + 4, y + 2, w - 8, 2);
+    // hublot : Archibald aux commandes
+    ctx.fillStyle = "rgba(170,220,240,0.85)"; ctx.beginPath(); ctx.arc(x + w / 2, y + 18, 11, 0, Math.PI * 2); ctx.fill();
+    if (!vaincu) { ctx.save(); ctx.beginPath(); ctx.arc(x + w / 2, y + 18, 10, 0, Math.PI * 2); ctx.clip(); drawRival({ x: x + w / 2 - 5, y: y + 10, state: "wait", t: R.t, face: -1 }); ctx.restore(); }
+    ctx.strokeStyle = "#3a3f46"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + w / 2, y + 18, 11, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = Math.floor(R.t / 10) % 2 ? "#ff4a3a" : "#7a1a12"; ctx.fillRect(x + 6, y + 8, 4, 4); ctx.fillRect(x + w - 10, y + 8, 4, 4);
+    ctx.restore();
+    if (b.touche > 0) drawStars(x + w / 2, y - 4, 60);
+  }
+  function drawArchibald() {
+    const b = R.boss, sol = solDuel();
+    for (const q of b.proj) {
+      if (q.type === "rocher") {
+        ctx.save(); ctx.translate(q.x, sol - q.r); ctx.rotate(q.rot || 0);
+        ctx.fillStyle = "#8a7a62"; ctx.beginPath(); ctx.arc(0, 0, q.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#6b5e4a"; ctx.fillRect(-3, -6, 4, 4); ctx.fillRect(2, 1, 4, 3); ctx.restore();
+      } else if (q.type === "glacon") {
+        if (q.warn > 0) { ctx.fillStyle = `rgba(0,0,0,${0.2 + 0.2 * Math.sin(R.t / 3)})`; ctx.beginPath(); ctx.ellipse(q.x + 4, sol - 1, 6, 2, 0, 0, Math.PI * 2); ctx.fill(); continue; }
+        ctx.fillStyle = "#cfeaff"; ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x + 8, q.y); ctx.lineTo(q.x + 4, q.y + 12); ctx.closePath(); ctx.fill();
+      } else if (q.type === "eclair") {
+        if (q.warn > 0) { ctx.fillStyle = `rgba(255,230,120,${0.25 + 0.25 * Math.sin(R.t / 2)})`; ctx.fillRect(q.x * T + 2, sol - 3, T - 4, 3); continue; }
+        ctx.strokeStyle = "#fff6c0"; ctx.lineWidth = 3; ctx.beginPath(); let yy = 0; ctx.moveTo(q.x * T + 8, 0);
+        while (yy < sol) { yy += 14; ctx.lineTo(q.x * T + 8 + ((yy * 7) % 11 - 5), Math.min(sol, yy)); } ctx.stroke();
+      } else if (q.type === "mine") {
+        if (q.renvoyee) for (let i = 1; i < 4; i++) { ctx.fillStyle = `rgba(255,210,90,${0.35 - i * 0.08})`; ctx.beginPath(); ctx.arc(q.x + 6 - q.vx * i * 3, q.y + 6 - q.vy * i * 3, 5 - i, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = `rgba(255,90,60,${0.18 + 0.12 * Math.sin(q.t / 5)})`; ctx.beginPath(); ctx.arc(q.x + 6, q.y + 6, 12, 0, Math.PI * 2); ctx.fill();
+        drawEnemy({ kind: "M", x: q.x, y: q.y, w: 12, h: 12, vx: q.vx || 1, t: q.t, alive: true });
+      }
+    }
+    drawCabine(b);
+    if (b.etat === "vaincu" && b.k > 60) drawRival({ x: b.x - 14, y: sol - 13, state: "wait", t: R.t, face: -1 });   // Archibald sorti de sa cabine
+    drawOeilFinal(b.oeil);
+  }
+
+  /* ---------- Combat final, manche 2 : la poursuite ---------- */
+  // La lave monte (crue « collante »), la foreuse de la machine perce sous Max, des pierres en fusion tombent.
+  function updatePoursuite() {
+    const p = R.player, f = R.flood;
+    if (!f || !p.alive || game.mode !== "play") return;
+    R.foreuseX = R.foreuseX == null ? p.x : R.foreuseX + (p.x + p.w / 2 - R.foreuseX) * 0.02;
+    if (R.t % 150 === 75) { R.grelons.push({ x: p.x + p.w / 2 - 3 + (Math.random() - 0.5) * 60, y: cam.y - 20, vy: 0, warn: 55, w: 7, h: 7, magma: true }); sfx.god(); }
+  }
+  function drawForeuse() {
+    const f = R.flood;
+    if (!f || R.foreuseX == null) return;
+    ctx.save(); ctx.translate(R.foreuseX, f.level - 6 + Math.sin(R.t / 4) * 2);
+    ctx.fillStyle = "#a0a6b0"; ctx.beginPath(); ctx.moveTo(-16, 10); ctx.lineTo(0, -22); ctx.lineTo(16, 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#5a606a"; ctx.lineWidth = 1.5;
+    for (let k = 0; k < 4; k++) { const o = ((R.t * 0.8 + k * 8) % 32) - 22, l = (16 * (o + 22)) / 32; ctx.beginPath(); ctx.moveTo(-l, o + 2); ctx.lineTo(l, o + 6); ctx.stroke(); }
+    ctx.restore();
   }
 
   // La pieuvre géante lance les mines d'Archibald vers Max. Un COUP de massue les lui renvoie
@@ -1957,8 +2157,11 @@
       }
     } else if (b.kind === "oiseau") {
       if (b.etat === "vole") for (const c of b.cloches) if (Math.hypot(b.x + b.w / 2 - (c.x + 6), b.y + b.h / 2 - (c.y + 6)) < 64) drawRepere(c.x + 6, c.y - 24, "COUP !");
+    } else if (b.kind === "archibald") {
+      if (b.etat === "surchauffe") drawRepere(b.x + b.w / 2, b.y - 6, "SAUTE DESSUS !");
+      for (const q of b.proj) if (q.type === "mine" && !q.renvoyee && Math.hypot(p.x - q.x, p.y - q.y) < 90) drawRepere(q.x + 6, q.y - 6, "COUP !");
     } else if (b.kind === "fouisseur") {
-      const c = b.etat === "combat" && (game.ammo.tnt > 0 || R.dynamites.some((d) => !d.dans)) ? b.chem.find((q) => !q.bouchee && !q.warn && !q.feu) : null;
+      const c = b.etat === "combat" && (game.ammo.tnt > 0 || R.dynamites.some((d) => !d.dans)) ? b.chem.find((q) => !q.bouchee && q.ouvert) : null;
       if (c) drawRepere(c.x + 8, c.y - 4, "TNT");
     }
   }
@@ -2782,6 +2985,7 @@
 
   function updateDynamites() {
     for (const d of R.dynamites) {
+      if (d.rebond > 0 && --d.rebond === 0) d.vx = 0;
       d.vy = Math.min(d.vy + PHYS.gravity, PHYS.maxFall);
       moveBody(d);
       d.fuse--;
@@ -3015,7 +3219,7 @@
   function startLevel(i) {
     const vues = progress.intros || {}, nm = window.MondesUI ? MondesUI.NIV : 20;
     if (LEVELS[i].intro && !vues[Math.floor(i / nm)] && !window.__sansNouveautes) { montrerIntro(i); return; }
-    game.level = i;
+    game.level = i; game.manche = 0;
     Kit.Stats.debut("level", i + 1, { id: LEVELS[i].id, morts: 0, relances: 0, amulettes: 0, restarts: 0 });
     game.cpLevel = -1;   // nouvelle tentative depuis le menu : on repart du début
     statOf(i).essais++; saveProgress();
@@ -3032,6 +3236,16 @@
     releaseAll();
   }
 
+  // manche suivante du combat final : nouvelle carte, sa carte de titre puis sa fiche ; une chute ramène au début de la manche
+  function mancheSuivante() {
+    game.manche = (game.manche || 0) + 1;
+    game.ammo = { tnt: (LEVELS[game.level].ammo || [6, 1])[1] };
+    R = buildRoom(game.level);
+    updateCamera(true);
+    releaseAll();
+    game.mode = "card"; game.cardT = 0;
+    sfx.door();
+  }
   function restartRoom(fromDeath) {
     if (!R) return;
     if (!fromDeath && game.mode === "play") { game.deathsByRoom[R.index]++; progress.deaths++; saveProgress(); Kit.Stats.compter("restarts"); }
@@ -3366,6 +3580,8 @@
     if (view.h >= H + CAM_EXT.top + CAM_EXT.bottom) ty = (H - view.h) / 2;
     else ty = Math.max(-CAM_EXT.top, Math.min(H + CAM_EXT.bottom - view.h, fy - view.h / 2));
     if (view.h >= H && view.h < H + CAM_EXT.top + CAM_EXT.bottom) ty = Math.min(ty, (H - view.h) / 2 + 30);
+    // duel final : on garde la cabine d'Archibald à l'écran (la caméra ne descend pas sous le sol de l'arène)
+    if (R.boss && R.boss.kind === "archibald") ty = Math.min(ty, H - T - view.h + 30);
     if (snap) { cam.x = tx; cam.y = ty; }
     else { cam.x += (tx - cam.x) * 0.12; cam.y += (ty - cam.y) * 0.12; }
   }
@@ -3410,12 +3626,13 @@
     if (R.player && R.player.ski && R.player.alive) { const p = R.player; ctx.fillStyle = "#c0392b"; ctx.fillRect(p.x - 4, p.y + p.h, 18, 2); ctx.fillRect(p.x + 13, p.y + p.h - 2, 2, 2); }
     drawBeams();
     drawSecrets();
-    if (R.boss) { if (R.boss.kind === "yeti") drawYeti(); else if (R.boss.kind === "pieuvre") drawPieuvre(); else if (R.boss.kind === "oiseau") drawOiseauTonnerre(); else if (R.boss.kind === "fouisseur") drawFouisseur("dessus"); else drawBoss(); }
+    if (R.boss) { if (R.boss.kind === "yeti") drawYeti(); else if (R.boss.kind === "archibald") drawArchibald(); else if (R.boss.kind === "pieuvre") drawPieuvre(); else if (R.boss.kind === "oiseau") drawOiseauTonnerre(); else if (R.boss.kind === "fouisseur") drawFouisseur("dessus"); else drawBoss(); }
     drawFragmentNiveau();
     drawWinds();
     if (R.def.monde >= 4) drawCiel();
     if (R.def.monde === 5) drawOr();
     if (R.eau != null) drawEau();
+    if (R.def.poursuite) drawForeuse();
     drawFlood();
     drawTiles(true); // faux murs par-dessus le joueur
     if (R.boss) drawReperesBoss();   // par-dessus l'eau et le décor : toujours lisibles
@@ -4965,7 +5182,7 @@
     ctx.font = `8px ${FONT_PIX}`; ctx.fillStyle = C.dim;
     const MO = window.MondesUI, nm = MO ? MO.NIV : 20, k = Math.floor(R.index / nm);
     const nomMonde = MO && MO.MONDES[k] ? MO.MONDES[k].nom.toUpperCase() : act.nom.toUpperCase();
-    ctx.fillText(`MONDE ${k + 1} · ${nomMonde}  —  NIVEAU ${(R.index % nm) + 1} SUR ${nm}`, VW2, VH2 - 32);
+    ctx.fillText(`MONDE ${k + 1} · ${nomMonde}  —  NIVEAU ${(R.index % nm) + 1} SUR ${nm}${R.def.manches ? "  —  COMBAT FINAL" : ""}`, VW2, VH2 - 32);
     ctx.font = `16px ${FONT_PIX}`; ctx.fillStyle = C.text;
     ctx.fillText(R.def.name.toUpperCase(), VW2, VH2 - 8);
     ctx.font = `8px ${FONT_PIX}`;
@@ -5256,8 +5473,8 @@
       },
     },
     boss_fouisseur: {
-      titre: "LE FOUISSEUR D'ARCHIBALD",
-      texte: ["Monte sur la machine et lâche une TNT (bouton TNT) dans une cheminée ouverte.", "Fumée noire = le feu va jaillir : écarte-toi ! 3 cheminées."],
+      titre: "MANCHE 1 : LE FOUISSEUR",
+      texte: ["Monte sur la machine. Quand un couvercle se soulève (il devient vert), lâche une TNT dedans.", "Fumée noire = le feu va jaillir : écarte-toi ! 3 cheminées."],
       scene(t) {
         const T0 = t % 260, sol = SC_H - 6;
         scFond("#4a1a0c", "#1a0804"); scSol("#6b4a2a", "#e2a640");
@@ -5268,6 +5485,7 @@
           const bouchee = i === 0 && T0 >= 150;
           ctx.fillStyle = "#2a2a2a"; ctx.fillRect(x, 22, 14, 18); ctx.fillStyle = "#e2a640"; ctx.fillRect(x - 2, 22, 18, 3);
           if (bouchee) { ctx.fillStyle = "#6b6b6b"; ctx.fillRect(x + 1, 22, 12, 4); }
+          else { const ouvert = i === 0 && T0 >= 50 && T0 < 150; ctx.save(); ctx.translate(x - 2, 22); ctx.rotate(ouvert ? -1.1 : 0); ctx.fillStyle = ouvert ? "#9be7a6" : "#8a8f96"; ctx.fillRect(0, -3, 18, 3); ctx.restore(); }
           if (i === 2 && T0 % 120 < 50) { ctx.fillStyle = "rgba(30,30,30,0.6)"; ctx.beginPath(); ctx.arc(x + 7, 14 - (T0 % 50) * 0.2, 6 + (T0 % 50) * 0.1, 0, Math.PI * 2); ctx.fill(); }
         });
         // Max monte sur le toit, lâche la TNT dans la première cheminée
@@ -5281,6 +5499,48 @@
         if (T0 < 60) scTexte("MONTE SUR LE TOIT", 110, 10, "#ffd36b");
         else if (T0 < 140) scTexte("TNT DANS LA CHEMINÉE", 110, 10, "#ffd36b");
         if (T0 % 120 < 50) scTexte("FUMÉE = DANGER", 157, 60, "#ff9a7a");
+      },
+    },
+  });
+  Object.assign(NOUVEAUTES, {
+    poursuite: {
+      titre: "MANCHE 2 : LA POURSUITE",
+      texte: ["La foreuse d'Archibald creuse sous tes pieds, et la lave monte avec elle.", "Grimpe sans t'arrêter ! Gare aux pierres en fusion : leur ombre les annonce."],
+      scene(t) {
+        const T0 = t % 300;
+        scFond("#4a1a0c", "#1a0804");
+        // un escalier qui monte vers la droite
+        ctx.fillStyle = "#6b4a2a"; for (let i = 0; i < 6; i++) ctx.fillRect(10 + i * 32, 70 - i * 12, 28, 6);
+        const k = (T0 % 200) / 200, i = Math.min(5, Math.floor(k * 6)), fr = k * 6 - i;
+        const mx = 16 + i * 32 + fr * 32, my = 70 - i * 12 - 15 - Math.sin(fr * Math.PI) * 10;
+        avecScene(t, { x: mx, y: my, face: 1, swim: false, grounded: fr < 0.1, vx: 1 }, drawPlayer);
+        // la lave monte, la foreuse perce
+        const lv = SC_H + 6 - k * 50;
+        ctx.fillStyle = "rgba(230,80,20,0.92)"; ctx.fillRect(0, lv, SC_W, SC_H); ctx.fillStyle = "#ffc850"; ctx.fillRect(0, lv, SC_W, 2);
+        ctx.save(); ctx.translate(mx - 20, lv); ctx.fillStyle = "#a0a6b0"; ctx.beginPath(); ctx.moveTo(-10, 6); ctx.lineTo(0, -16); ctx.lineTo(10, 6); ctx.closePath(); ctx.fill(); ctx.restore();
+        scTexte("GRIMPE !", 150, 12, "#ffd36b");
+      },
+    },
+    duel: {
+      titre: "MANCHE 3 : LE DUEL",
+      texte: ["Archibald attaque avec les pièges des mondes : rochers, glaçons, éclairs, mines.", "Quand sa cabine surchauffe et se pose, saute dessus ! 3 fois."],
+      scene(t) {
+        const T0 = t % 320, sol = SC_H - 6;
+        scFond("#4a1a0c", "#1a0804"); scSol("#6b4a2a", "#e2a640");
+        // la cabine : en l'air, puis posée et rouge
+        const pose = T0 >= 170 && T0 < 300, cy = pose ? sol - 16 : T0 >= 140 && T0 < 170 ? lerp(6, sol - 16, (T0 - 140) / 30) : 6;
+        avecScene(t, {}, () => drawCabine({ x: 120, y: cy, w: 48, h: 40, t, etat: pose ? "surchauffe" : "attaque", touche: T0 >= 230 && T0 < 280 ? 30 : 0 }, false));
+        // un rocher roule, Max saute par-dessus
+        const rx = T0 < 130 ? lerp(118, -20, T0 / 130) : -40;
+        ctx.fillStyle = "#8a7a62"; ctx.beginPath(); ctx.arc(rx, sol - 8, 8, 0, Math.PI * 2); ctx.fill();
+        let mx = 40, my = sol - 15, gr = true;
+        if (T0 >= 60 && T0 < 90) { my -= Math.sin(((T0 - 60) / 30) * Math.PI) * 24; gr = false; }
+        if (T0 >= 190 && T0 < 230) { const k = (T0 - 190) / 40; mx = lerp(40, 132, k); my = sol - 15 - Math.sin(k * Math.PI) * 30 - k * 2; gr = false; }
+        if (T0 >= 230 && T0 < 300) { mx = 132; my = sol - 16 - 15 - (T0 < 250 ? Math.sin(((T0 - 230) / 20) * Math.PI) * 10 : 0); }
+        avecScene(t, { x: mx, y: my, face: 1, swim: false, grounded: gr, vx: 0 }, drawPlayer);
+        if (T0 < 100) scTexte("SAUTE PAR-DESSUS", 60, 10, "#ffd36b");
+        else if (T0 >= 170 && T0 < 230) scTexte("ELLE SURCHAUFFE !", 60, 10, "#ff9a7a");
+        else if (T0 >= 230 && T0 < 290) scTexte("SAUTE DESSUS !", 60, 10, "#9be7a6");
       },
     },
   });
@@ -5870,7 +6130,7 @@
       for (const it of R.pickups) drawPickup(it);
       for (const e of R.enemies) drawEnemy(e);
       drawMovers(); drawCrushers(); drawTorches(); drawFlames(); drawVines(); drawPlayer(); drawTiles(true);
-      if (R.boss) { if (R.boss.kind === "yeti") drawYeti(); else if (R.boss.kind === "pieuvre") drawPieuvre(); else if (R.boss.kind === "oiseau") drawOiseauTonnerre(); else if (R.boss.kind === "fouisseur") drawFouisseur(); else drawBoss(); }
+      if (R.boss) { if (R.boss.kind === "yeti") drawYeti(); else if (R.boss.kind === "archibald") drawArchibald(); else if (R.boss.kind === "pieuvre") drawPieuvre(); else if (R.boss.kind === "oiseau") drawOiseauTonnerre(); else if (R.boss.kind === "fouisseur") drawFouisseur(); else drawBoss(); }
       // marquer les pièges déclenchés (zones) pour la relecture
       ctx.strokeStyle = "rgba(255,80,120,0.7)"; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
       for (const tr of R.def.triggers) for (const a of tr.act) if (["collapse", "spikes", "fall", "dropspike", "appear", "boulder", "door"].includes(a[0])) ctx.strokeRect(a[1] * T, a[2] * T, (a[3] && a[0] !== "boulder" && a[0] !== "door" ? a[3] : 1) * T, (a[4] && ["collapse", "spikes", "fall", "appear"].includes(a[0]) ? Math.min(a[4], 3) : 1) * T);
@@ -5895,5 +6155,5 @@
   };
   document.getElementById("btn-statistiques").addEventListener("click", () => { Kit.Stats.activer(statsSauvegarde.data.stats === false); majStatsBouton(); });
   majStatsBouton();
-  window.__temple = { Kit, mesurePerf, game, get room() { return R; }, LEVELS, input, pressed, startLevel, playFrom, goHome, showEnd, progress, apercuNiveau, camera: () => updateCamera(true) };
+  window.__temple = { Kit, mesurePerf, game, get room() { return R; }, LEVELS, input, pressed, startLevel, playFrom, goHome, showEnd, mancheSuivante, progress, apercuNiveau, camera: () => updateCamera(true) };
 })();

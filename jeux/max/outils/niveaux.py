@@ -3634,7 +3634,7 @@ FIN_OR = {
     17: "Archibald, au milieu de ses robots : « Ils sont gentils, en vrai. Ils sonnent juste un peu fort. »",
     18: "Archibald, couvert de poussière : « Tout s'est effondré. Sauf mon moral. Enfin, un peu mon moral aussi. »",
     19: "Archibald, devant une énorme machine à vapeur : « Tu aimes mon Fouisseur ? Il creuse jusqu'à l'Œil de Jade ! Recule, Max ! »",
-    20: "Le Fouisseur cale dans un nuage de suie. Le dernier fragment roule aux pieds de Max, et les cinq morceaux s'assemblent dans ses mains : l'Œil de Jade, enfin entier ! Archibald sort de la ferraille, tout noir, et tousse : « Mon grand-père disait : ensemble, ou pas du tout… » Max lui tend la main. Ensemble, ils soulèvent l'Œil de Jade.",
+    20: "La cabine d'Archibald s'écrase dans un nuage de suie. Le dernier fragment roule aux pieds de Max, et les cinq morceaux s'assemblent dans ses mains : l'Œil de Jade, enfin entier ! Archibald sort de la ferraille, tout noir, et tousse : « Mon grand-père disait : ensemble, ou pas du tout… » Max lui tend la main. Ensemble, ils soulèvent l'Œil de Jade.",
 }
 
 
@@ -3683,7 +3683,43 @@ def boss_fouisseur():
     return {"name": "Le Fouisseur d'Archibald", "type": "histoire", "ammo": [6, 1], "map": ["".join(r) for r in rows],
             "triggers": [], "nouveau": ["boss_fouisseur"],
             "machine": [30, 9, 12, 6], "cheminees": [[32, 7], [35, 7], [38, 7]], "caisse": [7, sol],
-            "boss": "fouisseur", "doorHidden": True, "monde": 5, "palette": "cite", "decor": "cite", "_tnt": 0}
+            "boss": "fouisseur", "doorHidden": True, "monde": 5, "palette": "cite", "decor": "cite", "_tnt": 0,
+            "manches": [{}, manche_poursuite(), manche_duel()]}
+
+
+# Le combat final se joue en 3 manches dans le même niveau (game.js : game.manche, mancheSuivante) :
+# 1 le Fouisseur (ci-dessus), 2 la poursuite, 3 le duel. Une chute fait recommencer la manche en cours.
+def manche_poursuite():
+    """Manche 2 : la machine éventrée creuse vers Max ; il grimpe pendant que la lave (et la foreuse) monte."""
+    sauve = NUMERO[0]
+    n = Niveau("La poursuite (manche 2 sur 3)", "action", h=40, sol=38, monde=5)
+    NUMERO[0] = sauve
+    n.motifs = None
+    n.depart(4); n.crue("lave", 0.24, colle=5)
+    grimpe(n, 3, ressorts=(1,)); n.corde(5); n.plat(3)
+    grimpe(n, 2); n.ressort_fragile(4); n.plat(3); n.corde(5); n.plat(3)
+    grimpe(n, 3, ressorts=(0, 2)); n.corde(5); n.plat(3); n.porte(4)
+    d = n.fini()
+    d["triggers"] = [t for t in d["triggers"] if not any(a[0] == "hint" for a in t["act"])]   # pas d'aide en texte : la fiche suffit
+    assert _jouable(d), "manche 2 (poursuite) infaisable"
+    d.update({"boss": None, "doorHidden": False, "nouveau": ["poursuite"], "poursuite": True, "palette": "cite", "decor": "cite",
+              "machine": None, "cheminees": None})
+    return d
+
+
+def manche_duel():
+    """Manche 3 : Archibald dans la cabine de sa machine, avec les pièges des quatre mondes."""
+    W, h, sol = 44, 17, 14
+    rows = [["#"] * W for _ in range(h)]
+    for y in range(1, sol + 1):
+        for x in range(1, W - 1):
+            rows[y][x] = "."
+    for x in list(range(7, 11)) + list(range(33, 37)):
+        rows[10][x] = "#"
+    rows[sol][3] = "P"; rows[sol][W - 4] = "D"
+    d = {"name": "Le duel (manche 3 sur 3)", "map": ["".join(r) for r in rows], "triggers": [], "nouveau": ["duel"],
+         "boss": "archibald", "doorHidden": True, "machine": None, "cheminees": None}
+    return d
 
 
 # =====================================================================
