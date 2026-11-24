@@ -2140,7 +2140,7 @@ def boss_jaguar():
     rows[y][3] = "P"
     rows[y][W - 4] = "D"
     lv = {"name": "Le Jaguar de pierre", "type": "histoire", "ammo": [6, 0], "map": ["".join(r) for r in rows],
-          "triggers": [{"zone": [6, 1, 1, h - 2], "max": 0, "act": [["hint", "Accroche-toi à une liane quand il charge. Sonné contre le mur, saute-lui sur la tête !"]]}],
+          "triggers": [], "nouveau": ["boss_jaguar"],
           "vines": [[4, 8, 5, 0.45, 0], [22, 8, 5, 0.45, 2.1], [39, 8, 5, 0.45, 4.2]],
           "boss": "jaguar", "doorHidden": True, "decor": "pillars", "monde": 1, "_tnt": 0}
     return lv
@@ -2929,8 +2929,7 @@ def boss_pieuvre():
     for bx in (1, 11, 19, W - 12):
         rows[h - 2][bx] = "u"
     return {"name": "La pieuvre géante", "type": "histoire", "ammo": [6, 0], "map": ["".join(r) for r in rows],
-            "triggers": [{"zone": [6, 1, 1, h - 2], "max": 0, "act": [["hint", "Écarte-toi de l'ombre d'une tentacule ! Quand elle est coincée au sol, coupe l'algue du coquillage au-dessus (COUP)."]]}],
-            "coquillages": [[7, 9], [15, 9], [23, 9]], "boss": "pieuvre", "doorHidden": True, "eau": eau, "monde": 3,
+            "triggers": [], "nouveau": ["boss_pieuvre"], "boss": "pieuvre", "doorHidden": True, "eau": eau, "monde": 3,
             "palette": "abysses", "decor": "abysses", "_tnt": 0}
 
 
@@ -3457,7 +3456,7 @@ def boss_oiseau():
         rows[y][x] = rows[y][x + 1] = "~"
     rows[sol - 1][3] = "P"; rows[sol - 1][W - 4] = "D"
     return {"name": "L'Oiseau-tonnerre", "type": "histoire", "ammo": [6, 0], "map": ["".join(r) for r in rows],
-            "triggers": [{"zone": [5, 1, 1, h - 2], "max": 0, "act": [["hint", "Sonne une cloche (COUP) quand l'Oiseau-tonnerre passe juste au-dessus ! Et fuis l'ombre des éclairs."]]}],
+            "triggers": [], "nouveau": ["boss_oiseau"],
             "cloches": cloches, "nid": [21, sol], "boss": "oiseau", "doorHidden": True, "monde": 4,
             "palette": "nuages", "decor": "nuages", "orage": True, "_tnt": 0}
 
@@ -3682,7 +3681,7 @@ def boss_fouisseur():
         rows[y][x] = rows[y][x + 1] = "#"
     rows[sol][2] = "P"; rows[sol][10] = "D"; rows[sol][7] = "t"
     return {"name": "Le Fouisseur d'Archibald", "type": "histoire", "ammo": [6, 1], "map": ["".join(r) for r in rows],
-            "triggers": [{"zone": [4, 1, 1, h - 2], "max": 0, "act": [["hint", "Monte sur la machine et lâche une dynamite (BOUM) dans chaque cheminée ! Évite la fumée noire : le feu va jaillir."]]}],
+            "triggers": [], "nouveau": ["boss_fouisseur"],
             "machine": [30, 9, 12, 6], "cheminees": [[32, 7], [35, 7], [38, 7]], "caisse": [7, sol],
             "boss": "fouisseur", "doorHidden": True, "monde": 5, "palette": "cite", "decor": "cite", "_tnt": 0}
 
@@ -3731,7 +3730,7 @@ def boss_yeti():
             rows[r][x] = "."
     rows[y][3] = "P"; rows[y][W - 4] = "D"
     return {"name": "Le Yéti grognon", "type": "histoire", "ammo": [6, 0], "map": ["".join(r) for r in rows],
-            "triggers": [{"zone": [6, 1, 1, h - 2], "max": 0, "act": [["hint", "Attire le yéti sous une grosse stalactite : quand il frappe le sol, elle lui tombe dessus ! Saute quand il retombe."]]}],
+            "triggers": [], "nouveau": ["boss_yeti"],
             "glacons": [[9, 1], [19, 1], [29, 1]], "boss": "yeti", "doorHidden": True, "monde": 2, "palette": "glace", "decor": "glace", "_tnt": 0}
 
 
