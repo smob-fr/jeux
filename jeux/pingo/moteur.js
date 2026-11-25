@@ -67,7 +67,7 @@ function reliefSansFin(m, r) {
 function reliefNiveau(spec) {
   const R = spec.relief;
   return (m, r) => {
-    if (m < 40) return { type: "bosse", haut: 140, creux: 120, descente: 1750, montee: 950 }; // départ toujours doux
+    if (m < 40 && !spec.essai) return { type: "bosse", haut: 140, creux: 120, descente: 1750, montee: 950 }; // départ toujours doux
     const t = r() < (R.tremplins || 0);
     return {
       type: t ? "tremplin" : "bosse", bosses: r() < (R.double || 0) ? 2 : 1,
@@ -190,10 +190,12 @@ function creerPartie(opts = {}) {
   const finX = niveau ? niveau.long * PX_PER_M : null;
   // Vitesse maximale : basse dans les premiers niveaux pour retomber dans la pente suivante.
   // Sans fin : 1 100 au départ, puis le maximum vers 1 500 m.
-  const vmaxAt = niveau ? () => niveau.vmax || MAX_SPEED : (m) => (m < 300 ? 1100 : Math.min(MAX_SPEED, 1100 + (m - 300)));
+  // Terrain d'essai (opts.essai : relief et vmax choisis à la main, sans fin, sans banquise).
+  const essai = opts.essai || null;
+  const vmaxAt = essai ? () => essai.vmax : niveau ? () => niveau.vmax || MAX_SPEED : (m) => (m < 300 ? 1100 : Math.min(MAX_SPEED, 1100 + (m - 300)));
   let VMAX = vmaxAt(0);
   const terrain = creerTerrain({
-    relief: niveau ? reliefNiveau(niveau) : reliefSansFin, rand, finX, fishes, vmax: niveau ? VMAX : 1300,
+    relief: essai ? reliefNiveau(essai) : niveau ? reliefNiveau(niveau) : reliefSansFin, rand, finX, fishes, vmax: niveau || essai ? VMAX : 1300,
     poissons: fantome ? null : niveau ? niveau.poissons : { sol: 0.75, air: 0.45, bleu: 0.3, or: 0.08 },
   });
   terrain.etendre(finX != null ? finX + 2000 : 5000);
@@ -205,10 +207,10 @@ function creerPartie(opts = {}) {
 
   const p = { x: 0, y: terrain.h(0), vx: 380, vy: 0, ground: true, rot: 0, flip: 0, flipping: false, flipsAir: 0, air: 0, maxH: 0 };
   const g = {
-    mode: niveau ? "niveau" : "sansfin", niveau, graine, terrain, fishes, p, finX, total, trace,
+    mode: niveau ? "niveau" : essai ? "essai" : "sansfin", niveau, graine, terrain, fishes, p, finX, total, trace,
     tempsParfait: parfait ? parfait.temps : null,
     etat: "jeu",              // jeu → plouf (rattrapé) ou gagne (arrivé à l'igloo)
-    fonte: opts.fonte !== false && !fantome && !opts.rejeu,
+    fonte: opts.fonte !== false && !fantome && !opts.rejeu && !essai,
     meltX: trace ? -RETARD_FONTE : F.debut, meltV: F.v0, recul: 0, time: 0,
     hold: false,
     fishCount: 0, score: 0, flips: 0, turbo: 0, turboT: 0, turbos: 0, boums: 0, parfaits: 0, hautsVols: 0,
@@ -480,6 +482,22 @@ function niveau(monde, i, { brut = false } = {}) {
   return spec;
 }
 
+/* ---------------- Terrain d'essai ----------------
+   Pour régler le relief en jouant : hauteur des bosses, longueur des montées et des descentes, vitesse
+   maximale, part de tremplins. Chaque valeur varie de ± 10 % d'une bosse à l'autre. */
+const ESSAIS = {
+  actuel: { hauteur: 175, montee: 1000, descente: 1800, vmax: 1400, tremplins: 30 },
+  rapproche: { hauteur: 200, montee: 550, descente: 700, vmax: 1500, tremplins: 0 },
+  russes: { hauteur: 300, montee: 600, descente: 750, vmax: 1900, tremplins: 20 },
+};
+function creerEssai(r) {
+  const f = (v) => [v * 0.9, v * 1.1];
+  return {
+    essai: true, vmax: r.vmax,
+    relief: { haut: f(r.hauteur), creux: f(r.hauteur * 0.85), montee: f(r.montee), descente: f(r.descente), tremplins: r.tremplins / 100, double: 0.5 },
+  };
+}
+
 /** Étoiles d'un niveau terminé : 1 à l'arrivée, 2 avec 30 % des poissons (en valeur), 3 avec 60 %. */
 const SEUILS = [0.3, 0.6];
 function etoiles(score, total) {
@@ -490,7 +508,7 @@ function etoiles(score, total) {
 const Pingo = {
   PX_PER_M, G, DIVE, MIN_SPEED, MAX_SPEED, FISH_FOR_TURBO, POISSONS, MONDES, NIVEAUX_PAR_MONDE, SEUILS,
   PAS_ENTREE, PAS_TRACE, SOUS_PAS,
-  aleatoire, creerPartie, niveau, etoiles, rejouer, encoder, decoder,
+  aleatoire, creerPartie, niveau, etoiles, rejouer, encoder, decoder, essai: creerEssai, ESSAIS,
 };
 if (typeof module !== "undefined" && module.exports) module.exports = Pingo;
 else racine.Pingo = Pingo;

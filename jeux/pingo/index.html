@@ -121,6 +121,16 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
 .niv.verrou { background: rgba(234, 246, 255, .18); color: rgba(234, 246, 255, .55); box-shadow: none; cursor: default; font-size: 16px; }
 .verrou-monde { font-size: 14px; color: var(--frost); margin: 8px 0 0; }
 
+/* ---------- terrain d'essai ---------- */
+.reglages { display: grid; gap: 8px; margin: 10px 0 4px; text-align: left; }
+.reglages label { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; font-size: 15px; font-weight: 700; }
+.reglages label b { color: var(--fish); font-variant-numeric: tabular-nums; }
+.reglages input { grid-column: 1 / -1; width: 100%; accent-color: var(--scarf); height: 28px; touch-action: pan-x; }
+.prereglages { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.prereglages .btn { width: auto; margin-top: 0; font-size: 15px; padding: 7px 12px; }
+.valeurs { font: 600 12px ui-monospace, monospace; color: var(--frost); background: rgba(0,0,0,.25); border-radius: 10px; padding: 6px 8px; margin: 8px 0 0; user-select: text; -webkit-user-select: text; word-break: break-word; }
+#essai .card { max-width: 400px; }
+
 /* ---------- victoire ---------- */
 .etoiles { display: flex; justify-content: center; gap: 6px; margin: 6px 0 2px; font-size: 54px; line-height: 1; }
 .etoiles span { color: rgba(234, 246, 255, .2); text-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
@@ -156,7 +166,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
   <div class="fishes" id="fishes">🐟 0</div>
   <button class="pause-btn" id="b-pause" type="button" aria-label="Pause">❚❚</button>
   <div class="meters">
-    <div class="meter"><label>Banquise</label><div class="bar" id="melt-bar"><i></i></div></div>
+    <div class="meter" id="melt-meter"><label>Banquise</label><div class="bar" id="melt-bar"><i></i></div></div>
     <div class="meter"><label>Turbo</label><div class="bar" id="turbo-bar"><i style="width:0%"></i></div></div>
     <div class="meter" id="goal-meter" hidden><label>Igloo</label><div class="bar" id="goal-bar"><i style="width:0%"></i></div></div>
   </div>
@@ -173,6 +183,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
     <div class="rangee">
       <button class="lien" id="b-comment" type="button">Comment jouer</button>
       <button class="lien" id="b-son" type="button">Son : oui</button>
+      <button class="lien" id="b-essai" type="button">Terrain d'essai</button>
     </div>
     <button class="lien stats-btn" id="stats-btn" type="button" hidden></button>
     <p class="proto">Prototype</p>
@@ -214,6 +225,33 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
     <h2 id="nouveau-titre"></h2>
     <p id="nouveau-texte"></p>
     <button class="btn" id="b-nouveau-ok" type="button">C'est parti !</button>
+  </div>
+</div>
+
+<!-- Terrain d'essai : régler le relief en jouant -->
+<div class="panel defile" id="essai" hidden>
+  <div class="card">
+    <h2>Terrain d'essai</h2>
+    <p>Règle les collines, glisse, et recommence. Pas de banquise ici.</p>
+    <div class="prereglages">
+      <button class="btn sobre" type="button" data-essai="actuel">Actuel</button>
+      <button class="btn sobre" type="button" data-essai="rapproche">Rapproché</button>
+      <button class="btn sobre" type="button" data-essai="russes">Montagnes russes</button>
+    </div>
+    <div class="reglages">
+      <label>Hauteur des bosses <b id="v-hauteur"></b><input type="range" id="r-hauteur" min="60" max="450" step="10"></label>
+      <label>Longueur des montées <b id="v-montee"></b><input type="range" id="r-montee" min="250" max="1500" step="50"></label>
+      <label>Longueur des descentes <b id="v-descente"></b><input type="range" id="r-descente" min="250" max="2400" step="50"></label>
+      <label>Vitesse maximale <b id="v-vmax"></b><input type="range" id="r-vmax" min="800" max="2600" step="50"></label>
+      <label>Tremplins <b id="v-tremplins"></b><input type="range" id="r-tremplins" min="0" max="100" step="10"></label>
+    </div>
+    <p class="objectif" id="essai-bilan"></p>
+    <p class="valeurs" id="essai-valeurs"></p>
+    <button class="btn" id="b-essai-go" type="button">Glisser !</button>
+    <div class="duo">
+      <button class="btn sobre" id="b-essai-reprendre" type="button">Reprendre</button>
+      <button class="btn sobre" id="b-essai-accueil" type="button">Accueil</button>
+    </div>
   </div>
 </div>
 
@@ -920,6 +958,10 @@ function hud() {
     const s1 = Math.ceil(g.total * P.SEUILS[0]), s2 = Math.ceil(g.total * P.SEUILS[1]);
     $("fishes").innerHTML = `🐟 ${g.score}<span class="mini">${g.score >= s1 ? "<b>★</b>" : "★"}${g.score >= s2 ? "<b>★</b>" : "★"}</span>`;
     $("goal-bar").firstElementChild.style.width = Math.min(100, p.x / g.finX * 100) + "%";
+  } else if (g.mode === "essai") {
+    $("dist").innerHTML = `${nf(m)}<small> m</small>`;
+    $("fishes").innerHTML = `✨ ${g.parfaits}<span class="mini">💥 ${g.boums}</span>`;
+    vitesseMax = Math.max(vitesseMax, Math.hypot(p.vx, p.vy));
   } else {
     $("dist").innerHTML = `${nf(m)}<small> m</small>`;
     $("fishes").textContent = "🐟 " + g.score;
@@ -933,7 +975,7 @@ function hud() {
 }
 
 /* ---------------- Écrans ---------------- */
-const PANNEAUX = ["accueil", "comment", "carte", "nouveau", "pause", "over", "win"];
+const PANNEAUX = ["accueil", "comment", "carte", "nouveau", "essai", "pause", "over", "win"];
 function montrer(id) {
   for (const k of PANNEAUX) $(k).hidden = k !== id;
   $("hud").hidden = !(ecran === "jeu" || ecran === "pause");
@@ -1057,12 +1099,14 @@ function demarrerNiveau(n) {
 }
 function commencer() {
   ecran = "jeu";
+  $("melt-meter").hidden = g.mode === "essai";
   hold = false;
   montrer(null);
   Sound.unlock();
 }
 function recommencer() {
-  if (niveauEnCours) demarrerNiveau(niveauEnCours);
+  if (g && g.mode === "essai") lancerEssai();
+  else if (niveauEnCours) demarrerNiveau(niveauEnCours);
   else lancerSansFin();
 }
 function quitterNiveau(raison) {
@@ -1072,12 +1116,51 @@ function quitterNiveau(raison) {
 function mettrePause() {
   if (ecran !== "jeu") return;
   ecran = "pause"; hold = false;
+  if (g.mode === "essai") return ouvrirEssai();
   $("pause-texte").textContent = niveauEnCours ? `Niveau ${niveauEnCours.id} · ${nf(g.m)} m sur ${nf(niveauEnCours.long)}` : `${nf(g.m)} m · record ${nf(save.best)} m`;
   $("b-quitter").textContent = niveauEnCours ? "Carte" : "Accueil";
   montrer("pause");
   $("b-reprendre").focus();
 }
 function reprendre() { ecran = "jeu"; montrer(null); last = performance.now(); }
+
+/* ---------------- Terrain d'essai ----------------
+   Réglages gardés dans save.essai ; la fiche montre les valeurs à recopier pour les reprendre dans le jeu. */
+const CHAMPS_ESSAI = ["hauteur", "montee", "descente", "vmax", "tremplins"];
+function reglagesEssai() {
+  if (!save.essai || typeof save.essai !== "object") save.essai = { ...P.ESSAIS.rapproche };
+  for (const k of CHAMPS_ESSAI) if (typeof save.essai[k] !== "number") save.essai[k] = P.ESSAIS.rapproche[k];
+  return save.essai;
+}
+function majEssai() {
+  const r = reglagesEssai();
+  for (const k of CHAMPS_ESSAI) { $("r-" + k).value = r[k]; $("v-" + k).textContent = k === "tremplins" ? r[k] + " %" : nf(r[k]); }
+  $("essai-valeurs").textContent = `Valeurs : hauteur ${r.hauteur}, montées ${r.montee}, descentes ${r.descente}, vitesse ${r.vmax}, tremplins ${r.tremplins} %`;
+}
+function ouvrirEssai() {
+  const enCours = g && g.mode === "essai" && ecran === "pause";
+  if (!enCours) { ecran = "carte"; if (!g || g.fonte || g.mode === "essai") demo(); }
+  majEssai();
+  $("b-essai-reprendre").hidden = !enCours;
+  $("essai-bilan").textContent = enCours ? `${nf(g.m)} m · ${g.parfaits} glisse${g.parfaits > 1 ? "s" : ""} parfaite${g.parfaits > 1 ? "s" : ""} · ${g.boums} « Boum » · vitesse max atteinte ${nf(vitesseMax)}` : "";
+  $("b-essai-go").textContent = enCours ? "Relancer avec ces réglages" : "Glisser !";
+  montrer("essai");
+}
+let vitesseMax = 0;
+function lancerEssai() {
+  niveauEnCours = null;
+  demarrerMoteur({ essai: P.essai(reglagesEssai()) });
+  aide = null; vitesseMax = 0;
+  $("goal-meter").hidden = true;
+  commencer();
+  toast("Terrain d'essai");
+}
+for (const k of CHAMPS_ESSAI) $("r-" + k).addEventListener("input", (e) => { reglagesEssai()[k] = +e.target.value; persist(); majEssai(); });
+document.querySelectorAll("[data-essai]").forEach((b) => b.addEventListener("click", () => { Sound.clic(); save.essai = { ...P.ESSAIS[b.dataset.essai] }; persist(); majEssai(); }));
+$("b-essai").onclick = () => { Sound.unlock(); Sound.clic(); ouvrirEssai(); };
+$("b-essai-go").onclick = () => { Sound.clic(); lancerEssai(); };
+$("b-essai-reprendre").onclick = () => { Sound.clic(); reprendre(); };
+$("b-essai-accueil").onclick = () => { Sound.clic(); allerAccueil(); };
 
 /* ---------------- Fin de partie ---------------- */
 function perdu() {
