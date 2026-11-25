@@ -116,9 +116,19 @@ Le parcours parfait arrive au bout en 12 à 75 s ; le joueur visé arrive au bou
 - Objet de test : `window.__pingo` (`p`, `g` la partie du moteur, `state` : `menu`, `play`, `pause`,
   `over`, `win` ; `ecran`, `fish`, `save`).
 
+### Terrain d'essai (lien sur l'accueil)
+
+Pour régler le relief en jouant, sans refaire tous les niveaux : curseurs hauteur des bosses, longueur
+des montées, longueur des descentes, vitesse maximale, part de tremplins (± 10 % d'une bosse à l'autre),
+préréglages `ESSAIS` (actuel, rapproché, montagnes russes). Sans fin et sans banquise ; le bandeau
+compte les glisses parfaites (✨) et les « Boum » (💥) ; la pause rouvre les réglages avec un bilan.
+Réglages gardés dans `save.essai`. La fiche affiche une ligne « Valeurs : … » que le propriétaire
+recopie : on reprend ensuite ces valeurs dans `MONDES` / `PREMIERS`, puis `npm run parcours`.
+Moteur : `Pingo.essai(réglages)` donne l'option `essai` de `creerPartie`.
+
 ### Sauvegarde (`pingo.v1`, `Kit.creerSauvegarde`)
 
-`uid`, `stats` (statistiques), `best` (record sans fin, repris de l'ancienne clé `pingo.best`, qui est
+`uid`, `stats` (statistiques), `essai` (réglages du terrain d'essai), `best` (record sans fin, repris de l'ancienne clé `pingo.best`, qui est
 encore écrite), `son`, `niveaux` (`{ "1-1": 3 }`, meilleures étoiles), `vus` (aides et fiches déjà
 montrées). Sans le kit (`index.html` ouvert directement), une version minimale fait la même chose.
 

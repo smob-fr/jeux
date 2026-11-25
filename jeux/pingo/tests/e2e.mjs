@@ -119,6 +119,23 @@ await p.click("#again");
 ok((await etat()) === "play" && (await p.evaluate(() => __pingo.g.niveau.id)) === "1-3" && !(await p.isVisible("#nouveau")), "« Réessayer » relance le 1-3, sans redemander la fiche");
 await p.click("#b-pause"); await p.click("#b-quitter"); await p.click("#b-carte-retour");
 
+/* ---------- terrain d'essai ---------- */
+await p.click("#b-essai");
+ok(await p.isVisible("#essai"), "« Terrain d'essai » ouvre ses réglages");
+await p.click('[data-essai="russes"]');
+await p.fill("#r-hauteur", "350"); await p.dispatchEvent("#r-hauteur", "input");
+ok((await p.textContent("#essai-valeurs")).includes("hauteur 350") && (await p.evaluate(() => __pingo.save.essai.vmax)) === 1900, "réglages : préréglage « Montagnes russes », hauteur 350 (enregistrés)");
+await p.click("#b-essai-go");
+const essai = await p.evaluate(() => ({ mode: __pingo.g.mode, fonte: __pingo.g.fonte, pts: __pingo.g.terrain.pts.slice(4, 8).map((q) => q.y) }));
+ok((await etat()) === "play" && essai.mode === "essai" && !essai.fonte && !(await p.isVisible("#melt-meter")) && Math.max(...essai.pts) > 280, `terrain d'essai lancé, sans banquise, bosses hautes (${essai.pts.map(Math.round).join(", ")})`);
+await p.waitForTimeout(800);
+await p.click("#b-pause");
+ok((await p.isVisible("#essai")) && (await p.isVisible("#b-essai-reprendre")) && (await p.textContent("#essai-bilan")).includes("Boum"), "pause : les réglages et le bilan (glisses parfaites, « Boum »)");
+await p.click("#b-essai-go");
+ok((await etat()) === "play", "« Relancer avec ces réglages »");
+await p.click("#b-pause"); await p.click("#b-essai-accueil");
+ok(await p.isVisible("#accueil"), "retour à l'accueil");
+
 /* ---------- réglages de l'accueil ---------- */
 await p.click("#b-son");
 ok((await p.textContent("#b-son")) === "Son : non" && (await p.evaluate(() => __pingo.save.son)) === false, "son coupé depuis l'accueil (enregistré)");
