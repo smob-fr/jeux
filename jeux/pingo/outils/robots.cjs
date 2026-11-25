@@ -49,35 +49,59 @@ function jouerEntrees(niveau, bits) {
 
 let PENALITE_BOUM = 0, BONUS_PARFAIT = 0;
 /* ---------------- Pingouin parfait : recherche en faisceau ----------------
-   Toutes les 0,05 s, on garde les « largeur » meilleures situations (distance + 0,6 × vitesse), on essaie
-   pour chacune « appuyer » et « lâcher » pendant la tranche suivante, et on recommence. La première
-   situation qui atteint l'igloo donne le parcours le plus rapide trouvé. Poissons et turbo compris. */
-function parfait(niveau, { largeur = 150 } = {}) {
+   Toutes les 0,05 s, on garde les « largeur » meilleures situations, on essaie pour chacune « appuyer » et
+   « lâcher » pendant la tranche suivante, et on recommence. La première situation qui atteint l'igloo
+   donne le parcours le plus rapide trouvé. Poissons et turbo compris.
+   Note d'une situation : distance + 0,6 × vitesse (gros malus dans l'eau).
+   auSol (niveaux construits) : le pingouin parfait n'appuie jamais en l'air. Sinon, plonger en l'air, qui fait
+   gagner de la vitesse tout de suite, écarte le vol qui atteint la bosse cible et il tombe à l'eau.
+   prevoir : une situation en vol est notée d'après son atterrissage (fin du vol simulée sans appuyer). */
+function noter(g, prevoir) {
+  const base = () => g.p.x + 0.6 * Math.hypot(g.p.vx, g.p.vy) - (g.p.dansEau ? 6000 : 0);
+  if (!prevoir || g.p.ground) return base();
+  const e = g.sauver();
+  g.hold = false;
+  for (let k = 0; k < 600 && !g.p.ground && !g.p.dansEau && g.etat === "jeu"; k++) g.step(1 / 120);
+  const n = base() - (g.boums > e.boums ? 800 : 0);
+  g.restaurer(e);
+  return n;
+}
+/** Avance un faisceau d'une tranche. Renvoie { faisceau, gagne } (gagne : la liste d'appuis gagnante). */
+function etape(g, faisceau, { largeur = 150, prevoir = false, auSol = false } = {}) {
+  const suivants = [], vus = new Set();
+  for (const n of faisceau) {
+    g.restaurer(n.e);
+    const enVol = !g.p.ground;
+    for (const appui of [0, 1]) {
+      if (auSol && enVol && appui) continue;            // auSol : on n'appuie jamais en l'air
+      g.restaurer(n.e); g.hold = !!appui;
+      for (let k = 0; k < PAR_TRANCHE && g.etat === "jeu"; k++) g.step(SOUS_PAS);
+      const bits = { a: appui, avant: n.bits };
+      if (g.etat === "gagne") {
+        const liste = []; for (let b = bits; b; b = b.avant) liste.push(b.a);
+        return { faisceau, gagne: liste.reverse(), temps: g.time };
+      }
+      const p = g.p, cle = `${Math.round(p.x / 12)},${Math.round(p.y / 12)},${Math.round(p.vx / 25)},${Math.round(p.vy / 25)},${p.ground ? 1 : 0}`;
+      if (vus.has(cle)) continue;
+      vus.add(cle);
+      const e = g.sauver();
+      suivants.push({ e, bits, note: noter(g, prevoir) });
+    }
+  }
+  suivants.sort((a, b) => b.note - a.note);
+  return { faisceau: suivants.slice(0, largeur) };
+}
+function parfait(niveau, { largeur = 150, prevoir = false, auSol = !!niveau.points } = {}) {
   const g = Pingo.creerPartie({ niveau, rejeu: true });
   let faisceau = [{ e: g.sauver(), bits: null }];
   for (let tranche = 0; tranche < 200 / PAS_ENTREE; tranche++) {
-    const suivants = [], vus = new Set();
-    for (const n of faisceau) {
-      for (const appui of [0, 1]) {
-        g.restaurer(n.e); g.hold = !!appui;
-        for (let k = 0; k < PAR_TRANCHE && g.etat === "jeu"; k++) g.step(SOUS_PAS);
-        const bits = { a: appui, avant: n.bits };
-        if (g.etat === "gagne") {
-          const liste = []; for (let b = bits; b; b = b.avant) liste.push(b.a);
-          liste.reverse();
-          return { bits: liste, entrees: Pingo.encoder(liste), etat: "gagne", temps: g.time };
-        }
-        const p = g.p, cle = `${Math.round(p.x / 12)},${Math.round(p.y / 12)},${Math.round(p.vx / 25)},${Math.round(p.vy / 25)},${p.ground ? 1 : 0}`;
-        if (vus.has(cle)) continue;
-        vus.add(cle);
-        suivants.push({ e: g.sauver(), bits, note: p.x + 0.6 * Math.hypot(p.vx, p.vy) });
-      }
-    }
-    suivants.sort((a, b) => b.note - a.note);
-    faisceau = suivants.slice(0, largeur);
+    const r = etape(g, faisceau, { largeur, prevoir, auSol });
+    if (r.gagne) return { bits: r.gagne, entrees: Pingo.encoder(r.gagne), etat: "gagne", temps: r.temps };
+    faisceau = r.faisceau;
   }
   return { bits: [], entrees: "", etat: "jeu", temps: 200 };
 }
+
 /** Profils de joueurs qui prévoient : vue (s), retard de réaction (tranches de 0,05 s), largeur du faisceau. */
 const PROFILS = { moyen: { vue: 0.6, retard: 4, largeur: 6 }, joueur: { vue: 0.8, retard: 3, largeur: 8 }, expert: { vue: 1.2, retard: 2, largeur: 12 } };
 
@@ -115,4 +139,4 @@ function expert(niveau, { vue = 1.2, largeur = 12, retard = 2, fonte = true, sui
   }
   return { ...bilan(reel, atter), retardMax: pire };
 }
-module.exports = { rien, debutant, bon, jouer, jouerEntrees, parfait, expert, PROFILS, Pingo };
+module.exports = { etape, rien, debutant, bon, jouer, jouerEntrees, parfait, expert, PROFILS, Pingo };

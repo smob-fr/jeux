@@ -17,10 +17,11 @@ Depuis `jeux/pingo/` :
 ```bash
 npm run build      # installe le kit dans kit/, puis copie index.html, moteur.js, parcours.js et le kit dans www/
 npm run serve      # build, puis http://localhost:8080
-npm test           # build, parcours parfaits valides, vérification des niveaux, test de bout en bout (~1 min 30)
+npm test           # build, parcours parfaits valides, niveaux construits à jour, vérification des niveaux, test de bout en bout (~2 min)
 npm run niveaux    # tableau de chaque niveau : parcours parfait, joueur visé, robots simples
 npm run parcours   # recalcule le parcours parfait et la marge de chaque niveau (parcours.js, ~1 min)
 npm run parcours -- 2-4 3-1   # seulement ces niveaux
+npm run construire # reconstruit le niveau test à bosses calculées (niveaux-construits.js, ~10 s)
 ```
 
 **Après tout changement de la physique, du relief, des poissons ou des niveaux : `npm run parcours`**,
@@ -126,9 +127,29 @@ Réglages gardés dans `save.essai`. La fiche affiche une ligne « Valeurs : …
 recopie : on reprend ensuite ces valeurs dans `MONDES` / `PREMIERS`, puis `npm run parcours`.
 Moteur : `Pingo.essai(réglages)` donne l'option `essai` de `creerPartie`.
 
+### Niveau test : bosses calculées (`outils/construire-niveaux.mjs` → `niveaux-construits.js`)
+
+Piste pour les futurs niveaux, testable depuis le terrain d'essai (« Jouer le niveau test », curseur
+« Retard de la banquise »). Le relief n'est plus tiré au hasard : il est **construit en faisant jouer le
+pingouin parfait** au fur et à mesure.
+- Début en bosses rapprochées (élan), puis selon la vitesse du pingouin parfait au dernier creux : lent →
+  une bosse de glisse (170 / 850 / 1 050) pour prendre de la vitesse ; rapide → un **saut calculé**.
+- Saut : une bosse de décollage ; on simule le vol (à 93 % de la vitesse parfaite, `tolerance`) et on pose
+  la **bosse cible** là où il retombe, sa descente inclinée comme la trajectoire (glisse parfaite), son
+  sommet au moins 90 px sous le vol. Entre les deux, une **crevasse remplie d'eau** (`niveau.eaux`) :
+  qui ne saute pas assez loin tombe à l'eau (vitesse limitée à 380, pas de décollage) et remonte
+  lentement. Un peu trop court : « Boum » contre la montée de la bosse cible ; trop vite : on plonge en
+  l'air pour redescendre. Mesuré : on retombe proprement entre ~95 % et 100 % de la vitesse parfaite.
+- Chaque saut est vérifié (le pingouin parfait, sur le vrai terrain, retombe proprement sur la cible),
+  sinon recalculé (4 essais). Points arrondis dès la construction (le terrain enregistré est exactement
+  celui joué). Le pingouin parfait de ces niveaux n'appuie jamais en l'air (`auSol`).
+- Dans ces niveaux, le turbo ne donne pas de vitesse (les cibles sont calculées pour la vitesse du
+  parcours parfait) ; il repousse toujours la banquise.
+- `npm run construire` reconstruit (`DEBUG=1` pour le détail) ; `npm test` vérifie que le fichier est à jour.
+
 ### Sauvegarde (`pingo.v1`, `Kit.creerSauvegarde`)
 
-`uid`, `stats` (statistiques), `essai` (réglages du terrain d'essai), `best` (record sans fin, repris de l'ancienne clé `pingo.best`, qui est
+`uid`, `stats` (statistiques), `essai` (réglages du terrain d'essai), `margeTest` (retard de la banquise du niveau test), `best` (record sans fin, repris de l'ancienne clé `pingo.best`, qui est
 encore écrite), `son`, `niveaux` (`{ "1-1": 3 }`, meilleures étoiles), `vus` (aides et fiches déjà
 montrées). Sans le kit (`index.html` ouvert directement), une version minimale fait la même chose.
 

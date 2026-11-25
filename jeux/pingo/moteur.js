@@ -9,6 +9,7 @@ const G = 1150;          // gravité
 const DIVE = 2600;       // poussée supplémentaire quand on appuie
 const MIN_SPEED = 230, MAX_SPEED = 2300;
 const FISH_FOR_TURBO = 8;
+const VITESSE_EAU = 380;   // vitesse maximale dans l'eau d'une crevasse
 const BONUS_TURBO = 300;   // vitesse maximale en plus pendant le turbo
 const SURVITESSE = 700;    // les bonus peuvent dépasser la vitesse maximale de 700 au plus…
 const ESTOMPE = 0.6;       // … et cet excès s'estompe de 60 % par seconde au sol
@@ -78,8 +79,9 @@ function reliefNiveau(spec) {
 }
 
 /* ---------------- Terrain : points interpolés en cosinus ---------------- */
-function creerTerrain({ relief, rand, finX = null, poissons, fishes, vmax }) {
-  const pts = [{ x: -1800, y: -60 }, { x: -900, y: 80 }, { x: 0, y: 150 }, { x: 1500, y: -110 }];
+function creerTerrain({ relief, rand, finX = null, poissons, fishes, vmax, points = null }) {
+  // points : terrain déjà construit (niveaux construits, outils/construire-niveaux.mjs) ; on ne l'étend pas.
+  const pts = points || [{ x: -1800, y: -60 }, { x: -900, y: 80 }, { x: 0, y: 150 }, { x: 1500, y: -110 }];
   let cache = 0, fini = false;
   function seg(x) {
     let i = Math.min(cache, pts.length - 2);
@@ -132,6 +134,7 @@ function creerTerrain({ relief, rand, finX = null, poissons, fishes, vmax }) {
     if (rand() < P.sol) rangee(fin1, T1, fin1.x + (T1.x - fin1.x) * 0.45, 4 + Math.floor(rand() * 2));
   }
   function etendre(toX) {
+    if (points) return;
     while (pts[pts.length - 1].x < toX) {
       const T0 = pts[pts.length - 1];
       if (finX != null && T0.x >= finX - 2200) {
@@ -188,6 +191,12 @@ function creerPartie(opts = {}) {
   const on = fantome ? () => {} : (opts.on || (() => {}));
   const fishes = [];
   const finX = niveau ? niveau.long * PX_PER_M : null;
+  // Niveau construit : terrain et poissons calculés à l'avance ; le turbo n'y donne pas de vitesse
+  // (les bosses cibles sont placées pour la vitesse du pingouin parfait), il repousse seulement la banquise.
+  const construit = !!(niveau && niveau.points);
+  if (construit && !fantome) for (const [x, y, type] of niveau.poissonsFixes || []) fishes.push({ x, y, type, got: false, wob: (x * 7) % 6 });
+  const bonusTurbo = construit ? 0 : BONUS_TURBO;
+  const eaux = (niveau && niveau.eaux) || [];   // crevasses : [x début, x fin, niveau de l'eau]
   // Vitesse maximale : basse dans les premiers niveaux pour retomber dans la pente suivante.
   // Sans fin : 1 100 au départ, puis le maximum vers 1 500 m.
   // Terrain d'essai (opts.essai : relief et vmax choisis à la main, sans fin, sans banquise).
@@ -196,7 +205,8 @@ function creerPartie(opts = {}) {
   let VMAX = vmaxAt(0);
   const terrain = creerTerrain({
     relief: essai ? reliefNiveau(essai) : niveau ? reliefNiveau(niveau) : reliefSansFin, rand, finX, fishes, vmax: niveau || essai ? VMAX : 1300,
-    poissons: fantome ? null : niveau ? niveau.poissons : { sol: 0.75, air: 0.45, bleu: 0.3, or: 0.08 },
+    poissons: fantome || construit ? null : niveau ? niveau.poissons : { sol: 0.75, air: 0.45, bleu: 0.3, or: 0.08 },
+    points: construit ? niveau.points.map(([x, y]) => ({ x, y })) : null,
   });
   terrain.etendre(finX != null ? finX + 2000 : 5000);
   const total = fishes.reduce((s, f) => s + POISSONS[f.type].valeur, 0);
@@ -208,7 +218,7 @@ function creerPartie(opts = {}) {
   const p = { x: 0, y: terrain.h(0), vx: 380, vy: 0, ground: true, rot: 0, flip: 0, flipping: false, flipsAir: 0, air: 0, maxH: 0 };
   const g = {
     mode: niveau ? "niveau" : essai ? "essai" : "sansfin", niveau, graine, terrain, fishes, p, finX, total, trace,
-    tempsParfait: parfait ? parfait.temps : null,
+    tempsParfait: parfait ? parfait.temps : null, eaux,
     etat: "jeu",              // jeu → plouf (rattrapé) ou gagne (arrivé à l'igloo)
     fonte: opts.fonte !== false && !fantome && !opts.rejeu && !essai,
     meltX: trace ? -RETARD_FONTE : F.debut, meltV: F.v0, recul: 0, time: 0,
@@ -275,7 +285,7 @@ function creerPartie(opts = {}) {
     const saltos = p.flipsAir;
     if (saltos > 0) s += 200 * saltos;
     // au-delà de la vitesse maximale (bonus) : jusqu'à SURVITESSE de plus, qui s'estompe ensuite
-    s = Math.min(VMAX + (g.turboT > 0 ? BONUS_TURBO : 0) + SURVITESSE, Math.max(MIN_SPEED, s));
+    s = Math.min(VMAX + (g.turboT > 0 ? bonusTurbo : 0) + SURVITESSE, Math.max(MIN_SPEED, s));
     p.vx = s * tx; p.vy = s * ty; p.flipsAir = 0;
     on("atterrissage", { type, saltos, haut, x: p.x, y: p.y });
     if (type !== "tete" && haut > 420 && g.etat === "jeu") {   // grand saut réussi : bonus de turbo
@@ -303,25 +313,31 @@ function creerPartie(opts = {}) {
     const hold = enJeu && g.hold;
     const gr = G + (hold && !p.flipping ? DIVE : 0);
     if (g.turboT > 0) g.turboT -= dt;
+    // Crevasse remplie d'eau (niveaux construits) : on y perd sa vitesse, et on ne peut pas en décoller.
+    const eau = eaux.length ? eaux.find((e) => p.x > e[0] && p.x < e[1] && p.y < e[2] + 2) : null;
+    const dansEau = !!eau;
+    if (dansEau && !p.dansEau) on("eau", { x: p.x, y: eau[2] });
+    p.dansEau = dansEau;
 
     if (p.ground) {
       const d = terrain.pente(p.x), len = Math.hypot(1, d), tx = 1 / len, ty = d / len;
       let s = p.vx * tx + p.vy * ty;
       const avant = s;
       s += -gr * ty * dt;                       // la pente accélère ou freine
-      if (g.turboT > 0) s += 1500 * dt;
+      if (g.turboT > 0 && !construit) s += 1500 * dt;
       // Frottement : à plat ventre (on appuie) on glisse mieux ; une fois arrivé, on freine fort.
       s *= 1 - (!enJeu ? 0.9 : hold ? FROTTE_VENTRE : FROTTE) * dt;
       // Vitesse maximale souple : les pentes n'accélèrent pas au-delà, mais les bonus (glisse parfaite,
       // salto) la dépassent ; l'excès s'estompe peu à peu. Bien enchaîner fait donc aller plus vite.
-      const lim = VMAX + (g.turboT > 0 ? BONUS_TURBO : 0);
+      const lim = VMAX + (g.turboT > 0 ? bonusTurbo : 0);
       if (s > lim) { const b = Math.min(s, Math.max(avant, lim)); s = Math.max(lim, b - (b - lim) * ESTOMPE * dt); }
       s = Math.max(enJeu ? MIN_SPEED : 0, s);
+      if (dansEau) s = Math.min(s, VITESSE_EAU);
       p.vx = s * tx; p.vy = s * ty;
-      // Décollage : au sommet d'une bosse, si la vitesse est trop forte pour suivre la courbe.
+      // Décollage : au sommet d'une bosse, si la vitesse est trop forte pour suivre la courbe et qu'on n'appuie pas.
       const k = terrain.courbure(p.x) / Math.pow(1 + d * d, 1.5);
       const nx = p.x + p.vx * dt;
-      if (k < 0 && s * s * -k > gr * tx && !hold) {
+      if (k < 0 && s * s * -k > gr * tx && !hold && !dansEau) {
         p.ground = false; p.x = nx; p.y += p.vy * dt; p.flipsAir = 0; p.air = 0; p.maxH = 0;
         on("decollage", { vitesse: s });
       } else {
@@ -330,10 +346,11 @@ function creerPartie(opts = {}) {
       p.rot = Math.atan(d);
     } else {
       p.vy -= gr * dt;
-      if (g.turboT > 0) p.vx += 500 * dt;
-      const lim = VMAX + (g.turboT > 0 ? BONUS_TURBO : 0);
+      if (g.turboT > 0 && !construit) p.vx += 500 * dt;
+      const lim = VMAX + (g.turboT > 0 ? bonusTurbo : 0);
       p.vx *= 1 - 0.01 * dt;
       if (p.vx > lim) p.vx -= (p.vx - lim) * ESTOMPE * 0.5 * dt;
+      if (dansEau) { const v = Math.hypot(p.vx, p.vy); if (v > VITESSE_EAU) { p.vx *= VITESSE_EAU / v; p.vy *= VITESSE_EAU / v; } }
       p.x += p.vx * dt; p.y += p.vy * dt; p.air += dt;
       p.maxH = Math.max(p.maxH, p.y - terrain.h(p.x));
       const target = Math.atan2(p.vy, p.vx) * 0.6;
@@ -482,6 +499,16 @@ function niveau(monde, i, { brut = false } = {}) {
   return spec;
 }
 
+/** Niveaux construits (niveaux-construits.js, outils/construire-niveaux.mjs) : niveauConstruit("test", marge). */
+const CONSTRUITS = (typeof module !== "undefined" && module.exports)
+  ? (() => { try { return require("./niveaux-construits.js"); } catch (e) { return {}; } })()
+  : (racine.PINGO_CONSTRUITS || {});
+function niveauConstruit(id, marge) {
+  const N = CONSTRUITS[id];
+  if (!N) return null;
+  return { ...N, entrees: N.e, marge: marge || N.marge, monde: 0, numero: 0, poissons: {} };
+}
+
 /* ---------------- Terrain d'essai ----------------
    Pour régler le relief en jouant : hauteur des bosses, longueur des montées et des descentes, vitesse
    maximale, part de tremplins. Chaque valeur varie de ± 10 % d'une bosse à l'autre. */
@@ -508,7 +535,7 @@ function etoiles(score, total) {
 const Pingo = {
   PX_PER_M, G, DIVE, MIN_SPEED, MAX_SPEED, FISH_FOR_TURBO, POISSONS, MONDES, NIVEAUX_PAR_MONDE, SEUILS,
   PAS_ENTREE, PAS_TRACE, SOUS_PAS,
-  aleatoire, creerPartie, niveau, etoiles, rejouer, encoder, decoder, essai: creerEssai, ESSAIS,
+  aleatoire, creerPartie, niveau, etoiles, rejouer, encoder, decoder, essai: creerEssai, ESSAIS, niveauConstruit,
 };
 if (typeof module !== "undefined" && module.exports) module.exports = Pingo;
 else racine.Pingo = Pingo;
