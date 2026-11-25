@@ -85,8 +85,8 @@ const libres = await p.$$eval(".niv:not(.verrou)", (l) => l.map((b) => b.dataset
 ok(libres.length === 1 && libres[0] === "1-1" && (await p.$$(".niv")).length === 30, `carte : 30 niveaux, seul le 1-1 est ouvert (${libres.join(", ")})`);
 await p.click('[data-niveau="1-1"]');
 ok((await etat()) === "play" && (await p.isVisible("#goal-meter")), "niveau 1-1 lancé, jauge de l'igloo affichée");
-const niv = await p.evaluate(() => ({ fin: __pingo.g.finX, total: __pingo.g.total, aide: !!document }));
-ok(niv.fin === 800 * 20 && niv.total > 20, `niveau 1-1 : 800 m, ${niv.total} poissons à ramasser`);
+const niv = await p.evaluate(() => ({ fin: __pingo.g.finX, long: Pingo.niveau(1, 1).long, total: __pingo.g.total, parfait: __pingo.g.tempsParfait }));
+ok(niv.fin === niv.long * 20 && niv.total > 20 && niv.parfait > 5, `niveau 1-1 : ${niv.long} m, ${niv.total} poissons, parcours parfait en ${niv.parfait.toFixed(1)} s`);
 // on amène le pingouin juste avant le drapeau : il arrive à l'igloo
 await p.evaluate(() => { const g = __pingo.g; g.meltX = g.finX - 2500; g.p.x = g.finX - 200; g.p.y = g.terrain.h(g.p.x); g.p.ground = true; g.score = Math.ceil(g.total * 0.65); });
 await p.waitForFunction(() => __pingo.state === "win", null, { timeout: 10000 });
@@ -112,7 +112,7 @@ ok((await p.isVisible("#nouveau")) && (await p.textContent("#nouveau-titre")).in
 await p.click("#b-nouveau-ok");
 ok((await etat()) === "play" && (await p.evaluate(() => __pingo.g.fishes.some((f) => f.type === "bleu"))), "1-3 lancé, avec des poissons bleus");
 // perdu : la banquise rattrape le pingouin
-await p.evaluate(() => { const g = __pingo.g; g.meltX = g.p.x - 5; });
+await p.evaluate(() => { __pingo.g.time += 120; });   // très en retard sur le parcours parfait
 await p.waitForSelector("#over:not([hidden])", { timeout: 5000 });
 ok((await p.textContent("#again")) === "Réessayer" && (await p.textContent("#over-text")).includes("igloo"), "niveau perdu : « Plouf ! », distance jusqu'à l'igloo, « Réessayer »");
 await p.click("#again");
