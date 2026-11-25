@@ -15,7 +15,7 @@ clé publique du projet (`phc_…`) est dans le `jeu.json` de chaque jeu, rubriq
   *Web analytics* : `$session_id` (UUID v7 ; nouvelle session après 30 minutes en arrière-plan),
   `$current_url`, `$host`, `$pathname` (`/jeux/melopop/`…).
 - **Le joueur peut couper les statistiques** : Réglages › Statistiques anonymes (Mélo Pop), pause
-  (Ça Roule), Options (Max), lien sous « Glisser ! » (Pingo). Un dernier `setting_change { stats: false }`
+  (Ça Roule), Options (Max), lien sur l'accueil (Pingo). Un dernier `setting_change { stats: false }`
   part, puis plus rien.
 - **Les tests automatiques n'envoient rien** (navigateur piloté, `navigator.webdriver`). Les tests qui
   vérifient les statistiques interceptent eux-mêmes les requêtes : rien n'arrive dans PostHog.
@@ -52,8 +52,10 @@ clé publique du projet (`phc_…`) est dans le `jeu.json` de chaque jeu, rubriq
   **`death { level, id, x, y, why }`** à chaque chute, avec la position en cases : de quoi repérer les
   pièges qui tuent le plus. Aussi `level_skip`. Vidéos : `place` = `passer`, `amulette`, `relance`.
   Identifiant et réglage dans `maxjade.stats` (à part de `temple-progres`).
-- **Pingo Glisse** : `session_start { best }`, `run_start { run, best }`,
-  `run_end { run, m, fish, flips, turbos, record, ms }`.
+- **Pingo Glisse** : `session_start { best, etoiles }`. Mode sans fin : `run_start { run, best }`,
+  `run_end { run, m, fish, score, flips, turbos, record, ms }`. Aventure : `level_*` avec
+  `mode: "aventure"`, `level` (`1-1` à `3-10`), `monde` ; `level_fail { m, fish }` ;
+  `level_win { etoiles, fish, total, flips }` ; `level_quit` (`home`, `menu`, `restart`).
 
 ## Séparer les jeux
 
@@ -88,7 +90,7 @@ Dans PostHog :
   - niveaux où l'on abandonne : `level_quit`, ventilé par `level` et `reason` ;
   - pièges de Max : `death`, ventilé par `id` puis `x` ;
   - temps passé : moyenne de `ms` sur `level_win` ;
-  - Pingo : distribution de `m` sur `run_end`.
+  - Pingo : distribution de `m` sur `run_end`, et `level_fail` ventilé par `level` (la fonte est-elle trop rapide ?).
 - Testeurs : le nombre de joueurs distincts est celui des `distinct_id` différents (un par appareil et
   par navigateur).
 
