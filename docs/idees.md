@@ -31,4 +31,4 @@ fou, banquise, laboratoire d'Archibald.
 
 ## Pingo Glisse (prototype)
 
-Pistes pour en faire un jeu complet (monétisation, missions, cosmétiques) : `jeux/pingo/CLAUDE.md`.
+Pistes pour en faire un jeu complet (monétisation, missions, cosmétiques, nouveaux mondes) : `jeux/pingo/CLAUDE.md`.

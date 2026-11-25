@@ -1,9 +1,9 @@
 {
   "id": "pingo",
   "nom": "Pingo Glisse",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "statut": "prototype",
-  "description": "Prototype : un pingouin glisse sur des collines enneigées, la banquise fond derrière lui.",
+  "description": "Prototype : un pingouin glisse sur des collines enneigées, la banquise fond derrière lui. Mode sans fin et aventure en 30 niveaux.",
   "statistiques": {
     "posthog": "phc_tYQQxGun3aD3jRuJY8dvLmE2STkP62vTh5jNDJuQ4kXr",
     "hote": "https://eu.i.posthog.com"

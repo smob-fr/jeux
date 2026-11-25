@@ -4,19 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b2340">
-<!-- Prototype Pingo Glisse, repris tel quel de l'artefact claude.ai (EkNfEF2iAKN1aCmSrsXfkF). -->
+<!-- Pingo Glisse. Le moteur (collines, physique, niveaux) est dans moteur.js ; ici l'interface, le dessin et les sons. -->
 <title>Pingo Glisse</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap">
 <style>
-/* Mise en page : un seul écran plein cadre, le jeu en canvas, les menus en surimpression. */
+/* Mise en page : un seul écran plein cadre, le jeu en canvas, les écrans en surimpression. */
 :root {
   color-scheme: dark;
   --ice: #eaf6ff;          /* neige, texte principal */
   --deep: #0b2340;         /* nuit polaire, fonds des panneaux */
   --sea: #0f4c81;          /* eau libre */
   --scarf: #ff5a4e;        /* écharpe du pingouin, accent */
-  --fish: #ffc93c;         /* poissons, jauge turbo */
+  --fish: #ffc93c;         /* poissons, étoiles, jauge turbo */
+  --blue-fish: #4fc3ff;
   --frost: rgba(234, 246, 255, .72);
   --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
 }
@@ -25,30 +26,41 @@ html, body { height: 100%; margin: 0; overflow: hidden; }
 body { background: var(--deep); color: var(--ice); font-family: var(--display); user-select: none; -webkit-user-select: none; touch-action: none; }
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
+/* ---------- bandeau pendant la partie ---------- */
 .hud { position: fixed; z-index: 2; left: 0; right: 0; top: 0; pointer-events: none;
   padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
-  display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: start; }
-.dist { font-size: 34px; font-weight: 800; line-height: 1; text-shadow: 0 3px 0 rgba(11, 35, 64, .45); font-variant-numeric: tabular-nums; }
+  display: grid; grid-template-columns: 1fr auto auto; gap: 6px 12px; align-items: start; }
+.dist { font-size: 34px; font-weight: 800; line-height: 1; text-shadow: 0 3px 0 rgba(11, 35, 64, .45); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dist small { font-size: 18px; font-weight: 700; opacity: .8; }
-.fishes { font-size: 20px; font-weight: 700; text-align: right; text-shadow: 0 2px 0 rgba(11, 35, 64, .45); }
+.fishes { font-size: 20px; font-weight: 700; text-align: right; text-shadow: 0 2px 0 rgba(11, 35, 64, .45); line-height: 1.2; white-space: nowrap; }
+.fishes .mini { display: block; font-size: 15px; letter-spacing: .1em; color: rgba(255, 255, 255, .45); }
+.fishes .mini b { color: var(--fish); font-weight: 800; }
+.pause-btn { pointer-events: auto; width: 44px; height: 44px; margin-top: -4px; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(11, 35, 64, .45); box-shadow: inset 0 0 0 2px rgba(234, 246, 255, .5); color: #fff; font: 800 16px var(--display); display: grid; place-items: center; }
+.pause-btn:focus-visible { outline: 3px solid var(--fish); outline-offset: 2px; }
 .meters { grid-column: 1 / -1; display: flex; gap: 10px; }
 .meter { flex: 1; min-width: 0; }
-.meter label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; text-shadow: 0 1px 0 rgba(0,0,0,.3); }
+.meter label { display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; text-shadow: 0 1px 0 rgba(0,0,0,.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar { height: 10px; border-radius: 6px; background: rgba(11, 35, 64, .45); overflow: hidden; box-shadow: inset 0 0 0 2px rgba(234, 246, 255, .35); }
 .bar i { display: block; height: 100%; width: 50%; border-radius: 6px; transition: width .15s linear; }
 #melt-bar i { background: linear-gradient(90deg, var(--scarf), #ffb26b); }
 #melt-bar.danger { animation: blink .5s infinite; }
 #turbo-bar i { background: linear-gradient(90deg, var(--fish), #fff3a6); }
+#goal-bar i { background: linear-gradient(90deg, #7fe0a6, #d8ffe6); }
 
 .toast { position: fixed; z-index: 3; left: 50%; top: 32%; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
   font-size: 30px; font-weight: 800; color: #fff; text-shadow: 0 3px 0 var(--sea), 0 0 18px rgba(11, 35, 64, .6); opacity: 0; }
 .toast.show { animation: toast 1.1s ease-out forwards; }
 
+/* ---------- écrans ---------- */
 .panel { position: fixed; z-index: 5; inset: 0; display: grid; place-items: center; background: rgba(6, 22, 44, .55); backdrop-filter: blur(3px);
-  padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  padding-block: calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.panel.clair { background: rgba(6, 22, 44, .18); backdrop-filter: none; }
+.panel.defile { place-items: start center; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; }
 .card { width: 100%; max-width: 380px; text-align: center; background: linear-gradient(180deg, #164a7c, var(--deep)); border-radius: 26px; padding: 22px 20px 20px;
-  box-shadow: 0 0 0 3px var(--ice), 0 20px 50px rgba(0, 0, 0, .5); }
-.card h1 { margin: 0; font-size: 48px; line-height: .95; font-weight: 800; letter-spacing: .01em; text-wrap: balance; }
+  box-shadow: 0 0 0 3px var(--ice), 0 20px 50px rgba(0, 0, 0, .5); box-sizing: border-box; }
+.card h1 { margin: 0; font-size: 52px; line-height: .95; font-weight: 800; letter-spacing: .01em; text-wrap: balance; }
 .card h1 span { color: var(--scarf); }
 .card h2 { margin: 0 0 6px; font-size: 32px; font-weight: 800; }
 .card p { margin: 8px 0; line-height: 1.4; color: var(--frost); font-weight: 500; }
@@ -57,23 +69,82 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
 .how b { display: grid; place-items: center; height: 40px; border-radius: 10px; background: rgba(234, 246, 255, .14); font-size: 13px; line-height: 1.1; text-align: center; }
 .how span { font-size: 15px; line-height: 1.3; color: var(--ice); }
 .btn { display: block; width: 100%; margin-top: 14px; padding: 13px 18px; border: 0; border-radius: 999px; cursor: pointer;
-  font: 800 22px var(--display); color: #fff; background: linear-gradient(180deg, #ff7d6f, var(--scarf)); box-shadow: 0 5px 0 #b8322a; }
+  font: 800 22px var(--display); line-height: 1.1; color: #fff; background: linear-gradient(180deg, #ff7d6f, var(--scarf)); box-shadow: 0 5px 0 #b8322a; }
+.btn small { display: block; font-size: 14px; font-weight: 700; opacity: .9; }
 .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #b8322a; }
 .btn:focus-visible { outline: 3px solid var(--fish); outline-offset: 3px; }
+.btn.bleu { background: linear-gradient(180deg, #5fc0ff, #2a86d6); box-shadow: 0 5px 0 #1a5a9a; }
+.btn.bleu:active { box-shadow: 0 2px 0 #1a5a9a; }
+.btn.sobre { background: rgba(234, 246, 255, .12); box-shadow: inset 0 0 0 2px rgba(234, 246, 255, .4); font-size: 18px; padding: 10px 16px; }
+.btn.sobre:active { transform: translateY(1px); box-shadow: inset 0 0 0 2px rgba(234, 246, 255, .4); }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.duo .btn { margin-top: 10px; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 4px; }
 .stats div { background: rgba(234, 246, 255, .1); border-radius: 14px; padding: 8px 4px; }
 .stats b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
 .stats small { font-size: 12px; color: var(--frost); text-transform: uppercase; letter-spacing: .06em; }
 .record { color: var(--fish); font-weight: 800; }
 .proto { font-size: 12px; color: var(--frost); margin-top: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.rangee { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin-top: 12px; }
+.lien { min-height: 36px; border: 0; background: none; color: var(--frost); font: 600 14px var(--display); text-decoration: underline; cursor: pointer; padding: 4px 2px; }
+.lien:focus-visible { outline: 2px solid var(--fish); }
+.stats-btn { font-size: 12px; letter-spacing: .04em; }
+
+/* ---------- accueil ---------- */
+#accueil .card { padding-top: 26px; }
+.sous-titre { font-size: 17px; }
+
+/* ---------- carte de l'aventure ---------- */
+.carte { width: 100%; max-width: 440px; }
+.carte-tete { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin-bottom: 12px; }
+.carte-tete h2 { margin: 0; font-size: 30px; text-align: center; text-shadow: 0 3px 0 rgba(11, 35, 64, .5); }
+.retour { width: 46px; height: 46px; border: 0; border-radius: 50%; cursor: pointer; font: 800 22px var(--display); color: #fff;
+  background: rgba(11, 35, 64, .6); box-shadow: inset 0 0 0 2px rgba(234, 246, 255, .55); }
+.total { font-weight: 800; color: var(--fish); white-space: nowrap; font-size: 18px; text-shadow: 0 2px 0 rgba(11, 35, 64, .5); }
+.monde { border-radius: 22px; padding: 14px 14px 16px; margin-bottom: 14px; box-shadow: 0 0 0 3px rgba(234, 246, 255, .85), 0 12px 30px rgba(0, 0, 0, .35); }
+.monde.m1 { background: linear-gradient(180deg, #3f9ee6, #1b5d9e); }
+.monde.m2 { background: linear-gradient(180deg, #e8796f, #8a3b62); }
+.monde.m3 { background: linear-gradient(180deg, #1c3570, #0b1838); }
+.monde-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.monde h3 { margin: 0; font-size: 22px; line-height: 1.1; }
+.monde p { margin: 4px 0 10px; font-size: 14px; line-height: 1.3; color: var(--frost); }
+.grille { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.niv { aspect-ratio: 1; min-height: 52px; border: 0; border-radius: 16px; cursor: pointer; padding: 2px 0 0; display: grid; place-items: center; align-content: center; gap: 0;
+  font: 800 22px var(--display); line-height: 1; color: var(--deep); background: linear-gradient(180deg, #ffffff, #cfe9fb); box-shadow: 0 4px 0 rgba(11, 35, 64, .45); }
+.niv:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(11, 35, 64, .45); }
+.niv:focus-visible { outline: 3px solid var(--fish); outline-offset: 2px; }
+.niv .et { font-size: 11px; letter-spacing: 1px; color: rgba(11, 35, 64, .25); margin-top: 2px; }
+.niv .et b { color: #f0a800; font-weight: 800; }
+.niv.fait { background: linear-gradient(180deg, #fff8dc, #ffe39a); }
+.niv.actuel { background: linear-gradient(180deg, #ff9b8f, var(--scarf)); color: #fff; animation: appel 1.4s ease-in-out infinite; }
+.niv.actuel .et { color: rgba(255, 255, 255, .5); }
+.niv.verrou { background: rgba(234, 246, 255, .18); color: rgba(234, 246, 255, .55); box-shadow: none; cursor: default; font-size: 16px; }
+.verrou-monde { font-size: 14px; color: var(--frost); margin: 8px 0 0; }
+
+/* ---------- victoire ---------- */
+.etoiles { display: flex; justify-content: center; gap: 6px; margin: 6px 0 2px; font-size: 54px; line-height: 1; }
+.etoiles span { color: rgba(234, 246, 255, .2); text-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.etoiles span.on { color: var(--fish); animation: pop .5s cubic-bezier(.3, 1.6, .5, 1) both; }
+.etoiles span:nth-child(2) { transform: translateY(-10px); font-size: 64px; }
+.etoiles span:nth-child(2).on { animation-delay: .25s; }
+.etoiles span:nth-child(3).on { animation-delay: .5s; }
+.objectif { font-size: 14px; }
+.nouveau-tag { display: inline-block; padding: 2px 12px; border-radius: 999px; background: var(--fish); color: var(--deep); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: 14px; }
+#nouveau canvas { display: block; margin: 8px auto 0; }
 
 @keyframes toast { 0% { opacity: 0; transform: translate(-50%, -30%) scale(.6); } 20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -80%) scale(1); } }
 @keyframes blink { 50% { opacity: .45; } }
-@media (prefers-reduced-motion: reduce) { .toast.show { animation-duration: .6s; } #melt-bar.danger { animation: none; } }
-.stats-btn { margin-top: 6px; border: 0; background: none; color: var(--frost); font: 600 12px var(--display); letter-spacing: .04em; text-decoration: underline; cursor: pointer; }
+@keyframes appel { 50% { transform: scale(1.07); } }
+@keyframes pop { 0% { transform: scale(0) rotate(-40deg); } 100% { transform: scale(1) rotate(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .toast.show { animation-duration: .6s; }
+  #melt-bar.danger, .niv.actuel { animation: none; }
+  .etoiles span.on { animation: none; }
+}
 </style>
-<!-- kit commun du dépôt (statistiques anonymes), installé par npm run build ; facultatif -->
+<!-- kit commun du dépôt (sauvegarde, statistiques anonymes), installé par npm run build ; facultatif -->
 <script src="kit/kit.js"></script>
+<script src="moteur.js"></script>
 </head>
 <body>
 
@@ -82,29 +153,82 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
 <div class="hud" id="hud" hidden>
   <div class="dist" id="dist">0<small> m</small></div>
   <div class="fishes" id="fishes">🐟 0</div>
+  <button class="pause-btn" id="b-pause" type="button" aria-label="Pause">❚❚</button>
   <div class="meters">
-    <div class="meter"><label>Banquise qui fond</label><div class="bar" id="melt-bar"><i></i></div></div>
+    <div class="meter"><label>Banquise</label><div class="bar" id="melt-bar"><i></i></div></div>
     <div class="meter"><label>Turbo</label><div class="bar" id="turbo-bar"><i style="width:0%"></i></div></div>
+    <div class="meter" id="goal-meter" hidden><label>Igloo</label><div class="bar" id="goal-bar"><i style="width:0%"></i></div></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 
-<div class="panel" id="start">
+<!-- Accueil -->
+<div class="panel clair" id="accueil">
   <div class="card">
     <h1>Pingo <span>Glisse</span></h1>
-    <p>La banquise fond derrière toi : glisse le plus loin possible !</p>
+    <p class="sous-titre">La banquise fond derrière toi : glisse le plus loin possible !</p>
+    <button class="btn" id="b-aventure" type="button">Aventure<small id="aventure-info">3 mondes, 30 niveaux</small></button>
+    <button class="btn bleu" id="b-sansfin" type="button">Sans fin<small id="sansfin-info">Va le plus loin possible</small></button>
+    <div class="rangee">
+      <button class="lien" id="b-comment" type="button">Comment jouer</button>
+      <button class="lien" id="b-son" type="button">Son : oui</button>
+    </div>
+    <button class="lien stats-btn" id="stats-btn" type="button" hidden></button>
+    <p class="proto">Prototype</p>
+  </div>
+</div>
+
+<!-- Comment jouer -->
+<div class="panel" id="comment" hidden>
+  <div class="card">
+    <h2>Comment jouer</h2>
     <div class="how">
       <div><b>Appui long</b><span>Plonge dans les <strong>descentes</strong> pour prendre de la vitesse.</span></div>
       <div><b>Relâche</b><span>Laisse-toi <strong>décoller</strong> en haut des bosses.</span></div>
       <div><b>Touche en l'air</b><span>Fais un <strong>salto</strong> : bonus de vitesse si tu retombes sur le ventre.</span></div>
-      <div><b>🐟 × 8</b><span>Les poissons remplissent le <strong>turbo</strong> et repoussent la fonte.</span></div>
+      <div><b>🐟 × 8</b><span>Les poissons remplissent le <strong>turbo</strong> et repoussent la fonte. Les <strong>bleus</strong> (×3) et les <strong>dorés</strong> (×5) sont tout là-haut.</span></div>
     </div>
-    <button class="btn" id="play" type="button">Glisser !</button>
-    <p class="proto">Prototype</p>
-    <button class="stats-btn" id="stats-btn" type="button" hidden></button>
+    <button class="btn" id="b-comment-ok" type="button">J'ai compris</button>
   </div>
 </div>
 
+<!-- Carte de l'aventure -->
+<div class="panel defile" id="carte" hidden>
+  <div class="carte">
+    <div class="carte-tete">
+      <button class="retour" id="b-carte-retour" type="button" aria-label="Retour à l'accueil">←</button>
+      <h2>Aventure</h2>
+      <span class="total" id="carte-total">★ 0</span>
+    </div>
+    <div id="mondes"></div>
+  </div>
+</div>
+
+<!-- Fiche « Nouveau ! » -->
+<div class="panel" id="nouveau" hidden>
+  <div class="card">
+    <span class="nouveau-tag">Nouveau !</span>
+    <canvas id="nouveau-art" width="160" height="90"></canvas>
+    <h2 id="nouveau-titre"></h2>
+    <p id="nouveau-texte"></p>
+    <button class="btn" id="b-nouveau-ok" type="button">C'est parti !</button>
+  </div>
+</div>
+
+<!-- Pause -->
+<div class="panel" id="pause" hidden>
+  <div class="card">
+    <h2>Pause</h2>
+    <p id="pause-texte"></p>
+    <button class="btn" id="b-reprendre" type="button">Reprendre</button>
+    <div class="duo">
+      <button class="btn sobre" id="b-recommencer" type="button">Recommencer</button>
+      <button class="btn sobre" id="b-quitter" type="button">Quitter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Plouf (perdu) -->
 <div class="panel" id="over" hidden>
   <div class="card">
     <h2 id="over-title">Plouf !</h2>
@@ -116,15 +240,36 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
     </div>
     <p id="s-best"></p>
     <button class="btn" id="again" type="button">Rejouer</button>
+    <button class="btn sobre" id="over-menu" type="button">Accueil</button>
+  </div>
+</div>
+
+<!-- Niveau réussi -->
+<div class="panel" id="win" hidden>
+  <div class="card">
+    <h2 id="win-title">Bravo !</h2>
+    <div class="etoiles" id="win-stars"><span>★</span><span>★</span><span>★</span></div>
+    <p id="win-text"></p>
+    <p class="objectif" id="win-goal"></p>
+    <button class="btn" id="b-suivant" type="button">Niveau suivant</button>
+    <div class="duo">
+      <button class="btn sobre" id="b-rejouer" type="button">Rejouer</button>
+      <button class="btn sobre" id="b-carte" type="button">Carte</button>
+    </div>
   </div>
 </div>
 
 <script>
 (() => {
 "use strict";
+const P = window.Pingo;
+const { PX_PER_M, FISH_FOR_TURBO } = P;
 const cv = document.getElementById("game");
 const ctx = cv.getContext("2d");
 const $ = (id) => document.getElementById(id);
+const nf = (n) => Math.round(n).toLocaleString("fr-FR");
+const reduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const POLICE = '"Baloo 2", "Trebuchet MS", system-ui, sans-serif';
 let W = 0, H = 0, DPR = 1;
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -134,229 +279,176 @@ function resize() {
 addEventListener("resize", resize);
 resize();
 
-/* ---------------- Réglages de la physique (unités : pixels du monde) ---------------- */
-const PX_PER_M = 20;
-const G = 1150;          // gravité
-const DIVE = 2600;       // poussée supplémentaire quand on appuie
-const MIN_SPEED = 230, MAX_SPEED = 2300;
-const FISH_FOR_TURBO = 8;
-
-/* ---------------- Collines (interpolation en cosinus entre sommets et creux) ---------------- */
-let pts = [];
-function resetHills() {
-  pts = [{ x: -1200, y: 0 }, { x: -500, y: 40 }, { x: 0, y: 120 }];
-  extendHills(4000);
-}
-function extendHills(toX) {
-  while (pts[pts.length - 1].x < toX) {
-    const last = pts[pts.length - 1];
-    const m = Math.max(0, last.x / PX_PER_M);
-    const high = pts.length % 2 === 0;
-    const amp = 90 + Math.min(m / 9, 230) + Math.random() * 60;
-    const width = 320 + Math.random() * 260 + Math.min(m / 6, 260);
-    pts.push({ x: last.x + width, y: high ? amp : -amp * (0.7 + Math.random() * 0.5) });
-  }
-  if (pts.length > 400) { pts.splice(0, 100); segCache = 0; }
-}
-let segCache = 0;
-function seg(x) {
-  let i = Math.min(segCache, pts.length - 2);
-  while (i > 0 && pts[i].x > x) i--;
-  while (i < pts.length - 2 && pts[i + 1].x <= x) i++;
-  segCache = i;
-  return i;
-}
-function hAt(x) {
-  const i = seg(x), a = pts[i], b = pts[i + 1];
-  const t = Math.min(1, Math.max(0, (x - a.x) / (b.x - a.x)));
-  return a.y + (b.y - a.y) * (1 - Math.cos(Math.PI * t)) / 2;
-}
-function slopeAt(x) {
-  const i = seg(x), a = pts[i], b = pts[i + 1], w = b.x - a.x;
-  const t = Math.min(1, Math.max(0, (x - a.x) / w));
-  return (b.y - a.y) * Math.PI * Math.sin(Math.PI * t) / (2 * w);
-}
-function curvAt(x) {
-  const i = seg(x), a = pts[i], b = pts[i + 1], w = b.x - a.x;
-  const t = Math.min(1, Math.max(0, (x - a.x) / w));
-  return (b.y - a.y) * Math.PI * Math.PI * Math.cos(Math.PI * t) / (2 * w * w);
-}
-
-/* ---------------- État de la partie ---------------- */
-/* ---------------- Statistiques anonymes (kit commun, PostHog) ----------------
-   Identifiant aléatoire, pas de cookie, désactivables sur l'écran de départ. Sans le kit
-   (index.html ouvert directement), le jeu marche pareil, sans statistiques. */
+/* ---------------- Sauvegarde ----------------
+   pingo.v1 : uid et stats (statistiques), best (record du mode sans fin, repris de l'ancienne clé
+   pingo.best), son, niveaux { "1-1": étoiles }, vus { fiches et aides déjà montrées }.
+   Sans le kit (index.html ouvert directement), une version minimale fait la même chose. */
 const K = window.Kit;
-const statsSave = K ? K.creerSauvegarde({ cle: "pingo.v1", defauts: () => ({ uid: "", stats: true }) }) : null;
+const CLE = "pingo.v1";
+const defauts = () => ({ uid: "", stats: true, best: 0, son: true, niveaux: {}, vus: {} });
+const completer = (d) => {
+  if (!d.niveaux || typeof d.niveaux !== "object") d.niveaux = {};
+  if (!d.vus || typeof d.vus !== "object") d.vus = {};
+  if (typeof d.best !== "number") d.best = 0;
+  try { d.best = Math.max(d.best, +localStorage.getItem("pingo.best") || 0); } catch (e) { /* stockage indisponible */ }
+};
+const sauvegarde = K ? K.creerSauvegarde({ cle: CLE, defauts, completer }) : (() => {
+  const data = defauts();
+  try { const lu = JSON.parse(localStorage.getItem(CLE) || "null"); if (lu && typeof lu === "object") Object.assign(data, lu); } catch (e) { /* illisible */ }
+  completer(data);
+  return { data, enregistrer() { try { localStorage.setItem(CLE, JSON.stringify(data)); } catch (e) { /* ok */ } } };
+})();
+const save = sauvegarde.data;
+const persist = () => sauvegarde.enregistrer();
+
+/* ---------------- Statistiques anonymes (kit commun, PostHog) ---------------- */
 const stats = (event, props) => { if (K) K.Stats.track(event, props); };
-let runs = 0, turbos = 0, runT0 = 0;
+let runs = 0, runT0 = 0;
 if (K) {
-  K.Stats.init({ data: statsSave.data, enregistrer: () => statsSave.enregistrer(), build: K.config().version });
+  K.Stats.init({ data: save, enregistrer: persist, build: K.config().version });
   const btn = $("stats-btn");
-  const maj = () => { btn.hidden = !K.Stats.disponible; btn.textContent = "Statistiques anonymes : " + (statsSave.data.stats !== false ? "activées" : "coupées"); };
-  btn.onclick = () => { K.Stats.activer(statsSave.data.stats === false); maj(); };
+  const maj = () => { btn.hidden = !K.Stats.disponible; btn.textContent = "Statistiques anonymes : " + (save.stats !== false ? "activées" : "coupées"); };
+  btn.onclick = () => { K.Stats.activer(save.stats === false); maj(); };
   maj();
 }
+stats("session_start", { best: save.best, etoiles: totalEtoiles() });
 
-let state = "menu";
-let p, meltX, meltV, fishes, flips, fishCount, turbo, turboT, cam, particles, time, best = 0, hold = false, pressT = 0;
-try { best = +localStorage.getItem("pingo.best") || 0; } catch (e) { /* stockage indisponible */ }
-stats("session_start", { best });
+/* ---------------- Sons (Web Audio, générés) ---------------- */
+const Sound = (() => {
+  let ac = null;
+  const ctxA = () => {
+    if (!ac) { const A = window.AudioContext || window.webkitAudioContext; if (A) ac = new A(); }
+    if (ac && ac.state === "suspended" && !document.hidden) ac.resume();
+    return ac;
+  };
+  function tone(f, d, type = "sine", v = 0.12, slide = 0, delai = 0) {
+    if (!save.son) return;
+    const a = ctxA(); if (!a) return;
+    const t = a.currentTime + delai, o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(f * slide, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + 0.05);
+  }
+  document.addEventListener("visibilitychange", () => { if (!ac) return; if (document.hidden) ac.suspend(); else ac.resume(); });
+  return {
+    unlock: () => ctxA(),
+    ding: (k = 1) => { tone(880 * k, 0.18, "triangle", 0.1); tone(1320 * k, 0.12, "sine", 0.05); },
+    gros: (k = 1) => { [1, 1.25, 1.5, 2].forEach((m, i) => tone(660 * k * m, 0.16, "triangle", 0.09, 0, i * 0.06)); },
+    whoosh: () => tone(300, 0.25, "sine", 0.06, 2.2),
+    bump: () => tone(140, 0.2, "triangle", 0.15, 0.5),
+    turbo: () => { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.15, "square", 0.05, 0, i * 0.07)); },
+    splash: () => { tone(400, 0.5, "sine", 0.15, 0.25); tone(90, 0.6, "triangle", 0.12, 0.5); },
+    ploc: () => tone(260 + Math.random() * 120, 0.12, "sine", 0.03, 0.5),
+    victoire: () => { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, i > 3 ? 0.35 : 0.16, "triangle", 0.09, 0, i * 0.11)); },
+    clic: () => tone(700, 0.06, "triangle", 0.05),
+  };
+})();
 
-function newGame() {
-  resetHills();
-  p = { x: 0, y: hAt(0), vx: 380, vy: 0, ground: true, rot: 0, flip: 0, flipping: false, flipsAir: 0, air: 0, maxH: 0 };
-  meltX = -1100; meltV = 170;
-  fishes = []; spawnFishUntil(4000, 500);
-  flips = 0; fishCount = 0; turbo = 0; turboT = 0; time = 0;
-  particles = [];
-  cam = { x: p.x - W * 0.3, bottom: p.y - 260, scale: baseScale() };
+/* ---------------- Partie en cours ----------------
+   ecran : accueil, carte (démonstration en arrière-plan), jeu, pause, fin.
+   g : la partie du moteur (démonstration sans fonte dans les menus). */
+let ecran = "accueil";
+let g = null, niveauEnCours = null;
+let hold = false, pressT = 0;
+let particles = [], chunks = [], floes = [], seaY = -200, chunkT = 0;
+let chute = null;            // le pingouin qui tombe à l'eau
+let dansIgloo = false;
+let aide = null;             // aides de rythme ou de salto
+let camera = null;
+
+function demarrerMoteur(opts) {
+  g = P.creerPartie({ ...opts, on: surEvenement });
+  particles = []; chunks = []; floes = []; chute = null; dansIgloo = false;
+  seaY = g.terrain.h(g.meltX) - 80;
+  camera = { x: g.p.x - W * 0.3, bottom: g.p.y - 260, scale: baseScale(), fx: 0.3 };
 }
 function baseScale() { return Math.min(1.15, Math.max(0.55, H / 820)); }
+function demo() { demarrerMoteur({ fonte: false }); }
 
-let lastFishX = 0;
-function spawnFishUntil(toX, from) {
-  let x = from !== undefined ? from : lastFishX;
-  while (x < toX) {
-    x += 260 + Math.random() * 520;
-    const n = Math.random() < 0.35 ? 3 : 1; // parfois une petite rangée de poissons dans les airs
-    const lift = n > 1 ? 160 + Math.random() * 160 : 40 + Math.random() * 120;
-    for (let k = 0; k < n; k++) fishes.push({ x: x + k * 70, y: hAt(x + k * 70) + lift + k * 12, got: false, wob: Math.random() * 6 });
-    x += (n - 1) * 70;
-  }
-  lastFishX = x;
-}
-
-/* ---------------- Commandes ---------------- */
-function down(e) {
-  if (state !== "play") return;
-  e && e.preventDefault();
-  hold = true; pressT = performance.now();
-  Sound.unlock();
-}
-function up() {
-  if (state !== "play") return;
-  const quick = performance.now() - pressT < 170;
-  hold = false;
-  if (quick && !p.ground && !p.flipping && p.y - hAt(p.x) > 45) { p.flipping = true; p.flip = 0; Sound.whoosh(); }
-}
-cv.addEventListener("pointerdown", down);
-addEventListener("pointerup", up);
-addEventListener("pointercancel", () => (hold = false));
-addEventListener("keydown", (e) => { if (e.code === "Space" && !e.repeat) down(e); });
-addEventListener("keyup", (e) => { if (e.code === "Space") up(); });
-
-/* ---------------- Physique ---------------- */
-function step(dt) {
-  time += dt;
-  extendHills(p.x + 5000);
-  if (lastFishX < p.x + 4000) spawnFishUntil(p.x + 4000);
-
-  const g = G + (hold && !p.flipping ? DIVE : 0);
-  if (turboT > 0) turboT -= dt;
-
-  if (p.ground) {
-    const d = slopeAt(p.x), len = Math.hypot(1, d), tx = 1 / len, ty = d / len;
-    let s = p.vx * tx + p.vy * ty;
-    s += -g * ty * dt;                       // la pente accélère ou freine
-    if (turboT > 0) s += 1500 * dt;
-    s *= 1 - 0.04 * dt;                      // frottement léger de la neige
-    s = Math.min(MAX_SPEED, Math.max(MIN_SPEED, s));
-    p.vx = s * tx; p.vy = s * ty;
-    // Décollage : au sommet d'une bosse, si la vitesse est trop forte pour suivre la courbe.
-    const k = curvAt(p.x) / Math.pow(1 + d * d, 1.5);
-    const nx = p.x + p.vx * dt;
-    if (k < 0 && s * s * -k > g * tx && !hold) {
-      p.ground = false; p.x = nx; p.y += p.vy * dt; p.flipsAir = 0; p.air = 0; p.maxH = 0;
-      if (s > 700) Sound.whoosh();
-    } else {
-      p.x = nx; p.y = hAt(p.x);
+/* ---------------- Événements du moteur : sons, messages, étincelles ---------------- */
+function surEvenement(type, d) {
+  if (ecran !== "jeu") return;     // démonstration : silencieuse
+  const p = g.p;
+  switch (type) {
+    case "poisson": {
+      const f = d.f, gold = f.type === "or";
+      for (let k = 0; k < (d.valeur > 1 ? 18 : 8); k++) particles.push({ x: f.x, y: f.y, vx: (Math.random() - .5) * (d.valeur > 1 ? 480 : 300), vy: (Math.random() - .2) * 320, life: .7, r: d.valeur > 1 ? 4 : 3, c: f.type === "bleu" ? "blue" : "gold" });
+      if (d.valeur > 1) {
+        particles.push({ x: f.x, y: f.y + 30, vx: 0, vy: 90, life: 1.1, txt: "+" + d.valeur, c: gold ? "gold" : "blue", taille: 30 });
+        toast(gold ? "Poisson d'or !" : "Poisson bleu !");
+        Sound.gros(gold ? 1.25 : 1);
+      } else Sound.ding(1 + (g.turbo % FISH_FOR_TURBO) * 0.06);
+      break;
     }
-    p.rot = Math.atan(d);
-    if (s > 500 && Math.random() < 0.6) particles.push({ x: p.x - 18, y: p.y + 4, vx: -60 - Math.random() * 80, vy: 60 + Math.random() * 120, life: 0.5, r: 3 + Math.random() * 3, c: "snow" });
-  } else {
-    p.vy -= g * dt;
-    if (turboT > 0) p.vx += 500 * dt;
-    p.vx = Math.min(MAX_SPEED, p.vx * (1 - 0.01 * dt));
-    p.x += p.vx * dt; p.y += p.vy * dt; p.air += dt;
-    p.maxH = Math.max(p.maxH, p.y - hAt(p.x));
-    const target = Math.atan2(p.vy, p.vx) * 0.6;
-    p.rot += (target - p.rot) * Math.min(1, dt * 5);
-    if (p.flipping) {
-      p.flip += dt * Math.PI * 2 / 0.55;
-      if (p.flip >= Math.PI * 2) { p.flip = 0; p.flipping = false; p.flipsAir++; flips++; Sound.ding(1.2); }
-    }
-    if (p.y <= hAt(p.x)) land();
+    case "turbo": toast("Turbo ! 🚀"); Sound.turbo(); break;
+    case "decollage": if (d.vitesse > 700) Sound.whoosh(); break;
+    case "salto": Sound.whoosh(); if (aide) aide.saltoFait = true; break;
+    case "saltoReussi": Sound.ding(1.2); break;
+    case "atterrissage":
+      if (d.type === "tete") { toast("Aïe, sur la tête !"); Sound.bump(); splash(p.x, p.y, 16, "snow"); }
+      else if (d.type === "parfait") { if (!d.saltos) toast("Glisse parfaite !"); Sound.ding(1.5); }
+      else if (d.type === "boum") { toast("Boum !"); Sound.bump(); splash(p.x, p.y, 10, "snow"); }
+      if (d.saltos > 0 && d.type !== "tete") toast(d.saltos > 1 ? `Double salto ! ×${d.saltos}` : "Salto !");
+      break;
+    case "hautVol":
+      particles.push({ x: p.x, y: p.y + 90, vx: 0, vy: 70, life: 1.2, txt: "Haut vol ! +2 turbo", c: "gold", taille: 22 });
+      Sound.gros(1.5);
+      break;
+    case "plouf": perdu(); break;
+    case "gagne": gagne(); break;
   }
-
-  // La fonte avance de plus en plus vite, mais ne reste jamais trop loin.
-  meltV = Math.min(1500, 190 + time * 14);
-  meltX = Math.max(meltX + meltV * dt, p.x - 1500);
-  if (state === "play" && meltX >= p.x - 12) return gameOver();
-
-  // Poissons
-  for (const f of fishes) {
-    if (f.got) continue;
-    if (Math.hypot(f.x - p.x, f.y - (p.y + 18)) < 42) {
-      f.got = true; fishCount++; turbo++; meltX -= 50;
-      Sound.ding(1 + (turbo % FISH_FOR_TURBO) * 0.06);
-      for (let k = 0; k < 8; k++) particles.push({ x: f.x, y: f.y, vx: (Math.random() - .5) * 300, vy: (Math.random() - .2) * 300, life: .6, r: 3, c: "gold" });
-      if (turbo >= FISH_FOR_TURBO) { turbos++; turbo = 0; turboT = 2.6; meltX -= 450; toast("Turbo ! 🚀"); Sound.turbo(); }
-    }
-  }
-  fishes = fishes.filter((f) => f.x > p.x - 1500);
-
-  for (const q of particles) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy -= 500 * dt; }
-  particles = particles.filter((q) => q.life > 0);
-}
-
-function land() {
-  const d = slopeAt(p.x), len = Math.hypot(1, d), tx = 1 / len, ty = d / len;
-  const v = Math.hypot(p.vx, p.vy) || 1;
-  let s = p.vx * tx + p.vy * ty;
-  const align = s / v;
-  p.y = hAt(p.x); p.ground = true;
-  if (p.flipping) {                                   // retombé au milieu d'un salto
-    s = Math.max(MIN_SPEED, s * 0.35);
-    p.flipping = false; p.flip = 0;
-    toast("Aïe, sur la tête !");
-    Sound.bump();
-    splash(p.x, p.y, 16, "snow");
-  } else if (align > 0.94 && ty < -0.05) {            // pile dans le sens de la descente
-    s = s * 1.08 + 60;
-    toast(p.flipsAir ? "" : "Glisse parfaite !");
-    Sound.ding(1.5);
-  } else {
-    s *= 0.55 + 0.45 * Math.max(0, align);           // atterrissage brutal : on perd de la vitesse
-    if (align < 0.75) { toast("Boum !"); Sound.bump(); splash(p.x, p.y, 10, "snow"); }
-  }
-  if (p.flipsAir > 0) {
-    s += 160 * p.flipsAir;
-    toast(p.flipsAir > 1 ? `Double salto ! ×${p.flipsAir}` : "Salto !");
-  }
-  s = Math.min(MAX_SPEED, Math.max(MIN_SPEED, s));
-  p.vx = s * tx; p.vy = s * ty; p.flipsAir = 0;
 }
 function splash(x, y, n, c) {
   for (let k = 0; k < n; k++) particles.push({ x, y, vx: (Math.random() - .5) * 360, vy: Math.random() * 300, life: .7, r: 3 + Math.random() * 4, c });
 }
 
+/* ---------------- Commandes ---------------- */
+function down(e) {
+  if (ecran !== "jeu") return;
+  e && e.preventDefault();
+  hold = true; pressT = performance.now();
+  Sound.unlock();
+}
+function up() {
+  if (ecran !== "jeu") return;
+  const quick = performance.now() - pressT < 170;
+  hold = false;
+  if (quick) g.salto();
+}
+cv.addEventListener("pointerdown", down);
+addEventListener("pointerup", up);
+addEventListener("pointercancel", () => (hold = false));
+addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !e.repeat) down(e);
+  if ((e.code === "Escape" || e.code === "KeyP") && ecran === "jeu") mettrePause();
+});
+addEventListener("keyup", (e) => { if (e.code === "Space") up(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden && ecran === "jeu") mettrePause(); });
+
 /* ---------------- Caméra ---------------- */
 function updateCam(dt) {
-  const ground = Math.min(hAt(p.x), hAt(p.x + 500), hAt(p.x - 200));
+  const T = g.terrain, p = g.p;
+  const ground = Math.min(T.h(p.x), T.h(p.x + 500), T.h(p.x - 200));
   const bottomT = ground - 170;
   const base = baseScale();
-  const span = Math.max(p.y, hAt(p.x)) + 150 - bottomT;
-  const scaleT = Math.max(0.22, Math.min(base, (H * 0.74) / span));
+  const span = Math.max(p.y, T.h(p.x)) + 150 - bottomT;
+  let scaleT = Math.max(0.22, Math.min(base, (H * 0.74) / span));
+  const gap = p.x - g.meltX;
+  if (g.fonte && ecran === "jeu" && gap < 500) scaleT = Math.min(scaleT, Math.max(0.5, (W * 0.6 - 30) / gap));
   // On dézoome vite quand le pingouin monte, on rezoome doucement.
-  cam.scale += (scaleT - cam.scale) * Math.min(1, dt * (scaleT < cam.scale ? 9 : 2.5));
-  cam.bottom += (bottomT - cam.bottom) * Math.min(1, dt * 4);
-  cam.x = p.x - (W * 0.3) / cam.scale;
+  camera.scale += (scaleT - camera.scale) * Math.min(1, dt * (scaleT < camera.scale ? 9 : 2.5));
+  camera.bottom += (bottomT - camera.bottom) * Math.min(1, dt * 4);
+  // Quand la banquise approche, le pingouin avance dans l'écran pour qu'on voie le bord fondre.
+  let fx = 0.3;
+  if (g.fonte && ecran !== "accueil" && ecran !== "carte") fx = Math.min(0.6, Math.max(0.3, ((p.x - g.meltX) * camera.scale + 40) / W));
+  camera.fx += (fx - camera.fx) * Math.min(1, dt * 3);
+  if (!chute) camera.x = p.x - (W * camera.fx) / camera.scale;
 }
-const sx = (x) => (x - cam.x) * cam.scale;
-const sy = (y) => H - (y - cam.bottom) * cam.scale;
+const sx = (x) => (x - camera.x) * camera.scale;
+const sy = (y) => H - (y - camera.bottom) * camera.scale;
+const wy = (ys) => camera.bottom + (H - ys) / camera.scale;     // y écran → y du monde
 
-/* ---------------- Ambiances : jour → couchant → aurore, en boucle ---------------- */
+/* ---------------- Ambiances : jour → couchant → aurore ---------------- */
 const SKIES = [
   { top: [94, 184, 255], bot: [214, 240, 255], hill: [244, 251, 255], shade: [176, 214, 245], far: [160, 205, 240] },
   { top: [255, 129, 120], bot: [255, 214, 160], hill: [255, 244, 236], shade: [236, 186, 196], far: [214, 150, 170] },
@@ -365,6 +457,7 @@ const SKIES = [
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 function skyAt(m) {
+  if (g.niveau) { const s = SKIES[g.niveau.ciel]; return { ...s, night: g.niveau.ciel === 2 ? 1 : 0 }; }
   const cycle = 2400, phase = (m % cycle) / cycle * SKIES.length;
   const i = Math.floor(phase), t = Math.min(1, Math.max(0, (phase - i - 0.7) / 0.3)); // transition sur la fin de chaque zone
   const a = SKIES[i % SKIES.length], b = SKIES[(i + 1) % SKIES.length];
@@ -374,15 +467,178 @@ function skyAt(m) {
   return out;
 }
 
+/* ---------------- La banquise qui fond ----------------
+   Une falaise de glace : bord déchiqueté (toujours le même pour une hauteur donnée), tranche de glace
+   bleutée avec ses strates, corniche de neige et stalactites, fissures sur la neige juste devant,
+   blocs qui se détachent et tombent dans la mer, glaçons qui flottent ensuite. */
+const jag = (y) => 7 * Math.sin(y / 19) + 4 * Math.sin(y / 7.3 + 2) + 3 * Math.sin(y / 3.1 + 1);
+function majBanquise(dt) {
+  const T = g.terrain, mx = g.meltX;
+  // niveau de la mer : suit doucement le relief au bord, toujours sous la crête de la falaise
+  const cible = Math.max(Math.min(T.h(mx) - 70, T.h(mx - 300) - 40), camera.bottom + 70 / camera.scale);
+  seaY += (cible - seaY) * Math.min(1, dt * 1.5);
+  seaY = Math.min(seaY, T.h(mx) - 34);
+  // blocs qui se détachent du bord
+  const visible = sx(mx) > -40;
+  chunkT -= dt;
+  if (g.fonte && visible && chunkT <= 0 && (ecran === "jeu" || ecran === "fin")) {
+    chunkT = 0.12 + Math.random() * 0.3;
+    const top = T.h(mx);
+    chunks.push({ x: mx - 4 + Math.random() * 8, y: top - Math.random() * Math.max(10, (top - seaY) * 0.6), vx: -40 - Math.random() * 70, vy: Math.random() * 80,
+      rot: Math.random() * 6, vr: (Math.random() - .5) * 6, r: 6 + Math.random() * 13, neige: Math.random() < 0.5 });
+  }
+  for (const c of chunks) {
+    c.vy -= 1100 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.vr * dt;
+    if (c.y <= seaY) {
+      c.dead = true;
+      for (let k = 0; k < 5; k++) particles.push({ x: c.x, y: seaY, vx: (Math.random() - .5) * 160, vy: 80 + Math.random() * 180, life: .5, r: 2 + Math.random() * 3, c: "foam" });
+      if (c.r > 12 && floes.length < 16) floes.push({ x: c.x, r: c.r * 1.3, ph: Math.random() * 6, forme: Math.random() });
+      if (ecran === "jeu" && g.p.x - mx < 700 && Math.random() < 0.3) Sound.ploc();
+    }
+  }
+  chunks = chunks.filter((c) => !c.dead);
+  floes = floes.filter((f) => f.x > mx - 2600);
+}
+function drawMer(t, meltS) {
+  if (meltS < -60) return;
+  const seaS = sy(seaY), right = meltS + jag(seaY) * camera.scale + 2;
+  const wave = (x) => Math.sin((x + camera.x * camera.scale) / 34 + t / 420) * 4 + Math.sin(x / 13 + t / 260) * 1.6;
+  const wg = ctx.createLinearGradient(0, seaS - 6, 0, H);
+  wg.addColorStop(0, "#69c0ee"); wg.addColorStop(0.1, "#2f8ccc"); wg.addColorStop(0.55, "#145a96"); wg.addColorStop(1, "#08284d");
+  ctx.fillStyle = wg;
+  ctx.beginPath(); ctx.moveTo(-10, H + 5);
+  for (let x = -10; x < right; x += 6) ctx.lineTo(x, seaS + wave(x));
+  ctx.lineTo(right, seaS + wave(right));
+  for (let y = seaS; y <= H + 5; y += 7) ctx.lineTo(meltS + jag(wy(y)) * camera.scale + 2, y);
+  ctx.lineTo(-10, H + 5); ctx.closePath(); ctx.fill();
+  // reflets : traits clairs qui ondulent
+  ctx.strokeStyle = "rgba(255,255,255,.22)"; ctx.lineWidth = 2;
+  for (let k = 0; k < 7; k++) {
+    const yy = seaS + 16 + k * 22 * camera.scale + k * k * 2;
+    if (yy > H) break;
+    const off = ((k * 83 + t / (30 + k * 6)) % 140);
+    ctx.beginPath();
+    for (let x = -off; x < right - 20; x += 140) { ctx.moveTo(x, yy); ctx.lineTo(x + 26 + k * 3, yy); }
+    ctx.stroke();
+  }
+  // écume à la surface
+  ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let x = -10; x < right; x += 6) { const y = seaS + wave(x) - 1; x === -10 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  ctx.stroke();
+  // glaçons qui flottent
+  for (const f of floes) {
+    const x = sx(f.x); if (x < -60 || x > right + 20) continue;
+    const r = f.r * camera.scale, y = seaS + wave(x) + Math.sin(t / 500 + f.ph) * 2;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(t / 700 + f.ph) * 0.08);
+    ctx.fillStyle = "rgba(20,80,140,.35)";
+    ctx.beginPath(); ctx.ellipse(0, r * 0.35, r * 1.1, r * 0.35, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#e9f7ff";
+    ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(-r * 0.7, -r * (0.5 + f.forme * 0.3)); ctx.lineTo(r * 0.3, -r * 0.6); ctx.lineTo(r * 0.95, -r * 0.2); ctx.lineTo(r, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#a9dcf6";
+    ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.lineTo(r * 0.8, r * 0.3); ctx.lineTo(-r * 0.8, r * 0.3); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+// Falaise de glace au bord de la banquise, dessinée par-dessus les collines.
+function drawFalaise(t, meltS) {
+  if (meltS < -50 || meltS > W + 50) return;
+  const T = g.terrain, s = camera.scale;
+  const topW = T.h(g.meltX), topS = sy(topW), seaS = sy(seaY);
+  const bas = H + 5;
+  const gauche = (y) => meltS + jag(wy(y)) * s;
+  const epais = (y) => (20 + 7 * Math.sin(wy(y) / 11 + 1)) * s;
+  // tranche de glace
+  const ig = ctx.createLinearGradient(0, topS, 0, Math.max(topS + 40, seaS + 50));
+  ig.addColorStop(0, "#f2fbff"); ig.addColorStop(0.25, "#b5e3fa"); ig.addColorStop(0.75, "#5fb0e0"); ig.addColorStop(1, "#2f7fbf");
+  ctx.fillStyle = ig;
+  const tranche = new Path2D();
+  tranche.moveTo(gauche(topS), topS);
+  for (let y = topS; y <= bas; y += 7) tranche.lineTo(gauche(y), y);
+  for (let y = bas; y >= topS; y -= 7) tranche.lineTo(gauche(y) + epais(y), y);
+  tranche.closePath(); ctx.fill(tranche);
+  // strates : lignes à hauteur fixe dans le monde
+  ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const pas = 34;
+  for (let yw = Math.floor(topW / pas) * pas - pas * 0.5; ; yw -= pas) {
+    const y = sy(yw); if (y > bas) break; if (y < topS + 6) continue;
+    ctx.moveTo(gauche(y) + 2, y); ctx.lineTo(gauche(y) + epais(y) * 0.85, y + 3 * s);
+  }
+  ctx.stroke();
+  // fissures sombres dans la tranche
+  ctx.strokeStyle = "rgba(20,70,130,.45)"; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let k = 0; k < 4; k++) {
+    let y = topS + (12 + k * 37) * s; if (y > bas) break;
+    let x = gauche(y) + epais(y) * (0.3 + 0.15 * (k % 3));
+    ctx.moveTo(x, y);
+    for (let j = 0; j < 4; j++) { y += 9 * s; x += (j % 2 ? -4 : 4) * s; ctx.lineTo(x, y); }
+  }
+  ctx.stroke();
+  // reflet vif sur l'arête
+  ctx.strokeStyle = "rgba(255,255,255,.95)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(gauche(topS), topS);
+  for (let y = topS; y <= Math.min(bas, seaS); y += 7) ctx.lineTo(gauche(y), y);
+  ctx.stroke();
+  // partie sous l'eau : voilée de bleu
+  if (seaS < bas) {
+    ctx.save(); ctx.clip(tranche);
+    ctx.fillStyle = "rgba(10,60,120,.55)";
+    ctx.fillRect(meltS - 30 * s, seaS + 3, 90 * s, bas - seaS);
+    ctx.restore();
+    // écume au pied de la falaise
+    ctx.fillStyle = "rgba(255,255,255,.85)";
+    for (let k = 0; k < 4; k++) {
+      const x = gauche(seaS) - (4 + k * 9) * s, r = (6 - k) * s * (1 + 0.2 * Math.sin(t / 150 + k));
+      ctx.beginPath(); ctx.arc(x, seaS + Math.sin(t / 200 + k) * 2, Math.max(1, r), 0, 7); ctx.fill();
+    }
+  }
+  // corniche de neige qui dépasse un peu, avec des stalactites
+  const cx = gauche(topS);
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.ellipse(cx + 8 * s, topS + 2 * s, 14 * s, 6 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "#dff4ff";
+  for (const [dx, l] of [[-2, 14], [6, 9], [13, 18]]) {
+    const l2 = l * s * (0.85 + 0.15 * Math.sin(t / 300 + dx));
+    ctx.beginPath(); ctx.moveTo(cx + (dx - 3) * s, topS + 5 * s); ctx.lineTo(cx + (dx + 3) * s, topS + 5 * s); ctx.lineTo(cx + dx * s, topS + 5 * s + l2); ctx.closePath(); ctx.fill();
+  }
+  // fissures sur la neige devant le bord (de plus en plus marquées en approchant)
+  ctx.lineCap = "round";
+  for (let k = Math.ceil((g.meltX + 25) / 64); k * 64 < g.meltX + 330; k++) {
+    const x0 = k * 64 + ((k * 37) % 23), d = x0 - g.meltX;
+    if (d < 20) continue;
+    const a = Math.max(0, 1 - d / 330);
+    ctx.strokeStyle = `rgba(40,100,170,${0.75 * a})`; ctx.lineWidth = (1 + 2 * a) * s;
+    let x = sx(x0), y = sy(T.h(x0)) + 1;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    const n = 2 + (k % 3);
+    for (let j = 0; j < n; j++) { x += (((k + j) % 2) ? -5 : 4) * s; y += (8 + ((k * 7 + j * 5) % 9)) * s * (0.6 + a); ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+  // blocs qui tombent
+  for (const c of chunks) {
+    const x = sx(c.x), y = sy(c.y), r = c.r * s;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(c.rot);
+    ctx.fillStyle = c.neige ? "#ffffff" : "#bfe6fb";
+    ctx.beginPath(); ctx.moveTo(-r, -r * 0.4); ctx.lineTo(-r * 0.2, -r); ctx.lineTo(r, -r * 0.5); ctx.lineTo(r * 0.7, r * 0.6); ctx.lineTo(-r * 0.6, r * 0.8); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(60,140,200,.35)";
+    ctx.beginPath(); ctx.moveTo(r * 0.7, r * 0.6); ctx.lineTo(-r * 0.6, r * 0.8); ctx.lineTo(-r * 0.2, 0); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+
 /* ---------------- Dessin ---------------- */
 const flakes = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2.2, s: 0.3 + Math.random() * 0.7 }));
 function draw(t) {
+  const T = g.terrain, p = g.p;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const m = Math.max(0, p.x / PX_PER_M);
   const sky = skyAt(m);
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, rgb(sky.top)); g.addColorStop(1, rgb(sky.bot));
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const gr = ctx.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, rgb(sky.top)); gr.addColorStop(1, rgb(sky.bot));
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
 
   // Aurore boréale la nuit
   if (sky.night > 0.05) {
@@ -407,96 +663,163 @@ function draw(t) {
     ctx.fillStyle = rgb(mix(sky.far, sky.bot, 1 - alpha));
     ctx.beginPath(); ctx.moveTo(0, H);
     for (let x = 0; x <= W + 20; x += 20) {
-      const wx = x + cam.x * cam.scale * depth;
+      const wx = x + camera.x * camera.scale * depth;
       const y = H * hgt - Math.abs(Math.sin(wx / 230) * amp) - Math.abs(Math.sin(wx / 97)) * amp * 0.4;
       ctx.lineTo(x, y);
     }
     ctx.lineTo(W, H); ctx.fill();
   }
 
-  // Eau libre à l'endroit où la banquise a fondu
-  const meltS = sx(meltX);
-  // Collines de neige
+  // La mer, là où la banquise a fondu
+  const meltS = sx(g.meltX);
+  drawMer(t, meltS);
+
+  // Collines de neige, coupées au bord de la banquise
+  const x0 = Math.max(0, meltS);
   const hillG = ctx.createLinearGradient(0, H * 0.35, 0, H);
   hillG.addColorStop(0, rgb(sky.hill)); hillG.addColorStop(1, rgb(sky.shade));
   ctx.fillStyle = hillG;
-  ctx.beginPath(); ctx.moveTo(Math.max(0, meltS), H);
-  for (let x = Math.max(0, meltS); x <= W + 6; x += 5) ctx.lineTo(x, sy(hAt(cam.x + x / cam.scale)));
-  ctx.lineTo(W + 6, H); ctx.closePath(); ctx.fill();
-  // Ombre bleutée dans les descentes, liseré lumineux sur la crête
+  ctx.beginPath();
+  const topS = sy(T.h(g.meltX));
+  if (meltS > -30) {
+    ctx.moveTo(meltS + jag(wy(H)) * camera.scale, H + 5);
+    for (let y = H; y > topS; y -= 7) ctx.lineTo(meltS + jag(wy(y)) * camera.scale, y);
+    ctx.lineTo(meltS + jag(wy(topS)) * camera.scale, topS);
+  } else ctx.moveTo(0, H + 5);
+  for (let x = x0; x <= W + 6; x += 5) ctx.lineTo(x, sy(T.h(camera.x + x / camera.scale)));
+  ctx.lineTo(W + 6, H + 5); ctx.closePath(); ctx.fill();
+  // Liseré lumineux sur la crête
   ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.9)";
   ctx.beginPath();
-  for (let x = Math.max(0, meltS); x <= W + 6; x += 5) { const y = sy(hAt(cam.x + x / cam.scale)); x === Math.max(0, meltS) ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+  for (let x = x0; x <= W + 6; x += 5) { const y = sy(T.h(camera.x + x / camera.scale)); x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
   ctx.stroke();
   // Paillettes dans la neige
   ctx.fillStyle = "rgba(255,255,255,.8)";
   for (let k = 0; k < 30; k++) {
-    const wx = Math.floor(cam.x / 90) * 90 + k * 90 + 37;
-    const x = sx(wx); if (x < meltS) continue;
-    const y = sy(hAt(wx)) + 18 + (k * 37 % 50) * cam.scale;
+    const wx = Math.floor(camera.x / 90) * 90 + k * 90 + 37;
+    const x = sx(wx); if (x < meltS + 30) continue;
+    const y = sy(T.h(wx)) + 18 + (k * 37 % 50) * camera.scale;
     if ((k + Math.floor(t / 300)) % 4 === 0) ctx.fillRect(x, y, 2, 2);
   }
-  if (meltS > -40) {
-    const wg = ctx.createLinearGradient(0, H * 0.4, 0, H);
-    wg.addColorStop(0, "#2a7fc0"); wg.addColorStop(1, "#0b2f5c");
-    ctx.fillStyle = wg;
-    const waterY = sy(Math.min(hAt(meltX), -60) - 40);
-    ctx.beginPath(); ctx.moveTo(-10, H);
-    for (let x = -10; x <= meltS + 8; x += 8) ctx.lineTo(x, waterY + Math.sin(x / 30 + t / 300) * 5);
-    ctx.lineTo(meltS + 8, H); ctx.fill();
-    // Bord de glace fissuré
-    ctx.strokeStyle = "#dff3ff"; ctx.lineWidth = 3; ctx.beginPath();
-    const topY = sy(hAt(meltX));
-    for (let y = topY; y < H; y += 14) ctx.lineTo(meltS + ((y * 7.3) % 12) - 6, y);
-    ctx.stroke();
-    // Morceaux de glace qui flottent
-    ctx.fillStyle = "#e6f6ff";
-    for (let k = 0; k < 6; k++) {
-      const x = meltS - 40 - k * 70 + Math.sin(t / 700 + k) * 6;
-      if (x < -40) break;
-      const y = waterY + Math.sin(t / 400 + k * 2) * 4;
-      ctx.beginPath(); ctx.moveTo(x - 18, y); ctx.lineTo(x - 10, y - 9); ctx.lineTo(x + 14, y - 7); ctx.lineTo(x + 20, y + 2); ctx.closePath(); ctx.fill();
-    }
-  }
+  drawFalaise(t, meltS);
+  drawArrivee(t, false);
 
   // Poissons
-  for (const f of fishes) {
+  for (const f of g.fishes) {
     if (f.got) continue;
-    const x = sx(f.x), y = sy(f.y + Math.sin(t / 300 + f.wob) * 6);
-    if (x < -30 || x > W + 30) continue;
-    drawFish(x, y, cam.scale);
+    const x = sx(f.x);
+    if (x < -40 || x > W + 40 || f.x < g.meltX) continue;
+    drawFish(x, sy(f.y + Math.sin(t / 300 + f.wob) * 6), camera.scale, f.type, t + f.wob * 400);
   }
 
   // Particules
   for (const q of particles) {
     ctx.globalAlpha = Math.min(1, q.life * 2);
-    ctx.fillStyle = q.c === "gold" ? "#ffd84d" : "#ffffff";
-    ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), q.r * cam.scale, 0, 7); ctx.fill();
+    if (q.txt) {
+      ctx.font = `800 ${q.taille}px ${POLICE}`;
+      ctx.textAlign = "center"; ctx.lineWidth = 5; ctx.strokeStyle = "rgba(11,35,64,.75)";
+      ctx.strokeText(q.txt, sx(q.x), sy(q.y));
+      ctx.fillStyle = q.c === "blue" ? "#9ee0ff" : "#ffd84d"; ctx.fillText(q.txt, sx(q.x), sy(q.y));
+      continue;
+    }
+    ctx.fillStyle = q.c === "gold" ? "#ffd84d" : q.c === "blue" ? "#7fd6ff" : q.c === "foam" ? "#e8f7ff" : "#ffffff";
+    ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), q.r * camera.scale, 0, 7); ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  drawPenguin(sx(p.x), sy(p.y), cam.scale, t);
+  if (!(chute && chute.dansLeau) && !dansIgloo) drawPenguin(sx(p.x), sy(p.y), camera.scale, t);
+  drawArrivee(t, true);
+  if (aide && ecran === "jeu") drawAide(sx(p.x), sy(p.y), camera.scale, t);
 
   // Flocons
   ctx.fillStyle = "rgba(255,255,255,.75)";
   for (const f of flakes) {
-    f.y += 0.0009 * f.s * 16; f.x -= 0.0006 * f.s * 16 + (p.vx / 900000) * 16;
+    if (!reduit) { f.y += 0.0009 * f.s * 16; f.x -= 0.0006 * f.s * 16 + (p.vx / 900000) * 16; }
     if (f.y > 1) f.y = 0; if (f.x < 0) f.x = 1;
     ctx.beginPath(); ctx.arc(f.x * W, f.y * H, f.r, 0, 7); ctx.fill();
   }
 }
 
-function drawFish(x, y, s) {
-  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-  ctx.fillStyle = "#ffc93c";
-  ctx.beginPath(); ctx.ellipse(0, 0, 15, 8, 0, 0, 7); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-24, -9); ctx.lineTo(-24, 9); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#ffe48a"; ctx.beginPath(); ctx.ellipse(2, -3, 7, 3, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = "#0b2340"; ctx.beginPath(); ctx.arc(8, -2, 1.8, 0, 7); ctx.fill();
-  ctx.restore();
+// Poissons : jaune (×1), bleu plus gros (×3), doré encore plus gros et scintillant (×5).
+function drawFish(x, y, s, type = "normal", t = 0, c = ctx) {
+  const k = type === "or" ? 1.75 : type === "bleu" ? 1.45 : 1;
+  c.save(); c.translate(x, y); c.scale(s * k, s * k);
+  if (type !== "normal") {
+    const halo = c.createRadialGradient(0, 0, 2, 0, 0, 30);
+    halo.addColorStop(0, type === "or" ? "rgba(255,230,120,.75)" : "rgba(140,220,255,.65)"); halo.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = halo; c.beginPath(); c.arc(0, 0, 30 + Math.sin(t / 180) * 3, 0, 7); c.fill();
+  }
+  const corps = type === "or" ? "#ffb000" : type === "bleu" ? "#2fa8f0" : "#ffc93c";
+  const ventre = type === "or" ? "#fff0a0" : type === "bleu" ? "#bdeaff" : "#ffe48a";
+  c.fillStyle = corps;
+  c.beginPath(); c.ellipse(0, 0, 15, 8, 0, 0, 7); c.fill();
+  c.beginPath(); c.moveTo(-12, 0); c.lineTo(-24, -9); c.lineTo(-24, 9); c.closePath(); c.fill();
+  if (type !== "normal") { c.beginPath(); c.moveTo(-2, -7); c.lineTo(5, -13); c.lineTo(8, -6); c.closePath(); c.fill(); }
+  c.fillStyle = ventre; c.beginPath(); c.ellipse(2, -3, 7, 3, 0, 0, 7); c.fill();
+  c.fillStyle = "#0b2340"; c.beginPath(); c.arc(8, -2, 1.8, 0, 7); c.fill();
+  if (type === "or") {   // étincelle qui tourne
+    const a = t / 260;
+    c.fillStyle = "#ffffff";
+    for (let j = 0; j < 2; j++) {
+      const px = Math.cos(a + j * 3.1) * 20, py = Math.sin(a + j * 3.1) * 12, r = 3 + Math.sin(t / 120 + j) * 1.2;
+      c.beginPath(); c.moveTo(px, py - r * 1.6); c.lineTo(px + r * 0.4, py); c.lineTo(px, py + r * 1.6); c.lineTo(px - r * 0.4, py); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(px - r * 1.6, py); c.lineTo(px, py + r * 0.4); c.lineTo(px + r * 1.6, py); c.lineTo(px, py - r * 0.4); c.closePath(); c.fill();
+    }
+  }
+  c.restore();
+}
+
+// Arrivée d'un niveau : drapeau à damier, puis l'igloo (devant le pingouin, qui entre dedans).
+function drawArrivee(t, devant) {
+  if (g.finX == null) return;
+  const T = g.terrain, s = camera.scale;
+  const fx = g.finX, ix = fx + 650;
+  if (!devant) {
+    const x = sx(fx);
+    if (x > -80 && x < W + 80) {
+      const y = sy(T.h(fx));
+      ctx.fillStyle = "#6b4a2b"; ctx.fillRect(x - 2 * s, y - 120 * s, 4 * s, 120 * s);
+      const fw = 54 * s, fh = 34 * s, cs = fw / 6;
+      for (let i = 0; i < 6; i++) for (let j = 0; j < 4; j++) {
+        const ox = x + 2 * s + i * cs, oy = y - 118 * s + j * (fh / 4) + Math.sin(t / 200 + i * 0.7) * 3 * s * (i / 5);
+        ctx.fillStyle = (i + j) % 2 ? "#14243a" : "#ffffff";
+        ctx.fillRect(ox, oy, cs + 0.5, fh / 4 + 0.5);
+      }
+    }
+    return;
+  }
+  const x = sx(ix);
+  if (x < -150 || x > W + 150) return;
+  const y = sy(T.h(ix)), r = 78 * s;
+  ctx.fillStyle = "rgba(120,160,210,.35)";
+  ctx.beginPath(); ctx.ellipse(x, y + 4 * s, r * 1.15, 10 * s, 0, 0, 7); ctx.fill();
+  const ig = ctx.createLinearGradient(x - r, y - r, x + r, y);
+  ig.addColorStop(0, "#ffffff"); ig.addColorStop(1, "#c6e2f6");
+  ctx.fillStyle = ig;
+  ctx.beginPath(); ctx.arc(x, y, r, Math.PI, 0); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "rgba(110,160,210,.6)"; ctx.lineWidth = 2;
+  for (let k = 1; k < 4; k++) {   // rangées de blocs de neige
+    const yy = y - r * k / 4, half = Math.sqrt(r * r - (r * k / 4) ** 2);
+    ctx.beginPath(); ctx.moveTo(x - half, yy); ctx.lineTo(x + half, yy); ctx.stroke();
+    for (let j = -3; j <= 3; j++) {
+      const xx = x + j * r / 3.5 + (k % 2) * r / 7;
+      if (Math.abs(xx - x) > half - 4) continue;
+      ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx, yy + r / 4); ctx.stroke();
+    }
+  }
+  // entrée, côté pingouin
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.arc(x - r * 0.72, y, r * 0.42, Math.PI, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#1b3350";
+  ctx.beginPath(); ctx.arc(x - r * 0.78, y, r * 0.28, Math.PI, 0); ctx.closePath(); ctx.fill();
+  // petit drapeau sur le dôme
+  ctx.fillStyle = "#6b4a2b"; ctx.fillRect(x - 1.5 * s, y - r - 30 * s, 3 * s, 30 * s);
+  ctx.fillStyle = "#ff5a4e";
+  ctx.beginPath(); ctx.moveTo(x + 1.5 * s, y - r - 30 * s); ctx.lineTo(x + 22 * s, y - r - 24 * s + Math.sin(t / 180) * 2 * s); ctx.lineTo(x + 1.5 * s, y - r - 17 * s); ctx.closePath(); ctx.fill();
 }
 
 function drawPenguin(x, y, s, t) {
+  const p = g.p;
   ctx.save();
   ctx.translate(x, y); ctx.scale(s, s);
   ctx.rotate(-(p.rot) - p.flip);
@@ -538,109 +861,348 @@ function drawPenguin(x, y, s, t) {
   ctx.fillStyle = "#ff9d2e";
   ctx.beginPath(); ctx.ellipse(-25, 3, 6, 3, 0.4, 0, 7); ctx.fill();
   ctx.restore();
-  if (hold && state === "play") {   // petit indicateur de plongée
+  if (hold && ecran === "jeu") {   // petit indicateur de plongée
     ctx.fillStyle = "rgba(255,255,255,.75)";
     ctx.beginPath(); ctx.arc(x, y - 52 * s, 5 * s, 0, 7); ctx.fill();
   }
 }
 
-/* ---------------- Interface ---------------- */
-let toastT = 0;
+/* ---------------- Aides des premiers niveaux ----------------
+   « rythme » : une bulle dit d'appuyer dans les descentes et de lâcher dans les montées.
+   « salto » : en l'air, assez haut, une bulle propose de toucher pour faire un salto. */
+function quelleAide() {
+  if (!aide) return null;
+  const p = g.p, T = g.terrain;
+  if (aide.jusqua && g.m > aide.jusqua) return null;
+  if (aide.type === "rythme" && p.ground) {
+    const d = T.pente(p.x);
+    if (d < -0.04 && !hold) return { txt: "Appuie !", fleche: 1 };
+    if (d > 0.04 && hold) return { txt: "Lâche !", fleche: -1 };
+  }
+  if (aide.type === "salto" && !aide.saltoFait && !p.ground && !p.flipping && p.y - T.h(p.x) > 110 && p.vy > -200) return { txt: "Touche : salto !", fleche: 0 };
+  return null;
+}
+function drawAide(x, y, s, t) {
+  const a = quelleAide();
+  if (!a) return;
+  const by = y - 95 * Math.max(0.7, s) + Math.sin(t / 160) * 3;
+  ctx.font = `800 20px ${POLICE}`;
+  const w = ctx.measureText(a.txt).width + 34, h = 38;
+  const bx = Math.min(W - w / 2 - 8, Math.max(w / 2 + 8, x + 20));
+  ctx.fillStyle = a.fleche < 0 ? "#ff5a4e" : "#ffffff";
+  ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(bx - w / 2, by - h / 2, w, h, 19); else ctx.rect(bx - w / 2, by - h / 2, w, h); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 6, by + h / 2 - 1); ctx.lineTo(x + 20, by + h / 2 - 1); ctx.lineTo(x + 10, by + h / 2 + 12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = a.fleche < 0 ? "#ffffff" : "#0b2340"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText((a.fleche > 0 ? "👇 " : "") + a.txt, bx, by + 1);
+  ctx.textBaseline = "alphabetic";
+}
+
+/* ---------------- Bandeau ---------------- */
 function toast(text) {
-  if (!text || state !== "play") return;
+  if (!text || ecran !== "jeu") return;
   const el = $("toast");
   el.textContent = text;
   el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
 }
 function hud() {
-  const m = Math.floor(Math.max(0, p.x) / PX_PER_M);
-  $("dist").firstChild.nodeValue = m.toLocaleString("fr-FR");
-  $("fishes").textContent = "🐟 " + fishCount;
-  const gap = p.x - meltX;
+  const p = g.p, m = g.m;
+  if (g.niveau) {
+    $("dist").innerHTML = `${nf(Math.min(m, g.niveau.long))}<small> / ${nf(g.niveau.long)} m</small>`;
+    const s1 = Math.ceil(g.total * P.SEUILS[0]), s2 = Math.ceil(g.total * P.SEUILS[1]);
+    $("fishes").innerHTML = `🐟 ${g.score}<span class="mini">${g.score >= s1 ? "<b>★</b>" : "★"}${g.score >= s2 ? "<b>★</b>" : "★"}</span>`;
+    $("goal-bar").firstElementChild.style.width = Math.min(100, p.x / g.finX * 100) + "%";
+  } else {
+    $("dist").innerHTML = `${nf(m)}<small> m</small>`;
+    $("fishes").textContent = "🐟 " + g.score;
+  }
+  const gap = p.x - g.meltX;
   const pct = Math.max(0, Math.min(100, 100 - gap / 17));
   $("melt-bar").firstElementChild.style.width = pct + "%";
   $("melt-bar").classList.toggle("danger", gap < 450);
-  $("turbo-bar").firstElementChild.style.width = (turboT > 0 ? 100 : (turbo / FISH_FOR_TURBO) * 100) + "%";
+  $("turbo-bar").firstElementChild.style.width = (g.turboT > 0 ? 100 : (g.turbo / FISH_FOR_TURBO) * 100) + "%";
 }
 
-function gameOver() {
-  state = "over";
-  hold = false;
-  Sound.splash();
-  splash(p.x, p.y, 24, "snow");
-  const m = Math.floor(Math.max(0, p.x) / PX_PER_M);
-  const record = m > best;
-  if (record) { best = m; try { localStorage.setItem("pingo.best", String(best)); } catch (e) { /* ok */ } }
-  stats("run_end", { run: runs, m, fish: fishCount, flips, turbos, record, ms: Math.round(performance.now() - runT0) });
-  $("s-dist").textContent = m.toLocaleString("fr-FR");
-  $("s-fish").textContent = fishCount;
-  $("s-flip").textContent = flips;
-  $("s-best").innerHTML = record ? '<span class="record">Nouveau record !</span>' : `Record : ${best.toLocaleString("fr-FR")} m`;
-  setTimeout(() => { $("over").hidden = false; $("hud").hidden = true; $("again").focus(); }, 700);
+/* ---------------- Écrans ---------------- */
+const PANNEAUX = ["accueil", "comment", "carte", "nouveau", "pause", "over", "win"];
+function montrer(id) {
+  for (const k of PANNEAUX) $(k).hidden = k !== id;
+  $("hud").hidden = !(ecran === "jeu" || ecran === "pause");
+}
+function totalEtoiles() { return Object.values(save.niveaux).reduce((s, v) => s + (+v || 0), 0); }
+const fait = (id) => (save.niveaux[id] || 0) > 0;
+function debloque(monde, i) {
+  if (i === 1) return monde === 1 || fait(`${monde - 1}-${P.NIVEAUX_PAR_MONDE}`);
+  return fait(`${monde}-${i - 1}`);
+}
+function prochainNiveau() {
+  for (const M of P.MONDES) for (let i = 1; i <= P.NIVEAUX_PAR_MONDE; i++) if (!fait(`${M.id}-${i}`) && debloque(M.id, i)) return `${M.id}-${i}`;
+  return null;
 }
 
-function start() {
-  newGame();
-  runs++; turbos = 0; runT0 = performance.now();
-  stats("run_start", { run: runs, best });
-  $("start").hidden = true; $("over").hidden = true; $("hud").hidden = false;
-  state = "play";
-  Sound.unlock();
+function allerAccueil() {
+  if (ecran === "jeu" || ecran === "pause") quitterNiveau("home");
+  ecran = "accueil";
+  if (!g || g.mode !== "sansfin" || g.fonte) demo();
+  const tot = totalEtoiles(), max = P.MONDES.length * P.NIVEAUX_PAR_MONDE * 3;
+  $("aventure-info").textContent = tot ? `★ ${tot} sur ${max}` : "3 mondes, 30 niveaux";
+  $("sansfin-info").textContent = save.best ? `Record : ${nf(save.best)} m` : "Va le plus loin possible";
+  $("b-son").textContent = "Son : " + (save.son ? "oui" : "non");
+  montrer("accueil");
+}
+function allerCarte() {
+  if (ecran === "jeu" || ecran === "pause") quitterNiveau("menu");
+  ecran = "carte";
+  if (!g || g.fonte) demo();
+  construireCarte();
+  montrer("carte");
+  const actuel = document.querySelector(".niv.actuel");
+  if (actuel) actuel.scrollIntoView({ block: "center" });
+}
+function construireCarte() {
+  const max = P.MONDES.length * P.NIVEAUX_PAR_MONDE * 3;
+  $("carte-total").textContent = `★ ${totalEtoiles()} / ${max}`;
+  const prochain = prochainNiveau();
+  const box = $("mondes");
+  box.textContent = "";
+  for (const M of P.MONDES) {
+    const sec = document.createElement("section");
+    sec.className = "monde m" + M.id;
+    let et = 0;
+    for (let i = 1; i <= P.NIVEAUX_PAR_MONDE; i++) et += save.niveaux[`${M.id}-${i}`] || 0;
+    const ouvert = debloque(M.id, 1);
+    sec.innerHTML = `<div class="monde-tete"><h3>${M.id}. ${M.nom}</h3><span class="total">★ ${et} / ${P.NIVEAUX_PAR_MONDE * 3}</span></div><p>${M.texte}</p>`;
+    const gr = document.createElement("div");
+    gr.className = "grille";
+    for (let i = 1; i <= P.NIVEAUX_PAR_MONDE; i++) {
+      const id = `${M.id}-${i}`, n = save.niveaux[id] || 0, libre = debloque(M.id, i);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "niv" + (!libre ? " verrou" : id === prochain ? " actuel" : n ? " fait" : "");
+      b.dataset.niveau = id;
+      if (libre) {
+        b.innerHTML = `${i}<span class="et">${[1, 2, 3].map((k) => (k <= n ? "<b>★</b>" : "★")).join("")}</span>`;
+        b.setAttribute("aria-label", `Niveau ${id}, ${n} étoile${n > 1 ? "s" : ""}`);
+        b.onclick = () => { Sound.unlock(); Sound.clic(); lancerNiveau(M.id, i); };
+      } else {
+        b.textContent = "🔒"; b.disabled = true;
+        b.setAttribute("aria-label", `Niveau ${id}, verrouillé`);
+      }
+      gr.appendChild(b);
+    }
+    sec.appendChild(gr);
+    if (!ouvert) {
+      const v = document.createElement("p");
+      v.className = "verrou-monde";
+      v.textContent = `Termine le monde ${M.id - 1} pour ouvrir celui-ci.`;
+      sec.appendChild(v);
+    }
+    box.appendChild(sec);
+  }
+}
+
+/* ---------------- Lancer une partie ---------------- */
+function lancerSansFin() {
+  niveauEnCours = null;
+  demarrerMoteur({});
+  aide = save.vus.rythme ? null : { type: "rythme", jusqua: 250 };
+  save.vus.rythme = true; persist();
+  $("goal-meter").hidden = true;
+  commencer();
+  runs++; runT0 = performance.now();
+  stats("run_start", { run: runs, best: save.best });
   toast("C'est parti !");
 }
-$("play").onclick = start;
-$("again").onclick = start;
-
-/* ---------------- Sons (Web Audio, générés) ---------------- */
-const Sound = (() => {
-  let ac = null;
-  const ctxA = () => { if (!ac) { const A = window.AudioContext || window.webkitAudioContext; if (A) ac = new A(); } if (ac && ac.state === "suspended") ac.resume(); return ac; };
-  function tone(f, d, type = "sine", v = 0.12, slide = 0) {
-    const a = ctxA(); if (!a) return;
-    const t = a.currentTime, o = a.createOscillator(), g = a.createGain();
-    o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(f * slide, t + d);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-    o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + 0.05);
+const NOUVEAUX = {
+  bleu: { titre: "Le poisson bleu", texte: "Il vaut 3 poissons. Il nage haut au-dessus des bosses : arrive vite au sommet et lâche pour t'envoler jusqu'à lui." },
+  or: { titre: "Le poisson d'or", texte: "Il vaut 5 poissons, et il est encore plus haut. Prends un maximum d'élan dans les descentes, puis vole !" },
+};
+function lancerNiveau(monde, i) {
+  const n = P.niveau(monde, i);
+  if (!n) return allerCarte();
+  niveauEnCours = n;
+  if (n.nouveau && !save.vus[n.nouveau]) {
+    const N = NOUVEAUX[n.nouveau];
+    save.vus[n.nouveau] = true; persist();
+    $("nouveau-titre").textContent = N.titre;
+    $("nouveau-texte").textContent = N.texte;
+    const art = $("nouveau-art"), cx = art.getContext("2d");
+    cx.clearRect(0, 0, art.width, art.height);
+    drawFish(art.width / 2, art.height / 2 + 4, 1.25, n.nouveau, 300, cx);
+    ecran = "carte";
+    montrer("nouveau");
+    $("b-nouveau-ok").onclick = () => { Sound.clic(); demarrerNiveau(n); };
+    return;
   }
-  return {
-    unlock: () => ctxA(),
-    ding: (k = 1) => { tone(880 * k, 0.18, "triangle", 0.1); tone(1320 * k, 0.12, "sine", 0.05); },
-    whoosh: () => tone(300, 0.25, "sine", 0.06, 2.2),
-    bump: () => tone(140, 0.2, "triangle", 0.15, 0.5),
-    turbo: () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.15, "square", 0.05), i * 70)); },
-    splash: () => { tone(400, 0.5, "sine", 0.15, 0.25); tone(90, 0.6, "triangle", 0.12, 0.5); },
-  };
-})();
+  demarrerNiveau(n);
+}
+function demarrerNiveau(n) {
+  niveauEnCours = n;
+  demarrerMoteur({ niveau: n });
+  aide = n.aide === "rythme" ? { type: "rythme", jusqua: n.numero === 1 ? null : 500 } : n.aide === "salto" ? { type: "salto" } : null;
+  if (aide && aide.type === "rythme") { save.vus.rythme = true; persist(); }
+  $("goal-meter").hidden = false;
+  commencer();
+  if (K) K.Stats.debut("aventure", n.id, { monde: n.monde });
+  toast(`Niveau ${n.id}`);
+}
+function commencer() {
+  ecran = "jeu";
+  hold = false;
+  montrer(null);
+  Sound.unlock();
+}
+function recommencer() {
+  if (niveauEnCours) demarrerNiveau(niveauEnCours);
+  else lancerSansFin();
+}
+function quitterNiveau(raison) {
+  if (niveauEnCours && K && K.Stats.enCours) K.Stats.quitter(raison);
+}
+
+function mettrePause() {
+  if (ecran !== "jeu") return;
+  ecran = "pause"; hold = false;
+  $("pause-texte").textContent = niveauEnCours ? `Niveau ${niveauEnCours.id} · ${nf(g.m)} m sur ${nf(niveauEnCours.long)}` : `${nf(g.m)} m · record ${nf(save.best)} m`;
+  $("b-quitter").textContent = niveauEnCours ? "Carte" : "Accueil";
+  montrer("pause");
+  $("b-reprendre").focus();
+}
+function reprendre() { ecran = "jeu"; montrer(null); last = performance.now(); }
+
+/* ---------------- Fin de partie ---------------- */
+function perdu() {
+  ecran = "fin";
+  hold = false;
+  Sound.splash();
+  const p = g.p;
+  chute = { t: 0, dansLeau: false };
+  p.ground = false; p.vy = 260; p.vx = Math.max(150, p.vx * 0.3);
+  const m = g.m;
+  let txt;
+  if (niveauEnCours) {
+    if (K) K.Stats.echec({ m, fish: g.score });
+    $("over-title").textContent = "Plouf !";
+    txt = `La banquise t'a rattrapé à ${nf(Math.max(0, niveauEnCours.long - m))} m de l'igloo.`;
+    $("s-best").textContent = `Niveau ${niveauEnCours.id}`;
+    $("again").textContent = "Réessayer";
+    $("over-menu").textContent = "Carte";
+  } else {
+    const record = m > save.best;
+    if (record) { save.best = m; persist(); try { localStorage.setItem("pingo.best", String(m)); } catch (e) { /* ok */ } }
+    stats("run_end", { run: runs, m, fish: g.fishCount, score: g.score, flips: g.flips, turbos: g.turbos, record, ms: Math.round(performance.now() - runT0) });
+    txt = "La banquise t'a rattrapé.";
+    $("s-best").innerHTML = record ? '<span class="record">Nouveau record !</span>' : `Record : ${nf(save.best)} m`;
+    $("again").textContent = "Rejouer";
+    $("over-menu").textContent = "Accueil";
+  }
+  $("over-text").textContent = txt;
+  $("s-dist").textContent = nf(m);
+  $("s-fish").textContent = g.score;
+  $("s-flip").textContent = g.flips;
+  setTimeout(() => { if (ecran === "fin") { montrer("over"); $("again").focus(); } }, 1000);
+}
+function gagne() {
+  ecran = "fin";
+  hold = false;
+  const n = niveauEnCours;
+  const et = P.etoiles(g.score, g.total);
+  const avant = save.niveaux[n.id] || 0;
+  save.niveaux[n.id] = Math.max(avant, et);
+  persist();
+  if (K) K.Stats.gagne({ etoiles: et, fish: g.score, total: g.total, flips: g.flips });
+  Sound.victoire();
+  const dernier = n.numero === P.NIVEAUX_PAR_MONDE;
+  const suivant = P.niveau(n.monde + (dernier ? 1 : 0), dernier ? 1 : n.numero + 1);
+  $("win-title").textContent = dernier ? (suivant ? "Monde terminé !" : "Aventure terminée !") : "Bravo !";
+  [...$("win-stars").children].forEach((s, k) => s.classList.toggle("on", k < et));
+  $("win-text").textContent = `🐟 ${g.score} sur ${g.total} · ${g.flips} salto${g.flips > 1 ? "s" : ""}`;
+  const s1 = Math.ceil(g.total * P.SEUILS[0]), s2 = Math.ceil(g.total * P.SEUILS[1]);
+  $("win-goal").textContent = et < 3 ? `${et < 2 ? `★★ à ${s1} poissons, ` : ""}★★★ à ${s2} poissons.` : avant < 3 ? "Les trois étoiles !" : "";
+  $("b-suivant").hidden = !suivant;
+  $("b-suivant").textContent = dernier ? `Monde ${suivant ? suivant.monde : ""} →` : "Niveau suivant";
+  $("b-suivant").onclick = () => { Sound.clic(); lancerNiveau(suivant.monde, suivant.numero); };
+  setTimeout(() => { if (ecran === "fin") { montrer("win"); (suivant ? $("b-suivant") : $("b-carte")).focus(); } }, 1400);
+}
+
+$("b-aventure").onclick = () => { Sound.unlock(); Sound.clic(); allerCarte(); };
+$("b-sansfin").onclick = () => { Sound.unlock(); Sound.clic(); lancerSansFin(); };
+$("b-comment").onclick = () => { Sound.clic(); montrer("comment"); };
+$("b-comment-ok").onclick = () => { Sound.clic(); montrer("accueil"); };
+$("b-son").onclick = () => { save.son = !save.son; persist(); $("b-son").textContent = "Son : " + (save.son ? "oui" : "non"); Sound.unlock(); Sound.clic(); };
+$("b-carte-retour").onclick = () => { Sound.clic(); allerAccueil(); };
+$("b-pause").onclick = () => { Sound.clic(); mettrePause(); };
+$("b-pause").addEventListener("pointerdown", (e) => e.stopPropagation());
+$("b-reprendre").onclick = () => { Sound.clic(); reprendre(); };
+$("b-recommencer").onclick = () => { Sound.clic(); quitterNiveau("restart"); recommencer(); };
+$("b-quitter").onclick = () => { Sound.clic(); niveauEnCours ? allerCarte() : allerAccueil(); };
+$("again").onclick = () => { Sound.clic(); recommencer(); };
+$("over-menu").onclick = () => { Sound.clic(); niveauEnCours ? allerCarte() : allerAccueil(); };
+$("b-rejouer").onclick = () => { Sound.clic(); demarrerNiveau(niveauEnCours); };
+$("b-carte").onclick = () => { Sound.clic(); allerCarte(); };
 
 /* ---------------- Boucle ---------------- */
-newGame();
+function majParticules(dt) {
+  for (const q of particles) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; if (!q.txt) q.vy -= 500 * dt; }
+  particles = particles.filter((q) => q.life > 0);
+}
+function neige(dt) {
+  const p = g.p;
+  if (!p.ground) return;
+  const s = Math.hypot(p.vx, p.vy);
+  if (s > 500 && Math.random() < 0.6 * dt * 60) particles.push({ x: p.x - 18, y: p.y + 4, vx: -60 - Math.random() * 80, vy: 60 + Math.random() * 120, life: 0.5, r: 3 + Math.random() * 3, c: "snow" });
+}
 let last = performance.now();
 function frame(t) {
   const dt = Math.min(1 / 30, (t - last) / 1000);
   last = t;
-  if (state === "play") {
-    const n = 4;
-    for (let i = 0; i < n && state === "play"; i++) step(dt / n);
-    hud();
-  } else if (state === "menu") {
+  if (ecran === "jeu") {
+    g.hold = hold;
+    for (let i = 0; i < 4 && ecran === "jeu"; i++) g.step(dt / 4);
+    neige(dt);
+    if (ecran === "jeu") hud();
+  } else if (ecran === "accueil" || ecran === "carte") {
     // Démonstration en arrière-plan : le pingouin glisse tout seul.
-    hold = p.ground && slopeAt(p.x) < -0.05;
-    for (let i = 0; i < 4; i++) { step(dt / 4); if (state !== "menu") break; }
-    if (state === "over") state = "menu";
-    if (state === "menu" && p.x - meltX < 300) meltX = p.x - 1600;
-    hold = false;
-  } else {
-    for (const q of particles) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy -= 500 * dt; }
-    particles = particles.filter((q) => q.life > 0);
+    const p = g.p;
+    g.hold = p.ground && g.terrain.pente(p.x) < -0.05;
+    for (let i = 0; i < 4; i++) g.step(dt / 4);
+    neige(dt);
+  } else if (ecran === "fin") {
+    const p = g.p;
+    if (chute) {            // la glace cède : le pingouin tombe à l'eau
+      if (!chute.dansLeau) {
+        p.vy -= 1300 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 4;
+        if (p.y < seaY) {
+          chute.dansLeau = true;
+          for (let k = 0; k < 26; k++) particles.push({ x: p.x, y: seaY, vx: (Math.random() - .5) * 420, vy: 150 + Math.random() * 360, life: .9, r: 3 + Math.random() * 4, c: "foam" });
+        }
+      }
+      g.meltX += 120 * dt;
+    } else if (g.etat === "gagne") {   // arrivé : on glisse jusqu'à l'igloo
+      const ix = g.finX + 650;
+      if (!dansIgloo) {
+        g.hold = false;
+        for (let i = 0; i < 4; i++) g.step(dt / 4);
+        if (p.ground && p.x < ix && Math.hypot(p.vx, p.vy) < 260) { const k = 260 / (Math.hypot(p.vx, p.vy) || 1); p.vx *= k; p.vy *= k; }
+        if (p.x >= ix - 40) dansIgloo = true;
+        neige(dt);
+      }
+    }
   }
+  if (ecran !== "pause") { majParticules(dt); majBanquise(dt); }
   updateCam(dt);
   draw(t);
   requestAnimationFrame(frame);
 }
+
+allerAccueil();
 requestAnimationFrame(frame);
 
 // Accès pour les tests
-window.__pingo = { get p() { return p; }, get state() { return state; }, get fish() { return fishCount; } };
+window.__pingo = {
+  get p() { return g.p; }, get g() { return g; },
+  get state() { return ecran === "jeu" ? "play" : ecran === "pause" ? "pause" : ecran === "fin" ? (g.etat === "gagne" ? "win" : "over") : "menu"; },
+  get ecran() { return ecran; }, get fish() { return g.fishCount; }, get save() { return save; },
+};
 })();
 </script>
 </body>
