@@ -1,14 +1,14 @@
 {
   "name": "pingo-glisse",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Pingo Glisse : jeu de glisse, mode sans fin et aventure (kit commun : sauvegarde, statistiques)",
   "scripts": {
-    "build": "node ../../kit/outils/installer.mjs . kit --global && node -e \"const f=require('fs');f.rmSync('www',{recursive:true,force:true});f.mkdirSync('www');f.copyFileSync('index.html','www/index.html');f.copyFileSync('moteur.js','www/moteur.js');f.cpSync('kit','www/kit',{recursive:true});console.log('www/ prêt')\"",
+    "build": "node ../../kit/outils/installer.mjs . kit --global && node -e \"const f=require('fs');f.rmSync('www',{recursive:true,force:true});f.mkdirSync('www');f.copyFileSync('index.html','www/index.html');f.copyFileSync('moteur.js','www/moteur.js');f.copyFileSync('parcours.js','www/parcours.js');f.cpSync('kit','www/kit',{recursive:true});console.log('www/ prêt')\"",
     "serve": "npm run build && npx --yes http-server www -p 8080 -c-1",
-    "test": "npm run build && node outils/calibrer-niveaux.mjs --verifier && node outils/verifier-niveaux.mjs && node tests/e2e.mjs",
+    "test": "npm run build && node outils/parcours-parfaits.mjs --verifier && node outils/verifier-niveaux.mjs && node tests/e2e.mjs",
     "niveaux": "node outils/verifier-niveaux.mjs --detail",
-    "calibrer": "node outils/calibrer-niveaux.mjs"
+    "parcours": "node outils/parcours-parfaits.mjs"
   },
   "devDependencies": {
     "playwright": "^1.48.0"

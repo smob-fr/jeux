@@ -144,6 +144,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
 </style>
 <!-- kit commun du dépôt (sauvegarde, statistiques anonymes), installé par npm run build ; facultatif -->
 <script src="kit/kit.js"></script>
+<script src="parcours.js"></script>
 <script src="moteur.js"></script>
 </head>
 <body>
@@ -187,6 +188,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
       <div><b>Relâche</b><span>Laisse-toi <strong>décoller</strong> en haut des bosses.</span></div>
       <div><b>Touche en l'air</b><span>Fais un <strong>salto</strong> : bonus de vitesse si tu retombes sur le ventre.</span></div>
       <div><b>🐟 × 8</b><span>Les poissons remplissent le <strong>turbo</strong> et repoussent la fonte. Les <strong>bleus</strong> (×3) et les <strong>dorés</strong> (×5) sont tout là-haut.</span></div>
+      <div><b>Aventure</b><span>La banquise suit le <strong>parcours parfait</strong>, avec quelques secondes de retard : enchaîne les glisses parfaites pour rester devant.</span></div>
     </div>
     <button class="btn" id="b-comment-ok" type="button">J'ai compris</button>
   </div>
@@ -360,9 +362,12 @@ function demarrerMoteur(opts) {
   g = P.creerPartie({ ...opts, on: surEvenement });
   particles = []; chunks = []; floes = []; chute = null; dansIgloo = false;
   seaY = g.terrain.h(g.meltX) - 80;
-  camera = { x: g.p.x - W * 0.3, bottom: g.p.y - 260, scale: baseScale(), fx: 0.3 };
+  camera = { x: g.p.x - W * 0.25, bottom: g.p.y - 260, scale: baseScale(), fx: 0.25 };
 }
-function baseScale() { return Math.min(1.15, Math.max(0.55, H / 820)); }
+// Zoom : on voit environ 1 150 px du monde en largeur (1 300 en hauteur au plus), pour anticiper le relief.
+function baseScale() { return Math.min(1, Math.max(0.3, Math.min(W / 1150, H / 1300 * 1.6))); }
+// Le pingouin et les poissons sont dessinés un peu plus gros que le décor quand on est très dézoomé.
+const grossir = (s) => Math.max(s, Math.min(0.6, s * 1.7));
 function demo() { demarrerMoteur({ fonte: false }); }
 
 /* ---------------- Événements du moteur : sons, messages, étincelles ---------------- */
@@ -428,19 +433,19 @@ document.addEventListener("visibilitychange", () => { if (document.hidden && ecr
 /* ---------------- Caméra ---------------- */
 function updateCam(dt) {
   const T = g.terrain, p = g.p;
-  const ground = Math.min(T.h(p.x), T.h(p.x + 500), T.h(p.x - 200));
-  const bottomT = ground - 170;
+  const ground = Math.min(T.h(p.x), T.h(p.x + 500), T.h(p.x + 1000), T.h(p.x - 200));
+  const bottomT = ground - (H * 0.28) / camera.scale;      // le sol vers 70 % de la hauteur de l'écran
   const base = baseScale();
   const span = Math.max(p.y, T.h(p.x)) + 150 - bottomT;
   let scaleT = Math.max(0.22, Math.min(base, (H * 0.74) / span));
-  const gap = p.x - g.meltX;
-  if (g.fonte && ecran === "jeu" && gap < 500) scaleT = Math.min(scaleT, Math.max(0.5, (W * 0.6 - 30) / gap));
   // On dézoome vite quand le pingouin monte, on rezoome doucement.
   camera.scale += (scaleT - camera.scale) * Math.min(1, dt * (scaleT < camera.scale ? 9 : 2.5));
   camera.bottom += (bottomT - camera.bottom) * Math.min(1, dt * 4);
   // Quand la banquise approche, le pingouin avance dans l'écran pour qu'on voie le bord fondre.
-  let fx = 0.3;
-  if (g.fonte && ecran !== "accueil" && ecran !== "carte") fx = Math.min(0.6, Math.max(0.3, ((p.x - g.meltX) * camera.scale + 40) / W));
+  // (seulement quand le bord est à moins d'une demi-largeur d'écran : sinon, le pingouin reste à 25 %)
+  let fx = 0.25;
+  const gapS = (p.x - g.meltX) * camera.scale;
+  if (g.fonte && ecran !== "accueil" && ecran !== "carte" && gapS < W * 0.47) fx = Math.min(0.5, Math.max(0.25, (gapS + 30) / W));
   camera.fx += (fx - camera.fx) * Math.min(1, dt * 3);
   if (!chute) camera.x = p.x - (W * camera.fx) / camera.scale;
 }
@@ -709,7 +714,7 @@ function draw(t) {
     if (f.got) continue;
     const x = sx(f.x);
     if (x < -40 || x > W + 40 || f.x < g.meltX) continue;
-    drawFish(x, sy(f.y + Math.sin(t / 300 + f.wob) * 6), camera.scale, f.type, t + f.wob * 400);
+    drawFish(x, sy(f.y + Math.sin(t / 300 + f.wob) * 6), grossir(camera.scale), f.type, t + f.wob * 400);
   }
 
   // Particules
@@ -727,9 +732,9 @@ function draw(t) {
   }
   ctx.globalAlpha = 1;
 
-  if (!(chute && chute.dansLeau) && !dansIgloo) drawPenguin(sx(p.x), sy(p.y), camera.scale, t);
+  if (!(chute && chute.dansLeau) && !dansIgloo) drawPenguin(sx(p.x), sy(p.y), grossir(camera.scale), t);
   drawArrivee(t, true);
-  if (aide && ecran === "jeu") drawAide(sx(p.x), sy(p.y), camera.scale, t);
+  if (aide && ecran === "jeu") drawAide(sx(p.x), sy(p.y), grossir(camera.scale), t);
 
   // Flocons
   ctx.fillStyle = "rgba(255,255,255,.75)";
@@ -874,10 +879,14 @@ function quelleAide() {
   if (!aide) return null;
   const p = g.p, T = g.terrain;
   if (aide.jusqua && g.m > aide.jusqua) return null;
-  if (aide.type === "rythme" && p.ground) {
-    const d = T.pente(p.x);
-    if (d < -0.04 && !hold) return { txt: "Appuie !", fleche: 1 };
-    if (d > 0.04 && hold) return { txt: "Lâche !", fleche: -1 };
+  if (aide.type === "rythme") {
+    if (p.ground) {
+      const d = T.pente(p.x);
+      if (d < -0.04 && !hold) return { txt: "Appuie !", fleche: 1 };
+      if (d > 0.04 && hold) return { txt: "Lâche !", fleche: -1 };
+    } else if (!hold && p.vy < 0 && T.pente(p.x + p.vx * 0.25) < -0.05 && p.y - T.h(p.x) < 260) {
+      return { txt: "Appuie : redescends !", fleche: 1 };   // en l'air : plonger pour retomber dans la pente
+    }
   }
   if (aide.type === "salto" && !aide.saltoFait && !p.ground && !p.flipping && p.y - T.h(p.x) > 110 && p.vy > -200) return { txt: "Touche : salto !", fleche: 0 };
   return null;
@@ -915,10 +924,11 @@ function hud() {
     $("dist").innerHTML = `${nf(m)}<small> m</small>`;
     $("fishes").textContent = "🐟 " + g.score;
   }
+  // Banquise : en aventure, le retard sur le parcours parfait par rapport à la marge ; sinon, la distance.
   const gap = p.x - g.meltX;
-  const pct = Math.max(0, Math.min(100, 100 - gap / 17));
+  const pct = g.trace ? Math.max(0, Math.min(100, -g.avance / g.niveau.marge * 100)) : Math.max(0, Math.min(100, 100 - gap / 17));
   $("melt-bar").firstElementChild.style.width = pct + "%";
-  $("melt-bar").classList.toggle("danger", gap < 450);
+  $("melt-bar").classList.toggle("danger", pct > 75);
   $("turbo-bar").firstElementChild.style.width = (g.turboT > 0 ? 100 : (g.turbo / FISH_FOR_TURBO) * 100) + "%";
 }
 
@@ -1115,7 +1125,8 @@ function gagne() {
   const suivant = P.niveau(n.monde + (dernier ? 1 : 0), dernier ? 1 : n.numero + 1);
   $("win-title").textContent = dernier ? (suivant ? "Monde terminé !" : "Aventure terminée !") : "Bravo !";
   [...$("win-stars").children].forEach((s, k) => s.classList.toggle("on", k < et));
-  $("win-text").textContent = `🐟 ${g.score} sur ${g.total} · ${g.flips} salto${g.flips > 1 ? "s" : ""}`;
+  const sec = (t) => t.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  $("win-text").textContent = `🐟 ${g.score} sur ${g.total} · ${sec(g.time)} s` + (g.tempsParfait ? ` (parfait : ${sec(g.tempsParfait)} s)` : "");
   const s1 = Math.ceil(g.total * P.SEUILS[0]), s2 = Math.ceil(g.total * P.SEUILS[1]);
   $("win-goal").textContent = et < 3 ? `${et < 2 ? `★★ à ${s1} poissons, ` : ""}★★★ à ${s2} poissons.` : avant < 3 ? "Les trois étoiles !" : "";
   $("b-suivant").hidden = !suivant;
