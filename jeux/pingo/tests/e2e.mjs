@@ -133,7 +133,17 @@ await p.click("#b-pause");
 ok((await p.isVisible("#essai")) && (await p.isVisible("#b-essai-reprendre")) && (await p.textContent("#essai-bilan")).includes("Boum"), "pause : les réglages et le bilan (glisses parfaites, « Boum »)");
 await p.click("#b-essai-go");
 ok((await etat()) === "play", "« Relancer avec ces réglages »");
-await p.click("#b-pause"); await p.click("#b-essai-accueil");
+await p.click("#b-pause");
+await p.fill("#r-marge", "6"); await p.dispatchEvent("#r-marge", "input");
+await p.click("#b-test");
+const test = await p.evaluate(() => ({ id: __pingo.g.niveau.id, marge: __pingo.g.niveau.marge, construit: !!__pingo.g.niveau.points, parfait: __pingo.g.tempsParfait, poissons: __pingo.g.fishes.length }));
+ok((await etat()) === "play" && test.id === "test" && test.marge === 6 && test.construit && test.parfait > 10 && test.poissons > 50, `niveau test (bosses calculées) : banquise à 6 s, parcours parfait en ${test.parfait.toFixed(1)} s, ${test.poissons} poissons`);
+await p.evaluate(() => { __pingo.g.time += 120; });
+await p.waitForSelector("#over:not([hidden])", { timeout: 5000 });
+ok((await p.textContent("#over-menu")) === "Réglages" && !(await p.evaluate(() => "test" in __pingo.save.niveaux)), "niveau test perdu : retour « Réglages », rien d'enregistré dans l'aventure");
+await p.click("#over-menu");
+ok(await p.isVisible("#essai"), "retour aux réglages du terrain d'essai");
+await p.click("#b-essai-accueil");
 ok(await p.isVisible("#accueil"), "retour à l'accueil");
 
 /* ---------- réglages de l'accueil ---------- */

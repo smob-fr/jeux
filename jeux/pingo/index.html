@@ -155,6 +155,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
 <!-- kit commun du dépôt (sauvegarde, statistiques anonymes), installé par npm run build ; facultatif -->
 <script src="kit/kit.js"></script>
 <script src="parcours.js"></script>
+<script src="niveaux-construits.js"></script>
 <script src="moteur.js"></script>
 </head>
 <body>
@@ -248,6 +249,12 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
     <p class="objectif" id="essai-bilan"></p>
     <p class="valeurs" id="essai-valeurs"></p>
     <button class="btn" id="b-essai-go" type="button">Glisser !</button>
+    <h2 style="margin-top:18px;font-size:24px">Niveau test</h2>
+    <p>Bosses calculées : après quelques glisses parfaites, ton saut doit retomber pile sur la bosse prévue, plus loin. La banquise suit le parcours parfait.</p>
+    <div class="reglages">
+      <label>Retard de la banquise <b id="v-marge"></b><input type="range" id="r-marge" min="2" max="10" step="0.5"></label>
+    </div>
+    <button class="btn bleu" id="b-test" type="button">Jouer le niveau test</button>
     <div class="duo">
       <button class="btn sobre" id="b-essai-reprendre" type="button">Reprendre</button>
       <button class="btn sobre" id="b-essai-accueil" type="button">Accueil</button>
@@ -424,6 +431,10 @@ function surEvenement(type, d) {
       break;
     }
     case "turbo": toast("Turbo ! 🚀"); Sound.turbo(); break;
+    case "eau":
+      toast("Plouf ! Trop court…"); Sound.splash();
+      for (let k = 0; k < 22; k++) particles.push({ x: p.x, y: d.y, vx: (Math.random() - .5) * 420, vy: 150 + Math.random() * 360, life: .9, r: 3 + Math.random() * 4, c: "foam" });
+      break;
     case "decollage": if (d.vitesse > 700) Sound.whoosh(); break;
     case "salto": Sound.whoosh(); if (aide) aide.saltoFait = true; break;
     case "saltoReussi": Sound.ding(1.2); break;
@@ -745,6 +756,7 @@ function draw(t) {
     if ((k + Math.floor(t / 300)) % 4 === 0) ctx.fillRect(x, y, 2, 2);
   }
   drawFalaise(t, meltS);
+  drawCrevasses(t);
   drawArrivee(t, false);
 
   // Poissons
@@ -780,6 +792,27 @@ function draw(t) {
     if (!reduit) { f.y += 0.0009 * f.s * 16; f.x -= 0.0006 * f.s * 16 + (p.vx / 900000) * 16; }
     if (f.y > 1) f.y = 0; if (f.x < 0) f.x = 1;
     ctx.beginPath(); ctx.arc(f.x * W, f.y * H, f.r, 0, 7); ctx.fill();
+  }
+}
+
+// Crevasses remplies d'eau (niveaux construits) : l'eau entre sa surface et le fond de la crevasse.
+function drawCrevasses(t) {
+  for (const [x0, x1, ye] of g.eaux || []) {
+    const a = sx(x0), b = sx(x1);
+    if (b < -20 || a > W + 20) continue;
+    const T = g.terrain, yS = sy(ye);
+    const wg = ctx.createLinearGradient(0, yS, 0, yS + 260 * camera.scale);
+    wg.addColorStop(0, "#5fb6ea"); wg.addColorStop(1, "#0d3f74");
+    ctx.fillStyle = wg;
+    ctx.beginPath(); ctx.moveTo(a, yS);
+    for (let x = a; x <= b; x += 8) ctx.lineTo(x, yS + Math.sin((x + camera.x * camera.scale) / 26 + t / 380) * 3);
+    ctx.lineTo(b, yS);
+    for (let x = b; x >= a; x -= 6) ctx.lineTo(x, Math.max(yS, sy(T.h(camera.x + x / camera.scale))));
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = a; x <= b; x += 8) { const y = yS + Math.sin((x + camera.x * camera.scale) / 26 + t / 380) * 3 - 1; x === a ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.stroke();
   }
 }
 
@@ -1094,8 +1127,8 @@ function demarrerNiveau(n) {
   if (aide && aide.type === "rythme") { save.vus.rythme = true; persist(); }
   $("goal-meter").hidden = false;
   commencer();
-  if (K) K.Stats.debut("aventure", n.id, { monde: n.monde });
-  toast(`Niveau ${n.id}`);
+  if (K) K.Stats.debut(n.monde ? "aventure" : "essai", n.id, { monde: n.monde });
+  toast(n.monde ? `Niveau ${n.id}` : "Niveau test");
 }
 function commencer() {
   ecran = "jeu";
@@ -1118,7 +1151,7 @@ function mettrePause() {
   ecran = "pause"; hold = false;
   if (g.mode === "essai") return ouvrirEssai();
   $("pause-texte").textContent = niveauEnCours ? `Niveau ${niveauEnCours.id} · ${nf(g.m)} m sur ${nf(niveauEnCours.long)}` : `${nf(g.m)} m · record ${nf(save.best)} m`;
-  $("b-quitter").textContent = niveauEnCours ? "Carte" : "Accueil";
+  $("b-quitter").textContent = niveauEnCours ? (niveauEnCours.monde ? "Carte" : "Réglages") : "Accueil";
   montrer("pause");
   $("b-reprendre").focus();
 }
@@ -1134,6 +1167,8 @@ function reglagesEssai() {
 }
 function majEssai() {
   const r = reglagesEssai();
+  if (typeof save.margeTest !== "number") save.margeTest = 5;
+  $("r-marge").value = save.margeTest; $("v-marge").textContent = save.margeTest.toLocaleString("fr-FR") + " s";
   for (const k of CHAMPS_ESSAI) { $("r-" + k).value = r[k]; $("v-" + k).textContent = k === "tremplins" ? r[k] + " %" : nf(r[k]); }
   $("essai-valeurs").textContent = `Valeurs : hauteur ${r.hauteur}, montées ${r.montee}, descentes ${r.descente}, vitesse ${r.vmax}, tremplins ${r.tremplins} %`;
 }
@@ -1159,6 +1194,8 @@ for (const k of CHAMPS_ESSAI) $("r-" + k).addEventListener("input", (e) => { reg
 document.querySelectorAll("[data-essai]").forEach((b) => b.addEventListener("click", () => { Sound.clic(); save.essai = { ...P.ESSAIS[b.dataset.essai] }; persist(); majEssai(); }));
 $("b-essai").onclick = () => { Sound.unlock(); Sound.clic(); ouvrirEssai(); };
 $("b-essai-go").onclick = () => { Sound.clic(); lancerEssai(); };
+$("r-marge").addEventListener("input", (e) => { save.margeTest = +e.target.value; persist(); majEssai(); });
+$("b-test").onclick = () => { Sound.clic(); reglagesEssai(); majEssai(); demarrerNiveau(P.niveauConstruit("test", save.margeTest)); };
 $("b-essai-reprendre").onclick = () => { Sound.clic(); reprendre(); };
 $("b-essai-accueil").onclick = () => { Sound.clic(); allerAccueil(); };
 
@@ -1176,9 +1213,9 @@ function perdu() {
     if (K) K.Stats.echec({ m, fish: g.score });
     $("over-title").textContent = "Plouf !";
     txt = `La banquise t'a rattrapé à ${nf(Math.max(0, niveauEnCours.long - m))} m de l'igloo.`;
-    $("s-best").textContent = `Niveau ${niveauEnCours.id}`;
+    $("s-best").textContent = niveauEnCours.monde ? `Niveau ${niveauEnCours.id}` : "Niveau test";
     $("again").textContent = "Réessayer";
-    $("over-menu").textContent = "Carte";
+    $("over-menu").textContent = niveauEnCours.monde ? "Carte" : "Réglages";
   } else {
     const record = m > save.best;
     if (record) { save.best = m; persist(); try { localStorage.setItem("pingo.best", String(m)); } catch (e) { /* ok */ } }
@@ -1200,12 +1237,11 @@ function gagne() {
   const n = niveauEnCours;
   const et = P.etoiles(g.score, g.total);
   const avant = save.niveaux[n.id] || 0;
-  save.niveaux[n.id] = Math.max(avant, et);
-  persist();
+  if (n.monde) { save.niveaux[n.id] = Math.max(avant, et); persist(); }   // le niveau test ne compte pas
   if (K) K.Stats.gagne({ etoiles: et, fish: g.score, total: g.total, flips: g.flips });
   Sound.victoire();
   const dernier = n.numero === P.NIVEAUX_PAR_MONDE;
-  const suivant = P.niveau(n.monde + (dernier ? 1 : 0), dernier ? 1 : n.numero + 1);
+  const suivant = n.monde ? P.niveau(n.monde + (dernier ? 1 : 0), dernier ? 1 : n.numero + 1) : null;
   $("win-title").textContent = dernier ? (suivant ? "Monde terminé !" : "Aventure terminée !") : "Bravo !";
   [...$("win-stars").children].forEach((s, k) => s.classList.toggle("on", k < et));
   const sec = (t) => t.toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -1228,11 +1264,13 @@ $("b-pause").onclick = () => { Sound.clic(); mettrePause(); };
 $("b-pause").addEventListener("pointerdown", (e) => e.stopPropagation());
 $("b-reprendre").onclick = () => { Sound.clic(); reprendre(); };
 $("b-recommencer").onclick = () => { Sound.clic(); quitterNiveau("restart"); recommencer(); };
-$("b-quitter").onclick = () => { Sound.clic(); niveauEnCours ? allerCarte() : allerAccueil(); };
+// retour depuis un niveau : la carte, ou les réglages du terrain d'essai pour le niveau test
+const retourNiveau = () => { if (niveauEnCours && !niveauEnCours.monde) { ecran = "carte"; ouvrirEssai(); } else if (niveauEnCours) allerCarte(); else allerAccueil(); };
+$("b-quitter").onclick = () => { Sound.clic(); retourNiveau(); };
 $("again").onclick = () => { Sound.clic(); recommencer(); };
-$("over-menu").onclick = () => { Sound.clic(); niveauEnCours ? allerCarte() : allerAccueil(); };
+$("over-menu").onclick = () => { Sound.clic(); retourNiveau(); };
 $("b-rejouer").onclick = () => { Sound.clic(); demarrerNiveau(niveauEnCours); };
-$("b-carte").onclick = () => { Sound.clic(); allerCarte(); };
+$("b-carte").onclick = () => { Sound.clic(); retourNiveau(); };
 
 /* ---------------- Boucle ---------------- */
 function majParticules(dt) {
