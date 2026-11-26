@@ -250,7 +250,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
     <p class="valeurs" id="essai-valeurs"></p>
     <button class="btn" id="b-essai-go" type="button">Glisser !</button>
     <h2 style="margin-top:18px;font-size:24px">Constructeur de bosses</h2>
-    <p>Fais glisser les points : les sommets (hauteur, position) et les creux. Le pingouin part du plateau de la première bosse. Touche un sommet pour régler son plateau.</p>
+    <p>Fais glisser les points : les sommets (hauteur, position) et les creux. Le pingouin part du plateau de la première bosse. Touche un sommet pour régler précisément sa hauteur et son plateau.</p>
     <canvas id="editeur" class="editeur" aria-label="Profil des bosses à modifier"></canvas>
     <div class="prereglages">
       <button class="btn sobre" id="b-ed-plus" type="button">+ bosse</button>
@@ -258,6 +258,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
       <button class="btn sobre" id="b-ed-raz" type="button">Revenir au départ</button>
     </div>
     <div class="reglages">
+      <label>Hauteur du sommet choisi <b id="v-ed-haut"></b><input type="range" id="r-ed-haut" min="20" max="500" step="5"></label>
       <label>Plateau du sommet choisi <b id="v-ed-plateau"></b><input type="range" id="r-ed-plateau" min="0" max="800" step="20"></label>
       <label>Vitesse maximale <b id="v-ed-vmax"></b><input type="range" id="r-ed-vmax" min="600" max="2600" step="50"></label>
     </div>
@@ -1246,7 +1247,13 @@ function dessinerEditeur() {
   const c = edCtx; c.setTransform(d, 0, 0, d, 0, 0); c.clearRect(0, 0, w, h);
   const X = (x) => (x - V.x0) * V.kx, Y = (y) => h - (y - V.yMin) * V.ky;
   const hAt = (x) => { for (let i = 0; i < pts.length - 1; i++) if (pts[i + 1].x > x) { const a = pts[i], b = pts[i + 1], t = (x - a.x) / (b.x - a.x); return a.y + (b.y - a.y) * (1 - Math.cos(Math.PI * t)) / 2; } return pts[pts.length - 1].y; };
-  c.strokeStyle = "rgba(255,255,255,.15)"; c.lineWidth = 1; c.beginPath(); c.moveTo(0, Y(0)); c.lineTo(w, Y(0)); c.stroke();
+  // graduations des hauteurs, tous les 100
+  c.font = "600 10px " + POLICE; c.textAlign = "left"; c.lineWidth = 1;
+  for (let yy = -400; yy <= 500; yy += 100) {
+    c.strokeStyle = yy === 0 ? "rgba(255,255,255,.3)" : "rgba(255,255,255,.1)";
+    c.beginPath(); c.moveTo(0, Y(yy)); c.lineTo(w, Y(yy)); c.stroke();
+    c.fillStyle = "rgba(255,255,255,.45)"; c.fillText(String(yy), 4, Y(yy) - 2);
+  }
   c.fillStyle = "rgba(234,246,255,.9)"; c.beginPath(); c.moveTo(0, h);
   for (let px = 0; px <= w; px += 2) c.lineTo(px, Y(hAt(V.x0 + px / V.kx)));
   c.lineTo(w, h); c.closePath(); c.fill();
@@ -1260,6 +1267,15 @@ function dessinerEditeur() {
     c.beginPath(); c.arc(X(q.x), Y(q.y), sel ? 10 : 8, 0, 7); c.fill();
     c.strokeStyle = "#fff"; c.lineWidth = 2; c.stroke();
   }
+  // hauteur au-dessus de chaque sommet, profondeur sous chaque creux
+  c.font = "800 12px " + POLICE; c.textAlign = "center";
+  for (const q of pts) {
+    if (!q.role) continue;
+    const creux = q.role === "creux", txt = creux ? String(-q.y) : String(q.y), y = creux ? Y(q.y) + 22 : Y(q.y) - 15;
+    const xt = Math.min(w - 16, Math.max(16, X(q.x)));       // pas d'étiquette coupée au bord
+    c.lineWidth = 3; c.strokeStyle = "rgba(11,35,64,.85)"; c.strokeText(txt, xt, y);
+    c.fillStyle = creux ? "#9ee0ff" : "#ffd84d"; c.fillText(txt, xt, y);
+  }
   c.fillStyle = "rgba(255,255,255,.6)"; c.font = "600 11px " + POLICE; c.textAlign = "right";
   c.fillText(`hauteurs × ${(V.ky / V.kx).toFixed(1)}`, w - 8, 14);
   majValeursEditeur();
@@ -1267,6 +1283,7 @@ function dessinerEditeur() {
 function majValeursEditeur() {
   const r = reglagesEditeur(), b = edSel >= 0 ? r.bosses[edSel] : r.depart;
   $("r-ed-plateau").value = b ? b.plateau : 0; $("v-ed-plateau").textContent = b ? nf(b.plateau) : "";
+  $("r-ed-haut").value = b ? b.haut : 0; $("v-ed-haut").textContent = b ? nf(b.haut) : "";
   $("r-ed-vmax").value = r.vmax; $("v-ed-vmax").textContent = nf(r.vmax);
   const d = r.depart;
   $("ed-valeurs").textContent = `Valeurs : vitesse ${r.vmax} ; départ h${d.haut} p${d.plateau} d${d.descente} c${d.creux} ; `
@@ -1309,6 +1326,7 @@ const finDrag = () => { if (edDrag) { edDrag = null; persist(); } };
 edCv.addEventListener("pointerup", finDrag);
 edCv.addEventListener("pointercancel", finDrag);
 $("r-ed-plateau").addEventListener("input", (e) => { const r = reglagesEditeur(), b = edSel >= 0 ? r.bosses[edSel] : r.depart; b.plateau = +e.target.value; persist(); dessinerEditeur(); });
+$("r-ed-haut").addEventListener("input", (e) => { const r = reglagesEditeur(), b = edSel >= 0 ? r.bosses[edSel] : r.depart; b.haut = +e.target.value; persist(); dessinerEditeur(); });
 $("r-ed-vmax").addEventListener("input", (e) => { reglagesEditeur().vmax = +e.target.value; persist(); dessinerEditeur(); });
 $("b-ed-plus").onclick = () => { Sound.clic(); const r = reglagesEditeur(); if (r.bosses.length < 8) r.bosses.push({ ...r.bosses[r.bosses.length - 1] }); persist(); dessinerEditeur(); };
 $("b-ed-moins").onclick = () => { Sound.clic(); const r = reglagesEditeur(); if (r.bosses.length > 1) r.bosses.pop(); edSel = Math.min(edSel, r.bosses.length - 1); persist(); dessinerEditeur(); };

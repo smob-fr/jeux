@@ -143,6 +143,8 @@ const pos = await p.evaluate(() => { const c = document.getElementById("editeur"
 await p.mouse.move(pos.x, pos.y); await p.mouse.down(); await p.mouse.move(pos.x, pos.y - 25, { steps: 4 }); await p.mouse.up();
 const apresHaut = await p.evaluate(() => __pingo.save.editeur.bosses[0].haut);
 ok(apresHaut > avantHaut + 50 && (await p.textContent("#ed-valeurs")).includes(`h${apresHaut}`), `constructeur de bosses : 1er sommet monté de ${avantHaut} à ${apresHaut} en le faisant glisser`);
+await p.fill("#r-ed-haut", "150"); await p.dispatchEvent("#r-ed-haut", "input");
+ok((await p.evaluate(() => __pingo.save.editeur.bosses[0].haut)) === 150 && (await p.textContent("#v-ed-haut")) === "150", "curseur « Hauteur du sommet choisi » : 150");
 await p.click("#b-ed-jouer");
 const ed = await p.evaluate(() => ({ id: __pingo.g.niveau.id, fonte: __pingo.g.fonte, y0: Math.round(__pingo.p.y), haut: __pingo.save.editeur.depart.haut }));
 ok((await etat()) === "play" && ed.id === "editeur" && !ed.fonte && !(await p.isVisible("#melt-meter")) && ed.y0 === ed.haut, `« Jouer ces bosses » : partie sans banquise, départ en haut de la première bosse (y = ${ed.y0})`);

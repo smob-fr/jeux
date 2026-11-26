@@ -147,7 +147,8 @@ Moteur : `Pingo.essai(réglages)` donne l'option `essai` de `creerPartie`.
 
 Le propriétaire dessine les premières bosses au doigt : profil (hauteurs dessinées ×4 environ) avec des
 poignées (départ : hauteur ; sommets : position = montée, hauteur ; creux : position = descente,
-profondeur), plateau du sommet choisi, vitesse maximale, + / − bosse. « Jouer ces bosses » : le tracé
+profondeur), hauteurs écrites sur chaque point et graduations tous les 100, hauteur et plateau du
+sommet choisi au curseur, vitesse maximale, + / − bosse. « Jouer ces bosses » : le tracé
 répété 3 fois, sans banquise (`niveau.sansBanquise`), le pingouin part du plateau de la bosse de départ ;
 la pause ramène à l'éditeur avec le bilan. Tracé gardé dans `save.editeur` ; la ligne « Valeurs : … »
 (vitesse ; départ h p d c ; puis pour chaque bosse m h p d c) est à reprendre dans
