@@ -38,8 +38,10 @@ function construire(id, plan) {
   const varie = (v) => v * (0.9 + 0.2 * rand());
   const finX = plan.long * PX_PER_M;
   // Partie de calcul (sans poissons, sans banquise) dont on fait grandir le terrain.
-  // départ : une glissade douce, sans cassure, jusqu'au premier creux
-  const spec = { id, long: plan.long, vmax: plan.vmax, points: [[-1800, -40], [-900, 30], [0, 80], [1300, -60]], poissonsFixes: [], eaux: [], graine: plan.graine };
+  // départ : en haut d'une petite bosse (le pingouin démarre en x = 0, sur son plateau), puis la descente
+  const [hD, , dD] = plan.elan.relief;
+  const spec = { id, long: plan.long, vmax: plan.vmax, poissonsFixes: [], eaux: [], graine: plan.graine,
+    points: [[-1800, -40], [-900, Math.round(hD * 0.4)], [-150, Math.round(hD)], [150, Math.round(hD)], [Math.round(150 + dD), Math.round(-hD * 0.85)]] };
   const g = Pingo.creerPartie({ niveau: spec, rejeu: true });
   const pts = g.terrain.pts;
   // points arrondis dès la construction : le terrain enregistré (entiers) est exactement celui joué ici
@@ -47,13 +49,15 @@ function construire(id, plan) {
   const pousser = (...l) => pts.push(...l.map(rond));
   const poissons = [], vols = [];
   const eaux = spec.eaux;   // même tableau que la partie de calcul : elle voit les crevasses au fur et à mesure
-  const bosse = ([haut, montee, descente], { k = 1 } = {}) => {
+  // Une bosse : montée, sommet (avec un plateau de largeur « plateau » : sommet arrondi, pas pointu), descente.
+  const bosse = ([haut, montee, descente, plateau = 0], { k = 1 } = {}) => {
     const T0 = pts[pts.length - 1];
     const C = { x: 0, y: varie(haut) * k }, T1 = { x: 0, y: -varie(haut * 0.85) };
     // largeurs au moins celles d'une pente de PENTE_MAX (montée depuis un creux profond, par exemple)
     C.x = T0.x + Math.max(varie(montee), (C.y - T0.y) * Math.PI / 2 / PENTE_MAX);
-    T1.x = C.x + Math.max(varie(descente), (C.y - T1.y) * Math.PI / 2 / PENTE_MAX);
-    pousser(C, T1);
+    const C2 = { x: C.x + plateau, y: C.y };
+    T1.x = C2.x + Math.max(varie(descente), (C.y - T1.y) * Math.PI / 2 / PENTE_MAX);
+    if (plateau > 0) pousser(C, C2, T1); else pousser(C, T1);
     // rangée de poissons au sol dans la seconde moitié de la descente, gros poissons au-dessus du sommet
     for (let j = 0; j < 5; j++) { const x = C.x + (T1.x - C.x) * 0.55 + j * 62; if (x < T1.x - 30) poissons.push([Math.round(x), Math.round(hSeg(C, T1, x) + 22), "normal"]); }
     if (rand() < plan.poissons.bleu) poissons.push([Math.round(C.x + 200), Math.round(C.y + 230), "bleu"]);
@@ -141,13 +145,16 @@ function construire(id, plan) {
   }
   function saut(dist, kDecollage) {
     const T0 = pts[pts.length - 1];
-    const [haut, montee] = plan.glisse.relief;   // la bosse de décollage : une glisse plus haute
+    const [haut, montee, , plateau = 0] = plan.glisse.relief;   // la bosse de décollage : une glisse plus haute
     const yC = varie(haut) * kDecollage;
-    const C = rond({ x: T0.x + Math.max(varie(montee) * 1.1, (yC - T0.y) * Math.PI / 2 / PENTE_MAX), y: yC });
+    const xC = T0.x + Math.max(varie(montee) * 1.1, (yC - T0.y) * Math.PI / 2 / PENTE_MAX);
+    const n0 = pts.length;
+    if (plateau > 0) pousser({ x: xC - plateau / 2, y: yC });       // plateau du sommet de décollage
+    const C = rond({ x: xC + (plateau > 0 ? plateau / 2 : 0), y: yC });
     pts.push(C, { x: C.x + 8000, y: -3000 });                       // terrain provisoire, très bas
     const avant = faisceau;
     let dec = decoller(C);
-    if (!dec) { pts.splice(pts.length - 2, 2); faisceau = avant; return false; }   // pas décollé : pas de saut ici
+    if (!dec) { pts.length = n0; faisceau = avant; return false; }   // pas décollé : pas de saut ici
     const iC = pts.indexOf(C), nEaux = eaux.length, avecEau = rand() < plan.saut.eau;
     for (let iter = 0; iter < 4; iter++) {
       g.restaurer(dec.e);

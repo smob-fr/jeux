@@ -18,15 +18,14 @@ function melanger(A, B, t) {
 }
 
 const PREMIERS = {
-  // 1-1 : que des bosses douces, montée = descente, aucun saut : prendre le rythme
-  "1-1": { long: 900, vmax: 1400, marge: 9, elan: { bosses: 3, relief: [90, 800, 800] }, glisse: { relief: [110, 800, 800] },
-    saut: { vitesse: 99, decollage: 1.25, tolerance: 0.86, eau: 0, recup: 2, vol: [1400, 1800] }, poissons: { bleu: 0, or: 0 } },
-  // 1-2 : premiers sauts, très tolérants, sans eau
-  "1-2": { long: 1100, vmax: 1500, marge: 8.5, elan: { bosses: 3, relief: [100, 800, 800] }, glisse: { relief: [120, 800, 800] },
-    saut: { vitesse: 0.9, decollage: 1.25, tolerance: 0.86, eau: 0, recup: 2, vol: [1400, 1800] }, poissons: { bleu: 0, or: 0 } },
-  // 1-3 : le poisson bleu
-  "1-3": { long: 1200, vmax: 1550, marge: 9, elan: { bosses: 3, relief: [110, 800, 800] }, glisse: { relief: [130, 800, 820] },
-    saut: { vitesse: 0.9, decollage: 1.25, tolerance: 0.87, eau: 0, recup: 2, vol: [1400, 1900] }, poissons: { bleu: 0.4, or: 0 } },
+  // Début du jeu : bosses basses, pentues et rapprochées (prendre vite le rythme appuyer / lâcher), sommets
+  // en plateau (relief [hauteur, montée, descente, plateau]), sauts dès le 1-1, sans eau, très tolérants.
+  "1-1": { long: 900, vmax: 1000, marge: 9, elan: { bosses: 3, relief: [70, 420, 480, 220] }, glisse: { relief: [80, 450, 520, 220] },
+    saut: { vitesse: 0.72, decollage: 1.4, tolerance: 0.84, eau: 0, recup: 2, vol: [1000, 1400] }, poissons: { bleu: 0, or: 0 } },
+  "1-2": { long: 1100, vmax: 1100, marge: 8.5, elan: { bosses: 3, relief: [80, 420, 480, 200] }, glisse: { relief: [90, 450, 520, 200] },
+    saut: { vitesse: 0.74, decollage: 1.4, tolerance: 0.85, eau: 0, recup: 2, vol: [1100, 1500] }, poissons: { bleu: 0, or: 0 } },
+  "1-3": { long: 1200, vmax: 1150, marge: 8.5, elan: { bosses: 2, relief: [90, 430, 500, 200] }, glisse: { relief: [100, 460, 540, 200] },
+    saut: { vitesse: 0.76, decollage: 1.4, tolerance: 0.86, eau: 0, recup: 2, vol: [1200, 1600] }, poissons: { bleu: 0.4, or: 0 } },
 };
 const MONDES = {
   1: {
