@@ -275,7 +275,7 @@ function creerPartie(opts = {}) {
       p.flipping = false; p.flip = 0;
       type = "tete"; g.boums++;
     } else if (align > 0.94 && ty < -0.05) {             // pile dans le sens de la descente
-      s = s * 1.12 + 100;
+      s = s * (1.12 + 0.08 * Math.min(1, p.air / 1.5)) + 100;   // +12 %, jusqu'à +20 % après un long vol
       type = "parfait"; g.parfaits++;
     } else {
       s *= 0.55 + 0.45 * Math.max(0, align);            // atterrissage brutal : on perd de la vitesse
@@ -398,7 +398,7 @@ function creerPartie(opts = {}) {
 
 /* ---------------- Parcours parfait ----------------
    niveau.entrees : appuis du pingouin parfait, un bit par tranche de 0,05 s, en hexadécimal (4 tranches
-   par caractère). Calculés par outils/parcours-parfaits.mjs (fichier parcours.js) et rejoués ici. */
+   par caractère). Calculés par outils/construire-niveaux.mjs (niveaux-construits.js) et rejoués ici. */
 function decoder(hex) {
   const bits = [];
   for (const c of hex) { const v = parseInt(c, 16); for (let k = 3; k >= 0; k--) bits.push((v >> k) & 1); }
@@ -425,88 +425,40 @@ function rejouer(niveau, entrees = niveau.entrees) {
 }
 
 /* ---------------- Mondes et niveaux ----------------
-   Chaque monde va du plus facile au plus difficile : les valeurs sont interpolées entre le premier (de)
-   et le dernier niveau (a), sauf les premiers niveaux du premier monde, réglés à la main pour apprendre.
-   relief : hauteurs, largeurs, probabilité d'un tremplin (tremplins) et d'un tremplin à 2 petites bosses
-   (double). marge : retard de la banquise sur le pingouin parfait, en secondes (plus petit = plus dur). */
+   Les 30 niveaux de l'aventure sont construits à l'avance par outils/construire-niveaux.mjs, selon les plans
+   d'outils/plans-niveaux.mjs (relief calculé pour la vitesse du pingouin parfait, sauts dont la bosse cible
+   est posée là où il retombe), et enregistrés dans niveaux-construits.js : relief, poissons, crevasses,
+   appuis du pingouin parfait et marge. Ici : les noms des mondes, les aides et les fiches « Nouveau ! ». */
 const MONDES = [
-  {
-    id: 1, nom: "La Banquise", ciel: 0,
-    texte: "Prends le rythme : appuie dans les descentes, lâche avant les bosses.",
-    de: { long: 1300, vmax: 1300, marge: 5, relief: { haut: [150, 200], creux: [120, 170], descente: [1700, 1950], montee: [950, 1100], tremplins: 0.3, double: 0 },
-      poissons: { sol: 0.9, air: 0.45, bleu: 0.3, or: 0.1 } },
-    a: { long: 1900, vmax: 1550, marge: 4, relief: { haut: [180, 240], creux: [150, 200], descente: [1750, 2000], montee: [1000, 1150], tremplins: 0.4, double: 0.4 },
-      poissons: { sol: 0.85, air: 0.5, bleu: 0.4, or: 0.12 } },
-  },
-  {
-    id: 2, nom: "Le Fjord du Couchant", ciel: 1,
-    texte: "Des tremplins plus hauts : survole les bosses jusqu'aux poissons bleus et dorés.",
-    de: { long: 1800, vmax: 1600, marge: 4, relief: { haut: [190, 250], creux: [150, 200], descente: [1850, 2100], montee: [1050, 1200], tremplins: 0.4, double: 0.4 },
-      poissons: { sol: 0.85, air: 0.5, bleu: 0.4, or: 0.12 } },
-    a: { long: 2600, vmax: 1900, marge: 3, relief: { haut: [220, 280], creux: [170, 230], descente: [2000, 2300], montee: [1150, 1300], tremplins: 0.5, double: 0.6 },
-      poissons: { sol: 0.8, air: 0.55, bleu: 0.45, or: 0.15 } },
-  },
-  {
-    id: 3, nom: "La Nuit Polaire", ciel: 2,
-    texte: "Sous l'aurore, la banquise ne pardonne rien : il faut un parcours presque parfait.",
-    de: { long: 2200, vmax: 1900, marge: 3, relief: { haut: [220, 280], creux: [170, 230], descente: [2000, 2300], montee: [1150, 1300], tremplins: 0.5, double: 0.6 },
-      poissons: { sol: 0.8, air: 0.55, bleu: 0.45, or: 0.15 } },
-    a: { long: 3200, vmax: 2200, marge: 2, relief: { haut: [240, 300], creux: [190, 250], descente: [2100, 2400], montee: [1250, 1400], tremplins: 0.6, double: 0.8 },
-      poissons: { sol: 0.75, air: 0.6, bleu: 0.5, or: 0.2 } },
-  },
+  { id: 1, nom: "La Banquise", ciel: 0, texte: "Prends le rythme : appuie dans les descentes, lâche avant les bosses." },
+  { id: 2, nom: "Le Fjord du Couchant", ciel: 1, texte: "Des sauts plus longs, et des crevasses : vise la bosse d'en face !" },
+  { id: 3, nom: "La Nuit Polaire", ciel: 2, texte: "Sous l'aurore, la banquise ne pardonne rien : il faut un parcours presque parfait." },
 ];
 const NIVEAUX_PAR_MONDE = 10;
+/** Aides et nouveautés de certains niveaux. */
+const EXTRAS = {
+  "1-1": { aide: "rythme" }, "1-2": { aide: "rythme" }, "1-3": { aide: "salto", nouveau: "bleu" },
+  "1-4": { nouveau: "or" }, "2-1": { nouveau: "eau" },
+};
 
-/** Niveaux réglés à la main au début du premier monde (vérifiés avec les robots d'outils/). */
-const PREMIERS = [
-  { long: 900, vmax: 1100, marge: 7, relief: { haut: [130, 165], creux: [110, 140], descente: [1650, 1850], montee: [900, 1050] },
-    poissons: { sol: 1, air: 0.3, bleu: 0, or: 0 }, aide: "rythme" },
-  { long: 1100, vmax: 1200, marge: 6, relief: { haut: [140, 180], creux: [115, 150], descente: [1650, 1850], montee: [900, 1050] },
-    poissons: { sol: 0.95, air: 0.4, bleu: 0, or: 0 }, aide: "rythme" },
-  { long: 1200, vmax: 1250, marge: 5.5, relief: { haut: [150, 190], creux: [120, 160], descente: [1650, 1850], montee: [900, 1050], tremplins: 0.3 },
-    poissons: { sol: 0.9, air: 0.45, bleu: 0.5, or: 0 }, aide: "salto", nouveau: "bleu" },
-];
-
-/** Appuis du pingouin parfait de chaque niveau (parcours.js, écrit par outils/parcours-parfaits.mjs). */
-const PARCOURS = (typeof module !== "undefined" && module.exports)
-  ? (() => { try { return require("./parcours.js"); } catch (e) { return {}; } })()
-  : (racine.PINGO_PARCOURS || {});
-
-/** Le niveau i du monde ; avec { brut: true }, sans le parcours parfait enregistré (outils). */
-function niveau(monde, i, { brut = false } = {}) {
-  const M = MONDES[monde - 1];
-  if (!M || i < 1 || i > NIVEAUX_PAR_MONDE) return null;
-  let spec;
-  if (monde === 1 && i <= PREMIERS.length) spec = JSON.parse(JSON.stringify(PREMIERS[i - 1]));
-  else {
-    const debut = monde === 1 ? PREMIERS.length + 1 : 1;
-    const t = (i - debut) / (NIVEAUX_PAR_MONDE - debut);
-    const A = M.de, B = M.a, R = {}, Po = {};
-    for (const k of ["haut", "creux", "descente", "montee"]) R[k] = lerp2(A.relief[k], B.relief[k], t);
-    R.tremplins = lerp(A.relief.tremplins, B.relief.tremplins, t);
-    R.double = lerp(A.relief.double, B.relief.double, t);
-    for (const k of Object.keys(A.poissons)) Po[k] = lerp(A.poissons[k], B.poissons[k], t);
-    spec = { long: Math.round(lerp(A.long, B.long, t) / 50) * 50, vmax: Math.round(lerp(A.vmax, B.vmax, t)), relief: R, poissons: Po,
-      marge: Math.round(lerp(A.marge, B.marge, t) * 10) / 10 };
-    if (monde === 1 && i === 4) spec.nouveau = "or";
-  }
-  spec.id = `${monde}-${i}`;
-  spec.monde = monde; spec.numero = i;
-  spec.graine = monde * 1000 + i * 37 + 11;
-  spec.ciel = M.ciel;
-  const P = !brut && PARCOURS[spec.id];
-  if (P && P.e) { spec.entrees = P.e; spec.marge = P.marge; }
-  return spec;
-}
-
-/** Niveaux construits (niveaux-construits.js, outils/construire-niveaux.mjs) : niveauConstruit("test", marge). */
+/** Niveaux construits (niveaux-construits.js, outils/construire-niveaux.mjs). */
 const CONSTRUITS = (typeof module !== "undefined" && module.exports)
   ? (() => { try { return require("./niveaux-construits.js"); } catch (e) { return {}; } })()
   : (racine.PINGO_CONSTRUITS || {});
+/** Un niveau construit prêt à jouer ; marge : retard de la banquise (s), sinon celui du plan. */
 function niveauConstruit(id, marge) {
   const N = CONSTRUITS[id];
   if (!N) return null;
   return { ...N, entrees: N.e, marge: marge || N.marge, monde: 0, numero: 0, poissons: {} };
+}
+/** Le niveau i du monde (aventure). */
+function niveau(monde, i) {
+  const M = MONDES[monde - 1];
+  if (!M || i < 1 || i > NIVEAUX_PAR_MONDE) return null;
+  const id = `${monde}-${i}`;
+  const spec = niveauConstruit(id);
+  if (!spec) return null;
+  return Object.assign(spec, EXTRAS[id] || {}, { id, monde, numero: i, ciel: M.ciel });
 }
 
 /* ---------------- Terrain d'essai ----------------
@@ -534,7 +486,7 @@ function etoiles(score, total) {
 
 const Pingo = {
   PX_PER_M, G, DIVE, MIN_SPEED, MAX_SPEED, FISH_FOR_TURBO, POISSONS, MONDES, NIVEAUX_PAR_MONDE, SEUILS,
-  PAS_ENTREE, PAS_TRACE, SOUS_PAS,
+  PAS_ENTREE, PAS_TRACE, SOUS_PAS, EXTRAS,
   aleatoire, creerPartie, niveau, etoiles, rejouer, encoder, decoder, essai: creerEssai, ESSAIS, niveauConstruit,
 };
 if (typeof module !== "undefined" && module.exports) module.exports = Pingo;

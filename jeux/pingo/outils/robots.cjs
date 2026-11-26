@@ -1,5 +1,5 @@
 // Pingouins robots pour vérifier les niveaux sans navigateur (outils/verifier-niveaux.mjs,
-// outils/parcours-parfaits.mjs). Ils jouent au pas de 1/240 s, comme le jeu (4 sous-pas à 60 images/s).
+// outils/construire-niveaux.mjs). Ils jouent au pas de 1/240 s, comme le jeu (4 sous-pas à 60 images/s).
 const Pingo = require("../moteur.js");
 const { SOUS_PAS, PAS_ENTREE } = Pingo;
 const PAR_TRANCHE = Math.round(PAS_ENTREE / SOUS_PAS);

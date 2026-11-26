@@ -8,7 +8,11 @@
 //     deux, une vallée (et parfois une petite bosse) bien sous la trajectoire. Sans assez d'élan, on retombe
 //     trop court, dans la vallée ou contre la montée de la bosse cible : on casse sa vitesse.
 // Puis les poissons (arcs le long des vols, rangées au sol), le parcours parfait final et la marge.
-// Écrit niveaux-construits.js. Usage : node outils/construire-niveaux.mjs [--verifier]
+// Plans : outils/plans-niveaux.mjs. Écrit niveaux-construits.js.
+//   node outils/construire-niveaux.mjs              tous les niveaux (plusieurs minutes)
+//   node outils/construire-niveaux.mjs 1-2 test     seulement ceux-là (les autres sont gardés)
+//   node outils/construire-niveaux.mjs --verifier   rapide : chaque niveau existe, a été construit avec son
+//                                                   plan actuel, et son parcours parfait arrive au bout
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -18,18 +22,10 @@ const { Pingo } = R;
 const { SOUS_PAS, PAS_ENTREE, PX_PER_M } = Pingo;
 const PAR_TRANCHE = Math.round(PAS_ENTREE / SOUS_PAS);
 const FICHIER = fileURLToPath(new URL("../niveaux-construits.js", import.meta.url));
-
-/** Plans des niveaux construits. Relief : [hauteur, montée, descente] ; saut : distance visée du vol. */
-const PLANS = {
-  test: {
-    nom: "Niveau test : bosses calculées", long: 2600, vmax: 2100, marge: 4, graine: 7, ciel: 0,
-    elan: { bosses: 4, relief: [200, 550, 700] },
-    glisse: { relief: [170, 850, 1050] },
-    // après l'élan : [glisses, saut], répété ; distance du vol de plus en plus grande
-    // saut dès que le pingouin parfait va à plus de « vitesse » × vmax au creux ; sinon bosse de glisse
-    rythme: { vitesse: 0.8, vol: [1600, 2600], decollage: 1.3, tolerance: 0.93 },
-  },
-};
+import { plans } from "./plans-niveaux.mjs";
+const PLANS = plans();
+const signature = (plan) => JSON.stringify(plan);
+const PENTE_MAX = 1;   // pente maximale des parois des creux et des crevasses (45°)
 
 const hSeg = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a.x) / (b.x - a.x))); return a.y + (b.y - a.y) * (1 - Math.cos(Math.PI * t)) / 2; };
 function hPts(pts, x) {
@@ -42,7 +38,8 @@ function construire(id, plan) {
   const varie = (v) => v * (0.9 + 0.2 * rand());
   const finX = plan.long * PX_PER_M;
   // Partie de calcul (sans poissons, sans banquise) dont on fait grandir le terrain.
-  const spec = { id, long: plan.long, vmax: plan.vmax, points: [[-1800, -60], [-900, 80], [0, 150], [1500, -110]], poissonsFixes: [], eaux: [], graine: plan.graine };
+  // départ : une glissade douce, sans cassure, jusqu'au premier creux
+  const spec = { id, long: plan.long, vmax: plan.vmax, points: [[-1800, -40], [-900, 30], [0, 80], [1300, -60]], poissonsFixes: [], eaux: [], graine: plan.graine };
   const g = Pingo.creerPartie({ niveau: spec, rejeu: true });
   const pts = g.terrain.pts;
   // points arrondis dès la construction : le terrain enregistré (entiers) est exactement celui joué ici
@@ -52,10 +49,15 @@ function construire(id, plan) {
   const eaux = spec.eaux;   // même tableau que la partie de calcul : elle voit les crevasses au fur et à mesure
   const bosse = ([haut, montee, descente], { k = 1 } = {}) => {
     const T0 = pts[pts.length - 1];
-    const C = { x: T0.x + varie(montee), y: varie(haut) * k }, T1 = { x: C.x + varie(descente), y: -varie(haut * 0.85) };
+    const C = { x: 0, y: varie(haut) * k }, T1 = { x: 0, y: -varie(haut * 0.85) };
+    // largeurs au moins celles d'une pente de PENTE_MAX (montée depuis un creux profond, par exemple)
+    C.x = T0.x + Math.max(varie(montee), (C.y - T0.y) * Math.PI / 2 / PENTE_MAX);
+    T1.x = C.x + Math.max(varie(descente), (C.y - T1.y) * Math.PI / 2 / PENTE_MAX);
     pousser(C, T1);
-    // rangée de poissons au sol dans la seconde moitié de la descente
+    // rangée de poissons au sol dans la seconde moitié de la descente, gros poissons au-dessus du sommet
     for (let j = 0; j < 5; j++) { const x = C.x + (T1.x - C.x) * 0.55 + j * 62; if (x < T1.x - 30) poissons.push([Math.round(x), Math.round(hSeg(C, T1, x) + 22), "normal"]); }
+    if (rand() < plan.poissons.bleu) poissons.push([Math.round(C.x + 200), Math.round(C.y + 230), "bleu"]);
+    if (rand() < plan.poissons.or) poissons.push([Math.round(C.x + 320), Math.round(C.y + 430), "or"]);
   };
 
   // Faisceau : situations du pingouin parfait (même méthode que robots.parfait), avancé par morceaux.
@@ -73,24 +75,29 @@ function construire(id, plan) {
   const meilleur = () => { g.restaurer(faisceau[0].e); return g; };
 
   // Pose la bosse cible (et la vallée) pour un vol qui part de la situation q (juste après le décollage).
-  function poserCible(C, q, dist) {
+  function poserCible(C, q, dist, avecEau) {
     // vol calculé pour un pingouin un peu moins rapide que le parfait (« tolerance » de sa vitesse) : entre les
     // deux, on retombe dans la longue descente de la bosse cible ; plus vite, on plonge en l'air pour redescendre
     const traj = [];
-    q.p.vx *= plan.rythme.tolerance; q.p.vy *= plan.rythme.tolerance;
+    q.p.vx *= plan.saut.tolerance; q.p.vy *= plan.saut.tolerance;
     q.hold = false;
     for (let k = 0; k < 240 * 5 && q.p.y > C.y - 1200; k++) { q.step(SOUS_PAS); if (k % 4 === 0) traj.push({ x: q.p.x, y: q.p.y, pente: q.p.vy / q.p.vx }); }
     const yTraj = (x) => { for (let i = 1; i < traj.length; i++) if (traj[i].x >= x) return traj[i - 1].y + (traj[i].y - traj[i - 1].y) * (x - traj[i - 1].x) / (traj[i].x - traj[i - 1].x); return -1e9; };
     // point d'atterrissage visé : là où le vol redescend franchement (pente d'au moins 0,65),
     // au moins à 60 % de la distance visée
-    let L = traj.find((s) => s.x >= C.x + dist * 0.6 && s.pente <= -0.65);
-    if (!L) L = traj.find((s) => s.pente <= -0.65) || traj[traj.length - 1];
+    // (et jamais à plus de 350 px sous le sommet de décollage : pas de bosse cible au fond d'un trou)
+    let L = traj.find((s) => s.x >= C.x + dist * 0.6 && (s.pente <= -0.65 || s.y < C.y - 350));
+    if (!L) L = traj.find((s) => s.pente <= -0.65 || s.y < C.y - 350) || traj[traj.length - 1];
     // bosse cible : sa descente passe par L avec la pente de la trajectoire
     // Tolérance : le sommet de la bosse cible est au moins 90 px sous le vol parfait ; un vol un peu plus
     // lent (plus bas) passe encore au-dessus et retombe dans la descente.
-    let w = varie(plan.glisse.relief[2]) * 1.3, tL = 0.45;
+    // (descente plus longue quand la tolérance est grande : le pingouin parfait, plus rapide, retombe plus loin)
+    let w = varie(plan.glisse.relief[2]) * 1.3 / (plan.saut.tolerance * plan.saut.tolerance), tL = 0.45;
     for (let essai = 0; essai < 8; essai++) {
-      const delta = Math.min(900, Math.max(120, -L.pente * 2 * w / (Math.PI * Math.sin(Math.PI * tL))));
+      // (le pied de la bosse cible ne descend pas sous -300 : la bosse suivante n'aura pas un mur à gravir)
+      let delta = Math.min(900, Math.max(120, -L.pente * 2 * w / (Math.PI * Math.sin(Math.PI * tL))));
+      delta = Math.max(120, Math.min(delta, (L.y + 300) / (1 - (1 - Math.cos(Math.PI * tL)) / 2)));
+      delta = Math.min(delta, w * 2 * PENTE_MAX / Math.PI);       // descente de la bosse cible : pente ≤ PENTE_MAX
       const Cl = { x: L.x - tL * w, y: L.y + delta * (1 - Math.cos(Math.PI * tL)) / 2 };
       const Tl = { x: Cl.x + w, y: Cl.y - delta };
       // Crevasse remplie d'eau entre le décollage et la bosse cible, bien sous la trajectoire : qui ne
@@ -98,9 +105,20 @@ function construire(id, plan) {
       const span = Cl.x - C.x;
       let minTraj = Infinity;
       for (let x = C.x + 200; x < Cl.x; x += 20) minTraj = Math.min(minTraj, yTraj(x));
-      const bas = Math.min(C.y, Cl.y, minTraj) - 520;
-      const mid = [{ x: C.x + Math.max(380, span * 0.28), y: bas }, { x: Cl.x - Math.max(380, span * 0.22), y: bas }];
-      const yEau = Math.min(bas + 230, minTraj - 160, C.y - 200, Cl.y - 200);
+      // (sans eau : un simple creux ; trop court, on cogne la montée de la bosse cible)
+      // parois en pente douce : une paroi de hauteur Δ en cosinus a une pente maximale Δπ/(2·largeur) ≤ 1
+      const bas = Math.min(C.y, Cl.y, minTraj) - (avecEau ? 300 : 200);
+      const larg = (dy) => Math.max(350, Math.abs(dy) * Math.PI / 2 / PENTE_MAX);
+      let x1 = C.x + larg(C.y - bas), x2 = Cl.x - larg(Cl.y - bas);
+      let mid = [{ x: x1, y: bas }, { x: x2, y: bas }];
+      if (x2 <= x1 + 100) {
+        // creux court : un seul point bas, au milieu, pas plus profond que ce que permet une pente de PENTE_MAX
+        const xm = (C.x + Cl.x) / 2, prof = (xm - C.x) * 2 * PENTE_MAX / Math.PI;
+        mid = [{ x: xm, y: Math.max(bas, C.y - prof, Cl.y - prof) }];
+      }
+      if (mid[0].x <= C.x + 200 || mid[mid.length - 1].x >= Cl.x - 200) { tL = Math.max(0.25, tL - 0.04); w *= 1.08; continue; }
+      const fond = Math.min(...mid.map((q) => q.y));
+      const yEau = Math.min(fond + 230, minTraj - 160, C.y - 200, Cl.y - 200);
       // la trajectoire passe 35 px au-dessus de la vallée et de la montée de la bosse cible
       const essaiPts = [C, ...mid, Cl, Tl];
       let ok = true;
@@ -109,7 +127,7 @@ function construire(id, plan) {
         // l'eau couvre la crevasse là où le sol est sous sa surface
         let x0 = null, x1 = null;
         for (let x = C.x; x < Cl.x; x += 10) if (hPts(essaiPts, x) < yEau) { if (x0 === null) x0 = x; x1 = x; }
-        return { mid, Cl, Tl, L, yTraj, eau: x0 !== null ? [Math.round(x0), Math.round(x1), Math.round(yEau)] : null };
+        return { mid, Cl, Tl, L, yTraj, eau: avecEau && x0 !== null ? [Math.round(x0), Math.round(x1), Math.round(yEau)] : null };
       }
       tL = Math.max(0.25, tL - 0.04); w *= 1.08;
     }
@@ -123,16 +141,17 @@ function construire(id, plan) {
   }
   function saut(dist, kDecollage) {
     const T0 = pts[pts.length - 1];
-    const [haut, montee] = plan.glisse.relief;
-    const C = rond({ x: T0.x + varie(montee) * 1.1, y: varie(haut) * kDecollage });
+    const [haut, montee] = plan.glisse.relief;   // la bosse de décollage : une glisse plus haute
+    const yC = varie(haut) * kDecollage;
+    const C = rond({ x: T0.x + Math.max(varie(montee) * 1.1, (yC - T0.y) * Math.PI / 2 / PENTE_MAX), y: yC });
     pts.push(C, { x: C.x + 8000, y: -3000 });                       // terrain provisoire, très bas
     const avant = faisceau;
     let dec = decoller(C);
     if (!dec) { pts.splice(pts.length - 2, 2); faisceau = avant; return false; }   // pas décollé : pas de saut ici
-    const iC = pts.indexOf(C), nEaux = eaux.length;
+    const iC = pts.indexOf(C), nEaux = eaux.length, avecEau = rand() < plan.saut.eau;
     for (let iter = 0; iter < 4; iter++) {
       g.restaurer(dec.e);
-      const cible = poserCible(C, g, dist);
+      const cible = poserCible(C, g, dist, avecEau);
       pts.splice(iC + 1);                                           // tout ce qui suit le sommet est refait
       if (!cible) { eaux.length = nEaux; pousser({ x: C.x + 900, y: -C.y * 0.6 }); faisceau = avant; return "bosse"; }
       pousser(...cible.mid, cible.Cl, cible.Tl);
@@ -144,14 +163,15 @@ function construire(id, plan) {
       avancer((q) => { if (q.p.x > cible.Cl.x - 100 && q.p.x < cible.Cl.x) enVol = !q.p.ground; return q.p.x > cible.L.x + 400; });
       const q = meilleur();
       const propre = d2 && enVol && q.boums === d2.boums && q.parfaits > d2.parfaits;
-      if (propre || !d2) {
+      // sans eau, le pingouin parfait peut préférer rester au sol : le saut reste un raccourci, on le garde
+      if (propre || !d2 || (!avecEau && iter >= 1)) {
         vols.push({ C, L: cible.L, Cl: cible.Cl, ok: propre });
         // arc de poissons le long du vol idéal, un poisson bleu au milieu, parfois un doré au-dessus
         const { L, Cl, Tl, yTraj } = cible;
         for (let x = C.x + 160; x < L.x - 120; x += 130) poissons.push([Math.round(x), Math.round(yTraj(x) + 18), "normal"]);
         const xm = (C.x + L.x) / 2;
-        poissons.push([Math.round(xm + 40), Math.round(yTraj(xm + 40) + 18), "bleu"]);
-        if (rand() < 0.5) poissons.push([Math.round(xm), Math.round(yTraj(xm) + 260), "or"]);
+        if (rand() < plan.poissons.bleu * 2) poissons.push([Math.round(xm + 40), Math.round(yTraj(xm + 40) + 18), "bleu"]);
+        if (rand() < plan.poissons.or * 3) poissons.push([Math.round(xm), Math.round(yTraj(xm) + 260), "or"]);
         for (let j = 0; j < 4; j++) { const x = L.x + 150 + j * 62; poissons.push([Math.round(x), Math.round(hSeg(Cl, Tl, x) + 22), "normal"]); }
         faisceau = avant;
         return true;
@@ -173,17 +193,20 @@ function construire(id, plan) {
     avancer((q) => q.p.x > T.x - 500);
     const q = meilleur(), v = Math.hypot(q.p.vx, q.p.vy);
     const avancement = T.x / finX;
-    const dist = plan.rythme.vol[0] + (plan.rythme.vol[1] - plan.rythme.vol[0]) * avancement;
-    if (v < plan.rythme.vitesse * plan.vmax && glissesDeSuite < 3) { bosse(plan.glisse.relief); glissesDeSuite++; continue; }
-    const r = saut(dist, plan.rythme.decollage);
-    if (r === true) { n++; glissesDeSuite = 0; } else { bosse(plan.glisse.relief); glissesDeSuite++; }
+    const dist = plan.saut.vol[0] + (plan.saut.vol[1] - plan.saut.vol[0]) * avancement;
+    if (v < plan.saut.vitesse * plan.vmax) { bosse(plan.glisse.relief); glissesDeSuite++; continue; }
+    const r = saut(dist, plan.saut.decollage);
+    if (r === true) {
+      n++; glissesDeSuite = 0;
+      for (let i = 0; i < plan.saut.recup; i++) bosse(plan.elan.relief);   // de quoi reprendre de l'élan après un raté
+    } else { bosse(plan.glisse.relief); glissesDeSuite++; }
   }
   // arrivée : glissade presque plate jusqu'à l'igloo
   const last = pts[pts.length - 1];
   pousser({ x: Math.max(last.x + 600, finX - 300), y: -40 }, { x: finX + 8000, y: -110 });
 
   const niveau = {
-    id, nom: plan.nom, long: plan.long, vmax: plan.vmax, ciel: plan.ciel, graine: plan.graine,
+    id, nom: plan.nom, long: plan.long, vmax: plan.vmax, ciel: plan.ciel, graine: plan.graine, sig: signature(plan), sauts: n,
     points: pts.map((q) => [Math.round(q.x), Math.round(q.y)]),
     poissonsFixes: poissons.filter(([x]) => x < finX - 250),
     eaux: eaux.slice(),
@@ -211,20 +234,36 @@ function construire(id, plan) {
   return niveau;
 }
 
+const args = process.argv.slice(2);
+const anciens = existsSync(FICHIER) ? require(FICHIER) : {};
+if (args.includes("--verifier")) {
+  let faux = 0;
+  for (const [id, plan] of Object.entries(PLANS)) {
+    const N = anciens[id];
+    if (!N) { console.log(`✗ ${id} : pas construit (npm run construire -- ${id})`); faux++; continue; }
+    if (N.sig !== signature(plan)) { console.log(`✗ ${id} : son plan a changé (npm run construire -- ${id})`); faux++; continue; }
+    const r = Pingo.rejouer({ ...N, entrees: N.e });
+    if (r.etat !== "gagne") { console.log(`✗ ${id} : le parcours parfait n'arrive plus au bout (npm run construire -- ${id})`); faux++; }
+  }
+  console.log(faux ? `${faux} niveau(x) à reconstruire` : `✓ niveaux construits à jour (${Object.keys(PLANS).length}), parcours parfaits valides`);
+  process.exit(faux ? 1 : 0);
+}
+const demandes = args.filter((a) => PLANS[a]);
 const table = {};
-for (const [id, plan] of Object.entries(PLANS)) table[id] = construire(id, plan);
+for (const id of Object.keys(PLANS)) {
+  if (demandes.length && !demandes.includes(id) && anciens[id]) { table[id] = anciens[id]; continue; }
+  table[id] = construire(id, PLANS[id]);
+}
 const js = `// Niveaux construits par outils/construire-niveaux.mjs (npm run construire) : ne pas modifier à la main.
-// points : relief [x, y] ; poissonsFixes : [x, y, type] ; e : appuis du pingouin parfait ; marge (s).
+// points : relief [x, y] ; poissonsFixes : [x, y, type] ; eaux : crevasses [x début, x fin, niveau de l'eau] ;
+// e : appuis du pingouin parfait ; marge : retard de la banquise (s) ; sig : plan utilisé.
 (function (racine) {
-const NIVEAUX = ${JSON.stringify(table)};
+const NIVEAUX = {
+${Object.entries(table).map(([id, n]) => `${JSON.stringify(id)}: ${JSON.stringify(n)},`).join("\n")}
+};
 if (typeof module !== "undefined" && module.exports) module.exports = NIVEAUX;
 else racine.PINGO_CONSTRUITS = NIVEAUX;
 })(typeof window !== "undefined" ? window : globalThis);
 `;
-if (process.argv.includes("--verifier")) {
-  const ok = existsSync(FICHIER) && readFileSync(FICHIER, "utf8") === js;
-  console.log(ok ? "✓ niveaux construits à jour" : "✗ niveaux-construits.js n'est plus à jour : npm run construire");
-  process.exit(ok ? 0 : 1);
-}
 writeFileSync(FICHIER, js);
-console.log(`niveaux-construits.js écrit (${Object.keys(table).length} niveau)`);
+console.log(`niveaux-construits.js écrit (${Object.keys(table).length} niveaux)`);

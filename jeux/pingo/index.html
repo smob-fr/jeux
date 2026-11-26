@@ -154,7 +154,6 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
 </style>
 <!-- kit commun du dépôt (sauvegarde, statistiques anonymes), installé par npm run build ; facultatif -->
 <script src="kit/kit.js"></script>
-<script src="parcours.js"></script>
 <script src="niveaux-construits.js"></script>
 <script src="moteur.js"></script>
 </head>
@@ -1100,7 +1099,18 @@ function lancerSansFin() {
 const NOUVEAUX = {
   bleu: { titre: "Le poisson bleu", texte: "Il vaut 3 poissons. Il nage haut au-dessus des bosses : arrive vite au sommet et lâche pour t'envoler jusqu'à lui." },
   or: { titre: "Le poisson d'or", texte: "Il vaut 5 poissons, et il est encore plus haut. Prends un maximum d'élan dans les descentes, puis vole !" },
+  eau: { titre: "La crevasse", texte: "Une crevasse pleine d'eau te sépare de la bosse d'en face. Prends assez d'élan pour la survoler : si tu tombes dedans, tu perds toute ta vitesse !" },
 };
+// Vignette de la fiche « Nouveau ! » : le poisson, ou une crevasse entre deux bosses.
+function dessinerNouveau(cx, w, h, type) {
+  if (type !== "eau") return drawFish(w / 2, h / 2 + 4, 1.25, type, 300, cx);
+  cx.fillStyle = "#5fb6ea"; cx.fillRect(40, h * 0.55, w - 80, h * 0.45);
+  cx.fillStyle = "#eaf6ff";
+  cx.beginPath(); cx.moveTo(0, h); cx.lineTo(0, h * 0.3); cx.quadraticCurveTo(40, h * 0.25, 55, h * 0.6); cx.lineTo(55, h); cx.fill();
+  cx.beginPath(); cx.moveTo(w, h); cx.lineTo(w, h * 0.35); cx.quadraticCurveTo(w - 40, h * 0.3, w - 55, h * 0.62); cx.lineTo(w - 55, h); cx.fill();
+  cx.strokeStyle = "#fff"; cx.lineWidth = 2; cx.setLineDash([4, 5]);
+  cx.beginPath(); cx.moveTo(30, h * 0.25); cx.quadraticCurveTo(w / 2, -h * 0.15, w - 30, h * 0.3); cx.stroke(); cx.setLineDash([]);
+}
 function lancerNiveau(monde, i) {
   const n = P.niveau(monde, i);
   if (!n) return allerCarte();
@@ -1112,7 +1122,7 @@ function lancerNiveau(monde, i) {
     $("nouveau-texte").textContent = N.texte;
     const art = $("nouveau-art"), cx = art.getContext("2d");
     cx.clearRect(0, 0, art.width, art.height);
-    drawFish(art.width / 2, art.height / 2 + 4, 1.25, n.nouveau, 300, cx);
+    dessinerNouveau(cx, art.width, art.height, n.nouveau);
     ecran = "carte";
     montrer("nouveau");
     $("b-nouveau-ok").onclick = () => { Sound.clic(); demarrerNiveau(n); };
