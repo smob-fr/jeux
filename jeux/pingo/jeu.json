@@ -1,7 +1,7 @@
 {
   "id": "pingo",
   "nom": "Pingo Glisse",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "statut": "prototype",
   "description": "Prototype : un pingouin glisse sur des collines enneigées, la banquise fond derrière lui. Mode sans fin et aventure en 30 niveaux.",
   "statistiques": {

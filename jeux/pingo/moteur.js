@@ -220,7 +220,7 @@ function creerPartie(opts = {}) {
     mode: niveau ? "niveau" : essai ? "essai" : "sansfin", niveau, graine, terrain, fishes, p, finX, total, trace,
     tempsParfait: parfait ? parfait.temps : null, eaux,
     etat: "jeu",              // jeu → plouf (rattrapé) ou gagne (arrivé à l'igloo)
-    fonte: opts.fonte !== false && !fantome && !opts.rejeu && !essai,
+    fonte: opts.fonte !== false && !fantome && !opts.rejeu && !essai && !(niveau && niveau.sansBanquise),
     meltX: trace ? -RETARD_FONTE : F.debut, meltV: F.v0, recul: 0, time: 0,
     hold: false,
     fishCount: 0, score: 0, flips: 0, turbo: 0, turboT: 0, turbos: 0, boums: 0, parfaits: 0, hautsVols: 0,
@@ -461,6 +461,56 @@ function niveau(monde, i) {
   return Object.assign(spec, EXTRAS[id] || {}, { id, monde, numero: i, ciel: M.ciel });
 }
 
+/* ---------------- Constructeur de bosses (terrain d'essai) ----------------
+   Le joueur dessine les premières bosses : un départ (le pingouin part du plateau de cette petite bosse),
+   puis des bosses { montee, haut, plateau, descente, creux } enchaînées de creux en creux. Le tracé est
+   ensuite répété 3 fois, puis l'arrivée. Pas de banquise. */
+const EDITEUR = {
+  vmax: 1000,
+  depart: { haut: 70, plateau: 300, descente: 480, creux: 60 },
+  bosses: [
+    { montee: 420, haut: 70, plateau: 220, descente: 480, creux: 60 },
+    { montee: 420, haut: 80, plateau: 220, descente: 500, creux: 70 },
+    { montee: 450, haut: 110, plateau: 160, descente: 900, creux: 120 },
+    { montee: 450, haut: 80, plateau: 220, descente: 520, creux: 60 },
+  ],
+};
+/** Les points du tracé (départ et bosses, une seule fois) : [{ x, y, role, i }] (role : depart, sommet, creux). */
+function pointsEditeur(r) {
+  const d = r.depart, L = [];
+  L.push({ x: -1800, y: -40 }, { x: -900, y: Math.round(d.haut * 0.4) });
+  L.push({ x: -d.plateau / 2, y: d.haut, role: "depart" }, { x: d.plateau / 2, y: d.haut });
+  let x = d.plateau / 2 + d.descente;
+  L.push({ x, y: -d.creux, role: "creux", i: -1 });
+  r.bosses.forEach((b, i) => {
+    L.push({ x: x + b.montee, y: b.haut, role: "sommet", i });
+    if (b.plateau > 0) L.push({ x: x + b.montee + b.plateau, y: b.haut });
+    x += b.montee + b.plateau + b.descente;
+    L.push({ x, y: -b.creux, role: "creux", i });
+  });
+  return L;
+}
+/** Un niveau jouable à partir du tracé : répété 3 fois, poissons dans les descentes, igloo au bout. */
+function niveauEditeur(r) {
+  const pts = pointsEditeur(r).map((q) => [Math.round(q.x), Math.round(q.y)]);
+  const poissons = [];
+  let x = pts[pts.length - 1][0];
+  for (let tour = 0; tour < 3; tour++) {
+    for (const b of r.bosses) {
+      const c1 = x + b.montee, c2 = c1 + b.plateau, t = c2 + b.descente;
+      pts.push([Math.round(c1), b.haut]);
+      if (b.plateau > 0) pts.push([Math.round(c2), b.haut]);
+      pts.push([Math.round(t), -b.creux]);
+      for (let k = 0; k < 4; k++) { const xf = c2 + b.descente * 0.5 + k * 60; poissons.push([Math.round(xf), Math.round(-b.creux + (b.haut + b.creux) * (1 + Math.cos(Math.PI * (xf - c2) / b.descente)) / 2 + 22), "normal"]); }
+      x = t;
+    }
+  }
+  const long = Math.ceil((x + 800) / PX_PER_M / 50) * 50;
+  pts.push([Math.round(long * PX_PER_M - 300), -40], [Math.round(long * PX_PER_M + 8000), -110]);
+  return { id: "editeur", nom: "Mes bosses", long, vmax: r.vmax, points: pts, poissonsFixes: poissons, eaux: [],
+    sansBanquise: true, marge: 99, graine: 1, ciel: 0, monde: 0, numero: 0, poissons: {} };
+}
+
 /* ---------------- Terrain d'essai ----------------
    Pour régler le relief en jouant : hauteur des bosses, longueur des montées et des descentes, vitesse
    maximale, part de tremplins. Chaque valeur varie de ± 10 % d'une bosse à l'autre. */
@@ -487,7 +537,7 @@ function etoiles(score, total) {
 const Pingo = {
   PX_PER_M, G, DIVE, MIN_SPEED, MAX_SPEED, FISH_FOR_TURBO, POISSONS, MONDES, NIVEAUX_PAR_MONDE, SEUILS,
   PAS_ENTREE, PAS_TRACE, SOUS_PAS, EXTRAS,
-  aleatoire, creerPartie, niveau, etoiles, rejouer, encoder, decoder, essai: creerEssai, ESSAIS, niveauConstruit,
+  aleatoire, creerPartie, niveau, etoiles, rejouer, encoder, decoder, essai: creerEssai, ESSAIS, niveauConstruit, EDITEUR, pointsEditeur, niveauEditeur,
 };
 if (typeof module !== "undefined" && module.exports) module.exports = Pingo;
 else racine.Pingo = Pingo;

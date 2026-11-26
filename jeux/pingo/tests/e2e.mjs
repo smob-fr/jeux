@@ -134,6 +134,21 @@ ok((await p.isVisible("#essai")) && (await p.isVisible("#b-essai-reprendre")) &&
 await p.click("#b-essai-go");
 ok((await etat()) === "play", "« Relancer avec ces réglages »");
 await p.click("#b-pause");
+// constructeur de bosses : on monte le 1er sommet en le faisant glisser, puis on joue le tracé
+const avantHaut = await p.evaluate(() => __pingo.save.editeur ? __pingo.save.editeur.bosses[0].haut : Pingo.EDITEUR.bosses[0].haut);
+await p.locator("#editeur").scrollIntoViewIfNeeded();
+const pos = await p.evaluate(() => { const c = document.getElementById("editeur"), r = c.getBoundingClientRect(), L = Pingo.pointsEditeur(__pingo.save.editeur || Pingo.EDITEUR).slice(2);
+  const x0 = L[0].x - 150, x1 = L[L.length - 1].x + 150, kx = r.width / (x1 - x0), ky = r.height / 940, q = L.find((v) => v.role === "sommet" && v.i === 0);
+  return { x: r.left + (q.x - x0) * kx, y: r.top + r.height - (q.y + 420) * ky, ky }; });
+await p.mouse.move(pos.x, pos.y); await p.mouse.down(); await p.mouse.move(pos.x, pos.y - 25, { steps: 4 }); await p.mouse.up();
+const apresHaut = await p.evaluate(() => __pingo.save.editeur.bosses[0].haut);
+ok(apresHaut > avantHaut + 50 && (await p.textContent("#ed-valeurs")).includes(`h${apresHaut}`), `constructeur de bosses : 1er sommet monté de ${avantHaut} à ${apresHaut} en le faisant glisser`);
+await p.click("#b-ed-jouer");
+const ed = await p.evaluate(() => ({ id: __pingo.g.niveau.id, fonte: __pingo.g.fonte, y0: Math.round(__pingo.p.y), haut: __pingo.save.editeur.depart.haut }));
+ok((await etat()) === "play" && ed.id === "editeur" && !ed.fonte && !(await p.isVisible("#melt-meter")) && ed.y0 === ed.haut, `« Jouer ces bosses » : partie sans banquise, départ en haut de la première bosse (y = ${ed.y0})`);
+await p.waitForTimeout(600);
+await p.click("#b-pause"); await p.click("#b-quitter");
+ok((await p.isVisible("#essai")) && (await p.textContent("#essai-bilan")).includes("glisse"), "pause, « Réglages » : retour au constructeur avec le bilan");
 await p.fill("#r-marge", "6"); await p.dispatchEvent("#r-marge", "input");
 await p.click("#b-test");
 const test = await p.evaluate(() => ({ id: __pingo.g.niveau.id, marge: __pingo.g.niveau.marge, construit: !!__pingo.g.niveau.points, parfait: __pingo.g.tempsParfait, poissons: __pingo.g.fishes.length }));

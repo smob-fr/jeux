@@ -78,7 +78,8 @@ un plan a changé sans reconstruction, ou si un parcours parfait enregistré n'a
 
 Le relief n'est pas tiré au hasard : il est **construit en faisant jouer le pingouin parfait** (recherche
 en faisceau, `robots.cjs › etape`, sans plongée en l'air) au fur et à mesure.
-- Départ : glissade douce, puis bosses d'**élan** (montée = descente au début du jeu).
+- Départ : le pingouin part du **plateau d'une petite bosse** (en x = 0), puis bosses d'**élan**.
+- Relief `[hauteur, montée, descente, plateau]` : le plateau élargit les sommets (deux points à la même hauteur).
 - Ensuite, selon la vitesse du pingouin parfait au dernier creux : lent → une **bosse de glisse** ;
   rapide (plus de `saut.vitesse` × `vmax`) → un **saut calculé**, suivi de `saut.recup` bosses d'élan
   (pour se rattraper après un saut raté).
@@ -99,8 +100,7 @@ en faisceau, `robots.cjs › etape`, sans plongée en l'air) au fur et à mesure
 
 | | Bosses | Sauts | Crevasses | Banquise |
 |---|---|---|---|---|
-| 1-1 | 90-110, montée = descente = 800 | aucun | non | 9 s |
-| 1-2, 1-3 | 100-130 | rares, tolérants (86-87 %) | non | 8,5-9 s |
+| 1-1 → 1-3 | 70-100, rapprochées (montée ~430, descente ~500), sommets en plateau (~200), vitesse 1 000 → 1 150 | dès le 1-1, très tolérants (84-86 %) | non | 9-8,5 s |
 | monde 1 | 110 → 150 | tolérance 88 → 90 % | non | 9 → 7 s |
 | monde 2 | 140 → 170 | 90 → 92 % | 50 → 80 % des sauts | 6,5 → 5 s |
 | monde 3 | 170 → 200 | 92 → 94 % | 85 → 100 % | 5 → 4 s |
@@ -143,6 +143,16 @@ Réglages gardés dans `save.essai`. La fiche affiche une ligne « Valeurs : …
 recopie : on reprend ensuite ces valeurs dans `outils/plans-niveaux.mjs`, puis `npm run construire`.
 Moteur : `Pingo.essai(réglages)` donne l'option `essai` de `creerPartie`.
 
+### Constructeur de bosses (terrain d'essai)
+
+Le propriétaire dessine les premières bosses au doigt : profil (hauteurs dessinées ×4 environ) avec des
+poignées (départ : hauteur ; sommets : position = montée, hauteur ; creux : position = descente,
+profondeur), plateau du sommet choisi, vitesse maximale, + / − bosse. « Jouer ces bosses » : le tracé
+répété 3 fois, sans banquise (`niveau.sansBanquise`), le pingouin part du plateau de la bosse de départ ;
+la pause ramène à l'éditeur avec le bilan. Tracé gardé dans `save.editeur` ; la ligne « Valeurs : … »
+(vitesse ; départ h p d c ; puis pour chaque bosse m h p d c) est à reprendre dans
+`outils/plans-niveaux.mjs`. Moteur : `EDITEUR` (tracé par défaut), `pointsEditeur`, `niveauEditeur`.
+
 ### Niveau test (terrain d'essai)
 
 Le plan `test` d'`outils/plans-niveaux.mjs` (bosses 170 / 850 / 1 050, vitesse 2 100, crevasses à
@@ -151,7 +161,7 @@ pas dans l'aventure.
 
 ### Sauvegarde (`pingo.v1`, `Kit.creerSauvegarde`)
 
-`uid`, `stats` (statistiques), `essai` (réglages du terrain d'essai), `margeTest` (retard de la banquise du niveau test), `best` (record sans fin, repris de l'ancienne clé `pingo.best`, qui est
+`uid`, `stats` (statistiques), `essai` (réglages du terrain d'essai), `editeur` (bosses dessinées), `margeTest` (retard de la banquise du niveau test), `best` (record sans fin, repris de l'ancienne clé `pingo.best`, qui est
 encore écrite), `son`, `niveaux` (`{ "1-1": 3 }`, meilleures étoiles), `vus` (aides et fiches déjà
 montrées). Sans le kit (`index.html` ouvert directement), une version minimale fait la même chose.
 

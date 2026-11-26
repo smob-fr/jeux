@@ -130,6 +130,7 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
 .prereglages .btn { width: auto; margin-top: 0; font-size: 15px; padding: 7px 12px; }
 .valeurs { font: 600 12px ui-monospace, monospace; color: var(--frost); background: rgba(0,0,0,.25); border-radius: 10px; padding: 6px 8px; margin: 8px 0 0; user-select: text; -webkit-user-select: text; word-break: break-word; }
 #essai .card { max-width: 400px; }
+.editeur { display: block; width: 100%; height: 210px; margin: 10px 0 8px; border-radius: 14px; background: rgba(0, 0, 0, .22); touch-action: none; }
 
 /* ---------- victoire ---------- */
 .etoiles { display: flex; justify-content: center; gap: 6px; margin: 6px 0 2px; font-size: 54px; line-height: 1; }
@@ -248,6 +249,20 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
     <p class="objectif" id="essai-bilan"></p>
     <p class="valeurs" id="essai-valeurs"></p>
     <button class="btn" id="b-essai-go" type="button">Glisser !</button>
+    <h2 style="margin-top:18px;font-size:24px">Constructeur de bosses</h2>
+    <p>Fais glisser les points : les sommets (hauteur, position) et les creux. Le pingouin part du plateau de la première bosse. Touche un sommet pour régler son plateau.</p>
+    <canvas id="editeur" class="editeur" aria-label="Profil des bosses à modifier"></canvas>
+    <div class="prereglages">
+      <button class="btn sobre" id="b-ed-plus" type="button">+ bosse</button>
+      <button class="btn sobre" id="b-ed-moins" type="button">− bosse</button>
+      <button class="btn sobre" id="b-ed-raz" type="button">Revenir au départ</button>
+    </div>
+    <div class="reglages">
+      <label>Plateau du sommet choisi <b id="v-ed-plateau"></b><input type="range" id="r-ed-plateau" min="0" max="800" step="20"></label>
+      <label>Vitesse maximale <b id="v-ed-vmax"></b><input type="range" id="r-ed-vmax" min="600" max="2600" step="50"></label>
+    </div>
+    <p class="valeurs" id="ed-valeurs"></p>
+    <button class="btn" id="b-ed-jouer" type="button">Jouer ces bosses</button>
     <h2 style="margin-top:18px;font-size:24px">Niveau test</h2>
     <p>Bosses calculées : après quelques glisses parfaites, ton saut doit retomber pile sur la bosse prévue, plus loin. La banquise suit le parcours parfait.</p>
     <div class="reglages">
@@ -985,12 +1000,12 @@ function toast(text) {
 }
 function hud() {
   const p = g.p, m = g.m;
-  if (g.niveau) {
+  if (g.niveau && !g.niveau.sansBanquise) {
     $("dist").innerHTML = `${nf(Math.min(m, g.niveau.long))}<small> / ${nf(g.niveau.long)} m</small>`;
     const s1 = Math.ceil(g.total * P.SEUILS[0]), s2 = Math.ceil(g.total * P.SEUILS[1]);
     $("fishes").innerHTML = `🐟 ${g.score}<span class="mini">${g.score >= s1 ? "<b>★</b>" : "★"}${g.score >= s2 ? "<b>★</b>" : "★"}</span>`;
     $("goal-bar").firstElementChild.style.width = Math.min(100, p.x / g.finX * 100) + "%";
-  } else if (g.mode === "essai") {
+  } else if (g.mode === "essai" || (g.niveau && g.niveau.sansBanquise)) {
     $("dist").innerHTML = `${nf(m)}<small> m</small>`;
     $("fishes").innerHTML = `✨ ${g.parfaits}<span class="mini">💥 ${g.boums}</span>`;
     vitesseMax = Math.max(vitesseMax, Math.hypot(p.vx, p.vy));
@@ -1138,11 +1153,11 @@ function demarrerNiveau(n) {
   $("goal-meter").hidden = false;
   commencer();
   if (K) K.Stats.debut(n.monde ? "aventure" : "essai", n.id, { monde: n.monde });
-  toast(n.monde ? `Niveau ${n.id}` : "Niveau test");
+  toast(n.monde ? `Niveau ${n.id}` : n.id === "editeur" ? "Mes bosses" : "Niveau test");
 }
 function commencer() {
   ecran = "jeu";
-  $("melt-meter").hidden = g.mode === "essai";
+  $("melt-meter").hidden = !g.fonte;
   hold = false;
   montrer(null);
   Sound.unlock();
@@ -1184,12 +1199,14 @@ function majEssai() {
 }
 function ouvrirEssai() {
   const enCours = g && g.mode === "essai" && ecran === "pause";
+  const mesBosses = g && g.niveau && g.niveau.id === "editeur";   // retour d'une partie sur les bosses dessinées
   if (!enCours) { ecran = "carte"; if (!g || g.fonte || g.mode === "essai") demo(); }
   majEssai();
   $("b-essai-reprendre").hidden = !enCours;
-  $("essai-bilan").textContent = enCours ? `${nf(g.m)} m · ${g.parfaits} glisse${g.parfaits > 1 ? "s" : ""} parfaite${g.parfaits > 1 ? "s" : ""} · ${g.boums} « Boum » · vitesse max atteinte ${nf(vitesseMax)}` : "";
+  $("essai-bilan").textContent = enCours || mesBosses ? `${nf(g.m)} m · ${g.parfaits} glisse${g.parfaits > 1 ? "s" : ""} parfaite${g.parfaits > 1 ? "s" : ""} · ${g.boums} « Boum » · vitesse max atteinte ${nf(vitesseMax)}` : "";
   $("b-essai-go").textContent = enCours ? "Relancer avec ces réglages" : "Glisser !";
   montrer("essai");
+  requestAnimationFrame(dessinerEditeur);
 }
 let vitesseMax = 0;
 function lancerEssai() {
@@ -1204,6 +1221,100 @@ for (const k of CHAMPS_ESSAI) $("r-" + k).addEventListener("input", (e) => { reg
 document.querySelectorAll("[data-essai]").forEach((b) => b.addEventListener("click", () => { Sound.clic(); save.essai = { ...P.ESSAIS[b.dataset.essai] }; persist(); majEssai(); }));
 $("b-essai").onclick = () => { Sound.unlock(); Sound.clic(); ouvrirEssai(); };
 $("b-essai-go").onclick = () => { Sound.clic(); lancerEssai(); };
+
+/* ---------------- Constructeur de bosses ----------------
+   Le tracé (save.editeur) : départ { haut, plateau, descente, creux } et bosses { montee, haut, plateau,
+   descente, creux }. Poignées : départ (hauteur), sommets (position = montée, hauteur), creux (position =
+   descente, profondeur). Hauteurs dessinées plus grandes que les longueurs pour qu'on les voie bien. */
+const edCv = $("editeur"), edCtx = edCv.getContext("2d");
+let edSel = 0, edDrag = null;
+function reglagesEditeur() {
+  if (!save.editeur || !Array.isArray(save.editeur.bosses) || !save.editeur.depart) save.editeur = JSON.parse(JSON.stringify(P.EDITEUR));
+  return save.editeur;
+}
+function vueEditeur() {
+  const r = reglagesEditeur(), pts = P.pointsEditeur(r).slice(2);
+  const w = edCv.clientWidth || 340, h = edCv.clientHeight || 210;
+  const x0 = pts[0].x - 150, x1 = pts[pts.length - 1].x + 150, yMin = -420, yMax = 520;
+  return { r, pts, w, h, kx: w / (x1 - x0), ky: h / (yMax - yMin), x0, yMin };
+}
+const borne = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
+function dessinerEditeur() {
+  const V = vueEditeur(), { pts, w, h } = V;
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  if (edCv.width !== Math.round(w * d)) { edCv.width = Math.round(w * d); edCv.height = Math.round(h * d); }
+  const c = edCtx; c.setTransform(d, 0, 0, d, 0, 0); c.clearRect(0, 0, w, h);
+  const X = (x) => (x - V.x0) * V.kx, Y = (y) => h - (y - V.yMin) * V.ky;
+  const hAt = (x) => { for (let i = 0; i < pts.length - 1; i++) if (pts[i + 1].x > x) { const a = pts[i], b = pts[i + 1], t = (x - a.x) / (b.x - a.x); return a.y + (b.y - a.y) * (1 - Math.cos(Math.PI * t)) / 2; } return pts[pts.length - 1].y; };
+  c.strokeStyle = "rgba(255,255,255,.15)"; c.lineWidth = 1; c.beginPath(); c.moveTo(0, Y(0)); c.lineTo(w, Y(0)); c.stroke();
+  c.fillStyle = "rgba(234,246,255,.9)"; c.beginPath(); c.moveTo(0, h);
+  for (let px = 0; px <= w; px += 2) c.lineTo(px, Y(hAt(V.x0 + px / V.kx)));
+  c.lineTo(w, h); c.closePath(); c.fill();
+  // pingouin au départ
+  c.fillStyle = "#14243a"; c.beginPath(); c.ellipse(X(0), Y(hAt(0)) - 6, 9, 5, 0, 0, 7); c.fill();
+  c.fillStyle = "#ff5a4e"; c.fillRect(X(0) - 12, Y(hAt(0)) - 9, 6, 3);
+  for (const q of pts) {
+    if (!q.role) continue;
+    const sel = q.role === "sommet" && q.i === edSel || q.role === "depart" && edSel === -1;
+    c.fillStyle = q.role === "creux" ? "#4fc3ff" : sel ? "#ffc93c" : "#ff5a4e";
+    c.beginPath(); c.arc(X(q.x), Y(q.y), sel ? 10 : 8, 0, 7); c.fill();
+    c.strokeStyle = "#fff"; c.lineWidth = 2; c.stroke();
+  }
+  c.fillStyle = "rgba(255,255,255,.6)"; c.font = "600 11px " + POLICE; c.textAlign = "right";
+  c.fillText(`hauteurs × ${(V.ky / V.kx).toFixed(1)}`, w - 8, 14);
+  majValeursEditeur();
+}
+function majValeursEditeur() {
+  const r = reglagesEditeur(), b = edSel >= 0 ? r.bosses[edSel] : r.depart;
+  $("r-ed-plateau").value = b ? b.plateau : 0; $("v-ed-plateau").textContent = b ? nf(b.plateau) : "";
+  $("r-ed-vmax").value = r.vmax; $("v-ed-vmax").textContent = nf(r.vmax);
+  const d = r.depart;
+  $("ed-valeurs").textContent = `Valeurs : vitesse ${r.vmax} ; départ h${d.haut} p${d.plateau} d${d.descente} c${d.creux} ; `
+    + r.bosses.map((q, i) => `${i + 1}) m${q.montee} h${q.haut} p${q.plateau} d${q.descente} c${q.creux}`).join(" ; ");
+}
+function poigneeEditeur(e) {
+  const V = vueEditeur(), rect = edCv.getBoundingClientRect(), mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let best = null, dist = 30;
+  for (const q of V.pts) {
+    if (!q.role) continue;
+    const dd = Math.hypot((q.x - V.x0) * V.kx - mx, V.h - (q.y - V.yMin) * V.ky - my);
+    if (dd < dist) { dist = dd; best = q; }
+  }
+  return best;
+}
+edCv.addEventListener("pointerdown", (e) => {
+  const q = poigneeEditeur(e);
+  if (!q) return;
+  edDrag = q; edCv.setPointerCapture(e.pointerId);
+  if (q.role === "sommet") edSel = q.i; else if (q.role === "depart") edSel = -1;
+  dessinerEditeur();
+});
+edCv.addEventListener("pointermove", (e) => {
+  if (!edDrag) return;
+  const V = vueEditeur(), r = V.r, rect = edCv.getBoundingClientRect();
+  const x = V.x0 + (e.clientX - rect.left) / V.kx, y = V.yMin + (V.h - (e.clientY - rect.top)) / V.ky;
+  const q = edDrag, pts = V.pts;
+  if (q.role === "depart") r.depart.haut = borne(y, 20, 400);
+  else if (q.role === "sommet") {
+    const b = r.bosses[q.i], creuxAvant = pts.find((p) => p.role === "creux" && p.i === q.i - 1);
+    b.haut = borne(y, 20, 500); b.montee = borne(x - creuxAvant.x, 120, 2000);
+  } else if (q.role === "creux") {
+    const b = q.i < 0 ? r.depart : r.bosses[q.i];
+    const sommet = q.i < 0 ? { x: -r.depart.plateau / 2 } : pts.find((p) => p.role === "sommet" && p.i === q.i);
+    b.creux = borne(-y, 0, 400); b.descente = borne(x - sommet.x - (q.i < 0 ? r.depart.plateau : b.plateau), 120, 2500);
+  }
+  dessinerEditeur();
+});
+const finDrag = () => { if (edDrag) { edDrag = null; persist(); } };
+edCv.addEventListener("pointerup", finDrag);
+edCv.addEventListener("pointercancel", finDrag);
+$("r-ed-plateau").addEventListener("input", (e) => { const r = reglagesEditeur(), b = edSel >= 0 ? r.bosses[edSel] : r.depart; b.plateau = +e.target.value; persist(); dessinerEditeur(); });
+$("r-ed-vmax").addEventListener("input", (e) => { reglagesEditeur().vmax = +e.target.value; persist(); dessinerEditeur(); });
+$("b-ed-plus").onclick = () => { Sound.clic(); const r = reglagesEditeur(); if (r.bosses.length < 8) r.bosses.push({ ...r.bosses[r.bosses.length - 1] }); persist(); dessinerEditeur(); };
+$("b-ed-moins").onclick = () => { Sound.clic(); const r = reglagesEditeur(); if (r.bosses.length > 1) r.bosses.pop(); edSel = Math.min(edSel, r.bosses.length - 1); persist(); dessinerEditeur(); };
+$("b-ed-raz").onclick = () => { Sound.clic(); save.editeur = JSON.parse(JSON.stringify(P.EDITEUR)); edSel = 0; persist(); dessinerEditeur(); };
+$("b-ed-jouer").onclick = () => { Sound.clic(); demarrerNiveau(P.niveauEditeur(reglagesEditeur())); };
+addEventListener("resize", () => { if (!$("essai").hidden) dessinerEditeur(); });
 $("r-marge").addEventListener("input", (e) => { save.margeTest = +e.target.value; persist(); majEssai(); });
 $("b-test").onclick = () => { Sound.clic(); reglagesEssai(); majEssai(); demarrerNiveau(P.niveauConstruit("test", save.margeTest)); };
 $("b-essai-reprendre").onclick = () => { Sound.clic(); reprendre(); };
