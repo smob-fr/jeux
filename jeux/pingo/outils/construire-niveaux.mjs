@@ -25,7 +25,7 @@ const FICHIER = fileURLToPath(new URL("../niveaux-construits.js", import.meta.ur
 import { plans } from "./plans-niveaux.mjs";
 const PLANS = plans();
 const signature = (plan) => JSON.stringify(plan);
-const PENTE_MAX = 1;   // pente maximale des parois des creux et des crevasses (45°)
+const PENTE_MAX_DEFAUT = 1;   // pente maximale des montées, des descentes et des parois (45°), sauf plan.penteMax
 
 const hSeg = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a.x) / (b.x - a.x))); return a.y + (b.y - a.y) * (1 - Math.cos(Math.PI * t)) / 2; };
 function hPts(pts, x) {
@@ -35,13 +35,20 @@ function hPts(pts, x) {
 
 function construire(id, plan) {
   const rand = Pingo.aleatoire(plan.graine);
-  const varie = (v) => v * (0.9 + 0.2 * rand());
+  const PENTE_MAX = plan.penteMax || PENTE_MAX_DEFAUT;
+  const DEGAGEMENT = plan.saut.degagement ?? 90;   // le sommet de la bosse cible est au moins à ça sous le vol
+  const CHUTE_MAX = plan.saut.chuteMax ?? 350;     // la cible n'est jamais plus bas que ça sous le décollage
+  const va = plan.variation ?? 0.1;                         // variation d'une bosse à l'autre (± 10 %)
+  const varie = (v) => v * (1 - va + 2 * va * rand());
   const finX = plan.long * PX_PER_M;
   // Partie de calcul (sans poissons, sans banquise) dont on fait grandir le terrain.
   // départ : en haut d'une petite bosse (le pingouin démarre en x = 0, sur son plateau), puis la descente
+  // (plan.depart : la bosse de départ choisie à la main { haut, plateau, descente, creux })
   const [hD, , dD] = plan.elan.relief;
+  const D = plan.depart || { haut: hD, plateau: 300, descente: dD, creux: hD * 0.85 };
   const spec = { id, long: plan.long, vmax: plan.vmax, poissonsFixes: [], eaux: [], graine: plan.graine,
-    points: [[-1800, -40], [-900, Math.round(hD * 0.4)], [-150, Math.round(hD)], [150, Math.round(hD)], [Math.round(150 + dD), Math.round(-hD * 0.85)]] };
+    points: [[-1800, -40], [-900, Math.round(D.haut * 0.4)], [Math.round(-D.plateau / 2), Math.round(D.haut)], [Math.round(D.plateau / 2), Math.round(D.haut)],
+      [Math.round(D.plateau / 2 + D.descente), Math.round(-D.creux)]] };
   const g = Pingo.creerPartie({ niveau: spec, rejeu: true });
   const pts = g.terrain.pts;
   // points arrondis dès la construction : le terrain enregistré (entiers) est exactement celui joué ici
@@ -50,13 +57,16 @@ function construire(id, plan) {
   const poissons = [], vols = [];
   const eaux = spec.eaux;   // même tableau que la partie de calcul : elle voit les crevasses au fur et à mesure
   // Une bosse : montée, sommet (avec un plateau de largeur « plateau » : sommet arrondi, pas pointu), descente.
-  const bosse = ([haut, montee, descente, plateau = 0], { k = 1 } = {}) => {
+  // (relief [hauteur, montée, descente, plateau, creux] ; creux : profondeur sous 0, par défaut 85 % de la hauteur ;
+  //  fixe : valeurs exactes, sans variation, pour les bosses choisies à la main)
+  const bosse = ([haut, montee, descente, plateau = 0, creux = haut * 0.85], { k = 1, fixe = false } = {}) => {
     const T0 = pts[pts.length - 1];
-    const C = { x: 0, y: varie(haut) * k }, T1 = { x: 0, y: -varie(haut * 0.85) };
+    const v = fixe ? (x) => x : varie;
+    const C = { x: 0, y: v(haut) * k }, T1 = { x: 0, y: -v(creux) };
     // largeurs au moins celles d'une pente de PENTE_MAX (montée depuis un creux profond, par exemple)
-    C.x = T0.x + Math.max(varie(montee), (C.y - T0.y) * Math.PI / 2 / PENTE_MAX);
+    C.x = T0.x + Math.max(v(montee), (C.y - T0.y) * Math.PI / 2 / PENTE_MAX);
     const C2 = { x: C.x + plateau, y: C.y };
-    T1.x = C2.x + Math.max(varie(descente), (C.y - T1.y) * Math.PI / 2 / PENTE_MAX);
+    T1.x = C2.x + Math.max(v(descente), (C.y - T1.y) * Math.PI / 2 / PENTE_MAX);
     if (plateau > 0) pousser(C, C2, T1); else pousser(C, T1);
     // rangée de poissons au sol dans la seconde moitié de la descente, gros poissons au-dessus du sommet
     for (let j = 0; j < 5; j++) { const x = C.x + (T1.x - C.x) * 0.55 + j * 62; if (x < T1.x - 30) poissons.push([Math.round(x), Math.round(hSeg(C, T1, x) + 22), "normal"]); }
@@ -90,8 +100,8 @@ function construire(id, plan) {
     // point d'atterrissage visé : là où le vol redescend franchement (pente d'au moins 0,65),
     // au moins à 60 % de la distance visée
     // (et jamais à plus de 350 px sous le sommet de décollage : pas de bosse cible au fond d'un trou)
-    let L = traj.find((s) => s.x >= C.x + dist * 0.6 && (s.pente <= -0.65 || s.y < C.y - 350));
-    if (!L) L = traj.find((s) => s.pente <= -0.65 || s.y < C.y - 350) || traj[traj.length - 1];
+    let L = traj.find((s) => s.x >= C.x + dist * 0.6 && (s.pente <= -0.65 || s.y < C.y - CHUTE_MAX));
+    if (!L) L = traj.find((s) => s.pente <= -0.65 || s.y < C.y - CHUTE_MAX) || traj[traj.length - 1];
     // bosse cible : sa descente passe par L avec la pente de la trajectoire
     // Tolérance : le sommet de la bosse cible est au moins 90 px sous le vol parfait ; un vol un peu plus
     // lent (plus bas) passe encore au-dessus et retombe dans la descente.
@@ -126,7 +136,7 @@ function construire(id, plan) {
       // la trajectoire passe 35 px au-dessus de la vallée et de la montée de la bosse cible
       const essaiPts = [C, ...mid, Cl, Tl];
       let ok = true;
-      for (let x = C.x + 150; x < Cl.x + (L.x - Cl.x) * 0.5; x += 20) if (hPts(essaiPts, x) > yTraj(x) - (x < Cl.x - 400 ? 35 : x < Cl.x + 60 ? 90 : 2)) { ok = false; if (process.env.DEBUG) console.log(`    essai ${essai} tL ${tL.toFixed(2)} : touche à ${Math.round(x - Cl.x)} du sommet cible (sol ${Math.round(hPts(essaiPts, x))}, vol ${Math.round(yTraj(x))}, pente L ${L.pente.toFixed(2)})`); break; }
+      for (let x = C.x + 150; x < Cl.x + (L.x - Cl.x) * 0.5; x += 20) if (hPts(essaiPts, x) > yTraj(x) - (x < Cl.x - 400 ? 35 : x < Cl.x + 60 ? DEGAGEMENT : 2)) { ok = false; if (process.env.DEBUG) console.log(`    essai ${essai} tL ${tL.toFixed(2)} : touche à ${Math.round(x - Cl.x)} du sommet cible (sol ${Math.round(hPts(essaiPts, x))}, vol ${Math.round(yTraj(x))}, pente L ${L.pente.toFixed(2)})`); break; }
       if (ok) {
         // l'eau couvre la crevasse là où le sol est sous sa surface
         let x0 = null, x1 = null;
@@ -193,6 +203,7 @@ function construire(id, plan) {
 
   // Construction : élan, puis selon la vitesse du pingouin parfait au dernier creux :
   // lent → une bosse de glisse pour prendre de la vitesse ; rapide → un saut calculé.
+  for (const b of plan.fixes || []) bosse([b.haut, b.montee, b.descente, b.plateau, b.creux], { fixe: true });   // bosses choisies à la main
   for (let i = 0; i < plan.elan.bosses; i++) bosse(plan.elan.relief);
   let n = 0, glissesDeSuite = 0;
   while (pts[pts.length - 1].x < finX - 4500) {
@@ -201,6 +212,7 @@ function construire(id, plan) {
     const q = meilleur(), v = Math.hypot(q.p.vx, q.p.vy);
     const avancement = T.x / finX;
     const dist = plan.saut.vol[0] + (plan.saut.vol[1] - plan.saut.vol[0]) * avancement;
+    if (process.env.DEBUG) console.log(`  creux à ${Math.round(T.x)} : vitesse ${Math.round(v)} (saut au-delà de ${Math.round(plan.saut.vitesse * plan.vmax)})`);
     if (v < plan.saut.vitesse * plan.vmax) { bosse(plan.glisse.relief); glissesDeSuite++; continue; }
     const r = saut(dist, plan.saut.decollage);
     if (r === true) {

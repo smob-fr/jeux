@@ -198,7 +198,8 @@ body { background: var(--deep); color: var(--ice); font-family: var(--display); 
     <div class="how">
       <div><b>Appui long</b><span>Plonge dans les <strong>descentes</strong> pour prendre de la vitesse.</span></div>
       <div><b>Relâche</b><span>Laisse-toi <strong>décoller</strong> en haut des bosses.</span></div>
-      <div><b>Touche en l'air</b><span>Fais un <strong>salto</strong> : bonus de vitesse si tu retombes sur le ventre.</span></div>
+      <div><b>Appui en l'air</b><span>Le pingouin <strong>pique</strong> : il redescend plus vite pour attraper une pente plus tôt si tu vas trop loin.</span></div>
+      <div><b>Touche brève en l'air</b><span>Fais un <strong>salto</strong> : bonus de vitesse si tu retombes sur le ventre.</span></div>
       <div><b>🐟 × 8</b><span>Les poissons remplissent le <strong>turbo</strong> et repoussent la fonte. Les <strong>bleus</strong> (×3) et les <strong>dorés</strong> (×5) sont tout là-haut.</span></div>
       <div><b>Aventure</b><span>La banquise suit le <strong>parcours parfait</strong>, avec quelques secondes de retard : enchaîne les glisses parfaites pour rester devant.</span></div>
     </div>
@@ -397,6 +398,7 @@ const Sound = (() => {
     ding: (k = 1) => { tone(880 * k, 0.18, "triangle", 0.1); tone(1320 * k, 0.12, "sine", 0.05); },
     gros: (k = 1) => { [1, 1.25, 1.5, 2].forEach((m, i) => tone(660 * k * m, 0.16, "triangle", 0.09, 0, i * 0.06)); },
     whoosh: () => tone(300, 0.25, "sine", 0.06, 2.2),
+    pique: () => tone(700, 0.22, "sine", 0.05, 0.45),
     bump: () => tone(140, 0.2, "triangle", 0.15, 0.5),
     turbo: () => { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.15, "square", 0.05, 0, i * 0.07)); },
     splash: () => { tone(400, 0.5, "sine", 0.15, 0.25); tone(90, 0.6, "triangle", 0.12, 0.5); },
@@ -451,6 +453,7 @@ function surEvenement(type, d) {
       for (let k = 0; k < 22; k++) particles.push({ x: p.x, y: d.y, vx: (Math.random() - .5) * 420, vy: 150 + Math.random() * 360, life: .9, r: 3 + Math.random() * 4, c: "foam" });
       break;
     case "decollage": if (d.vitesse > 700) Sound.whoosh(); break;
+    case "pique": Sound.pique(); break;
     case "salto": Sound.whoosh(); if (aide) aide.saltoFait = true; break;
     case "saltoReussi": Sound.ding(1.2); break;
     case "atterrissage":
@@ -970,8 +973,8 @@ function quelleAide() {
       const d = T.pente(p.x);
       if (d < -0.04 && !hold) return { txt: "Appuie !", fleche: 1 };
       if (d > 0.04 && hold) return { txt: "Lâche !", fleche: -1 };
-    } else if (!hold && p.vy < 0 && T.pente(p.x + p.vx * 0.25) < -0.05 && p.y - T.h(p.x) < 260) {
-      return { txt: "Appuie : redescends !", fleche: 1 };   // en l'air : plonger pour retomber dans la pente
+    } else if (!hold && p.vy < 0 && (g.atterrissagePrevu() || { pente: 0 }).pente > 0.02) {
+      return { txt: "Appuie : pique !", fleche: 1 };   // en l'air : il va trop loin, piquer pour retomber dans la pente
     }
   }
   if (aide.type === "salto" && !aide.saltoFait && !p.ground && !p.flipping && p.y - T.h(p.x) > 110 && p.vy > -200) return { txt: "Touche : salto !", fleche: 0 };
@@ -1418,6 +1421,7 @@ function majParticules(dt) {
 }
 function neige(dt) {
   const p = g.p;
+  if (p.pique && Math.random() < 0.8) particles.push({ x: p.x - 20, y: p.y + 10, vx: -p.vx * 0.2, vy: -p.vy * 0.2, life: 0.35, r: 2 + Math.random() * 2, c: "snow" });   // traînée du piqué
   if (!p.ground) return;
   const s = Math.hypot(p.vx, p.vy);
   if (s > 500 && Math.random() < 0.6 * dt * 60) particles.push({ x: p.x - 18, y: p.y + 4, vx: -60 - Math.random() * 80, vy: 60 + Math.random() * 120, life: 0.5, r: 3 + Math.random() * 3, c: "snow" });

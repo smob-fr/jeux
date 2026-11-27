@@ -64,9 +64,18 @@ export function plans() {
       L[id] = { ...p, ciel: CIEL[m], graine: m * 1000 + i * 37 + 11 };
     }
   }
-  // niveau test du terrain d'essai (bosses du réglage choisi, crevasses partout)
-  L.test = { nom: "Niveau test : bosses calculées", long: 2600, vmax: 2100, marge: 4, graine: 7, ciel: 0,
-    elan: { bosses: 4, relief: [200, 550, 700] }, glisse: { relief: [170, 850, 1050] },
-    saut: { vitesse: 0.8, decollage: 1.3, tolerance: 0.93, eau: 1, recup: 0, vol: [1600, 2600] }, poissons: { bleu: 0, or: 0 } };
+  // niveau test du terrain d'essai : le départ et les 3 premières bosses dessinés par le propriétaire au
+  // constructeur de bosses (27/11, ajustés : descente du départ 388 → 430 et montée de la 1re 446 → 480,
+  // trop raides), puis la suite dans le même style (bosses hautes posées sur 0, rapprochées, arrondies),
+  // avec des sauts calculés, sans crevasse.
+  L.test = { nom: "Niveau test : tes bosses", long: 1600, vmax: 1400, marge: 6, graine: 7, ciel: 0, penteMax: 1.3, variation: 0.06,
+    depart: { haut: 350, plateau: 20, descente: 430, creux: 0 },
+    fixes: [
+      { montee: 480, haut: 343, plateau: 40, descente: 520, creux: 0 },
+      { montee: 571, haut: 322, plateau: 40, descente: 516, creux: 0 },
+      { montee: 513, haut: 329, plateau: 40, descente: 601, creux: 4 },
+    ],
+    elan: { bosses: 1, relief: [330, 520, 560, 40, 0] }, glisse: { relief: [330, 540, 580, 40, 0] },
+    saut: { vitesse: 0.55, decollage: 1.15, tolerance: 0.88, eau: 0, recup: 1, vol: [1200, 1800], degagement: 50, chuteMax: 450 }, poissons: { bleu: 0.3, or: 0.1 } };
   return L;
 }

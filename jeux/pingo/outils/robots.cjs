@@ -17,12 +17,15 @@ function debutant() {
     return retard > 48; // ~0,2 s de réaction
   };
 }
-/** Bon joueur : idem, et appuie en l'air pour retomber dans la pente quand il va dépasser le creux. */
+/** Bon joueur : idem, et pique en l'air quand il va trop loin (il retomberait dans une montée). */
 function bon() {
   return (g) => {
     const p = g.p, T = g.terrain;
     if (p.ground) return T.pente(p.x) < -0.02;
-    return p.vy < 0 && T.pente(p.x + p.vx * 0.25) < -0.05 && p.y - T.h(p.x) < 260;
+    // en l'air : il pique seulement s'il va trop loin (il retomberait dans une montée)
+    if (p.vy > 0) return false;
+    const a = g.atterrissagePrevu();
+    return !!a && a.pente > 0.02;
   };
 }
 /** Joue une partie avec un robot qui décide à chaque sous-pas ; renvoie le bilan. maxS : durée maximale (s). */
