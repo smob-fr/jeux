@@ -53,7 +53,10 @@ un plan a changé sans reconstruction, ou si un parcours parfait enregistré n'a
   - *tremplin* : grand sommet (×1,5), puis 1 ou 2 petites bosses plus bas, puis une longue descente.
     Bien lancé, on survole les petites bosses ; un arc de poissons suit le vol idéal.
 - **Physique** (`step`, sous-pas de 1/240 s) : au sol, la pente accélère ou freine (`G = 1150`,
-  `DIVE = 2600` en plus quand on appuie, au sol comme en l'air). Frottement 0,06/s à plat ventre (on
+  `DIVE = 2600` en plus quand on appuie au sol). **En l'air, appuyer fait piquer** (`PIQUE = 4200` : le
+  pingouin redescend nettement plus vite, bascule le bec vers le bas, petit son et traînée) pour attraper
+  une pente plus tôt quand on va trop loin ; une touche brève reste un salto. `g.atterrissagePrevu()`
+  donne où il retomberait sans appuyer (bulle « Appuie : pique ! » et robot `bon`). Frottement 0,06/s à plat ventre (on
   appuie), 0,25/s sinon. On décolle en haut d'une bosse si la vitesse est trop forte pour suivre la
   courbe et qu'on n'appuie pas.
 - **Vitesse maximale souple** (`vmax` du niveau, 1 400 au 1-1 jusqu'à 2 300 ; sans fin : 1 100 puis +1
@@ -156,9 +159,11 @@ la pause ramène à l'éditeur avec le bilan. Tracé gardé dans `save.editeur` 
 
 ### Niveau test (terrain d'essai)
 
-Le plan `test` d'`outils/plans-niveaux.mjs` (bosses 170 / 850 / 1 050, vitesse 2 100, crevasses à
-chaque saut), jouable depuis le terrain d'essai avec un curseur « Retard de la banquise » ; il ne compte
-pas dans l'aventure.
+Plan `test` d'`outils/plans-niveaux.mjs` : le départ et les 3 premières bosses dessinés par le propriétaire au
+constructeur (27/11 : bosses ~330-350 posées sur 0, rapprochées, plateau 20-40, vitesse 1 400 ; descente du
+départ et 1re montée un peu élargies), via `plan.depart` et `plan.fixes`, puis la suite dans le même style
+avec des sauts calculés (`penteMax` 1,3, `degagement` 50, `chuteMax` 450), sans crevasse. Jouable depuis le
+terrain d'essai, curseur « Retard de la banquise » ; il ne compte pas dans l'aventure.
 
 ### Sauvegarde (`pingo.v1`, `Kit.creerSauvegarde`)
 

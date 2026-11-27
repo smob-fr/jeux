@@ -6,7 +6,8 @@
 
 const PX_PER_M = 20;
 const G = 1150;          // gravité
-const DIVE = 2600;       // poussée supplémentaire quand on appuie
+const DIVE = 2600;       // poussée supplémentaire quand on appuie, au sol
+const PIQUE = 4200;      // en l'air, appuyer fait piquer : le pingouin redescend nettement plus vite
 const MIN_SPEED = 230, MAX_SPEED = 2300;
 const FISH_FOR_TURBO = 8;
 const VITESSE_EAU = 380;   // vitesse maximale dans l'eau d'une crevasse
@@ -177,7 +178,7 @@ function creerTerrain({ relief, rand, finX = null, poissons, fishes, vmax, point
    creerPartie({ niveau, graine, fonte: false (démonstration), fantome, rejeu, on(type, données) })
    - fantome : partie de calcul (robots) : ni poissons, ni banquise, ni événements ;
    - rejeu : partie qui rejoue un parcours enregistré (pas de banquise, pas de calcul du fantôme).
-   Événements : poisson, turbo, decollage, salto, saltoReussi, atterrissage, hautVol, plouf, gagne.
+   Événements : poisson, turbo, decollage, pique, salto, saltoReussi, atterrissage, hautVol, eau, plouf, gagne.
 
    Banquise d'un niveau : elle suit le parcours du pingouin parfait (niveau.entrees, rejoué au départ)
    avec niveau.marge secondes de retard. Pour arriver au bout, il faut donc rester à moins de « marge »
@@ -239,6 +240,16 @@ function creerPartie(opts = {}) {
       let a = 0, b = g.time + 30;               // temps où le parfait était à la position du joueur
       for (let k = 0; k < 30; k++) { const m = (a + b) / 2; if (g.fantomeX(m) < p.x) a = m; else b = m; }
       return a - g.time;
+    },
+    /** En l'air : où le pingouin retombera s'il n'appuie pas ({ x, pente } du sol à cet endroit), ou null. */
+    atterrissagePrevu() {
+      if (p.ground) return null;
+      let x = p.x, y = p.y, vx = p.vx, vy = p.vy;
+      for (let k = 0; k < 120; k++) {
+        vy -= G / 30; x += vx / 30; y += vy / 30;
+        if (y <= terrain.h(x)) return { x, pente: terrain.pente(x) };
+      }
+      return null;
     },
     /** État complet de la partie (sans la banquise), pour les robots qui essaient plusieurs suites. */
     sauver() {
@@ -311,7 +322,11 @@ function creerPartie(opts = {}) {
     VMAX = vmaxAt(p.x / PX_PER_M);
     const enJeu = g.etat === "jeu";
     const hold = enJeu && g.hold;
-    const gr = G + (hold && !p.flipping ? DIVE : 0);
+    const gr = G + (hold && !p.flipping ? (p.ground ? DIVE : PIQUE) : 0);
+    // début d'un piqué (pour le son et l'attitude du pingouin)
+    const pique = hold && !p.ground && !p.flipping;
+    if (pique && !p.pique && enJeu) on("pique", {});
+    p.pique = pique;
     if (g.turboT > 0) g.turboT -= dt;
     // Crevasse remplie d'eau (niveaux construits) : on y perd sa vitesse, et on ne peut pas en décoller.
     const eau = eaux.length ? eaux.find((e) => p.x > e[0] && p.x < e[1] && p.y < e[2] + 2) : null;
@@ -353,7 +368,8 @@ function creerPartie(opts = {}) {
       if (dansEau) { const v = Math.hypot(p.vx, p.vy); if (v > VITESSE_EAU) { p.vx *= VITESSE_EAU / v; p.vy *= VITESSE_EAU / v; } }
       p.x += p.vx * dt; p.y += p.vy * dt; p.air += dt;
       p.maxH = Math.max(p.maxH, p.y - terrain.h(p.x));
-      const target = Math.atan2(p.vy, p.vx) * 0.6;
+      // attitude : suit la trajectoire ; en piqué, le bec bascule nettement vers le bas
+      const target = p.pique ? Math.min(Math.atan2(p.vy, p.vx), 0) * 0.95 - 0.45 : Math.atan2(p.vy, p.vx) * 0.6;
       p.rot += (target - p.rot) * Math.min(1, dt * 5);
       if (p.flipping) {
         p.flip += dt * Math.PI * 2 / 0.55;

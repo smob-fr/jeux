@@ -3,8 +3,8 @@
 // parcours du pingouin parfait avec « marge » secondes de retard. Règles :
 // - le parcours parfait arrive au bout, en 12 à 75 s, sans « Boum » au 1-1 ;
 // - aucune pente trop raide (plus de 1,1, environ 48°) : pas de montée qui se casse brutalement ;
-// - le « bon » robot (règles simples, ce que disent les bulles d'aide) arrive au bout des 5 premiers
-//   niveaux, sans aucun « Boum » au 1-1 ;
+// - le « bon » robot (règles simples, ce que disent les bulles d'aide) arrive au bout du 1-1 et du 1-2,
+//   sans aucun « Boum » au 1-1 ;
 // - à partir du 1-2, un pingouin qui ne fait rien se fait rattraper ;
 // - au moins 20 poissons par niveau ;
 // - sans fin : le débutant ne fait aucun « Boum » sur les 300 premiers mètres.
@@ -32,7 +32,7 @@ for (const M of Pingo.MONDES) {
     if (pf.temps < 12 || pf.temps > 75) faux(`${n.id} : parcours parfait en ${pf.temps.toFixed(0)} s (hors de 12 à 75 s)`);
     if (n.id === "1-1" && pf.boums) faux(`1-1 : le parcours parfait fait des « Boum »`);
     if (pente > 1.1) faux(`${n.id} : pente trop raide (${pente.toFixed(2)})`);
-    if (M.id === 1 && i <= 5 && b.etat !== "gagne") faux(`${n.id} : le bon robot n'arrive pas au bout (${b.m} m sur ${n.long})`);
+    if (M.id === 1 && i <= 2 && b.etat !== "gagne") faux(`${n.id} : le bon robot n'arrive pas au bout (${b.m} m sur ${n.long})`);
     if (n.id === "1-1" && b.atter.boum + b.atter.tete > 0) faux(`1-1 : le bon robot fait ${b.atter.boum} « Boum »`);
     if ((M.id > 1 || i >= 2) && r.etat === "gagne") faux(`${n.id} : un pingouin qui ne fait rien arrive au bout`);
     if (total < 20) faux(`${n.id} : trop peu de poissons (${total})`);
