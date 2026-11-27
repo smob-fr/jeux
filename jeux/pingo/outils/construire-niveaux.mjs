@@ -201,12 +201,22 @@ function construire(id, plan) {
     return true;
   }
 
+  let n = 0, glissesDeSuite = 0;
+  if (plan.regulier) {
+    // Bosses régulières : sinusoïde ronde (sans plateau), montée = descente = demi, chaque sommet « pente »
+    // plus bas que le précédent ; on vole d'une bosse à l'autre (décoller dans la montée, piquer par-dessus
+    // le sommet suivant, retomber dans sa descente). Départ en haut de la première bosse.
+    const { haut, demi, pente } = plan.regulier;
+    pts.length = 0;
+    pousser({ x: -1800, y: haut - 150 }, { x: -900, y: haut - 60 }, { x: 0, y: haut });
+    let x = 0, base = 0;
+    while (x < finX - 2500) { x += varie(demi); pousser({ x, y: base }); x += varie(demi); base -= pente; pousser({ x, y: base + varie(haut) }); }
+  }
   // Construction : élan, puis selon la vitesse du pingouin parfait au dernier creux :
   // lent → une bosse de glisse pour prendre de la vitesse ; rapide → un saut calculé.
-  for (const b of plan.fixes || []) bosse([b.haut, b.montee, b.descente, b.plateau, b.creux], { fixe: true });   // bosses choisies à la main
-  for (let i = 0; i < plan.elan.bosses; i++) bosse(plan.elan.relief);
-  let n = 0, glissesDeSuite = 0;
-  while (pts[pts.length - 1].x < finX - 4500) {
+  if (!plan.regulier) for (const b of plan.fixes || []) bosse([b.haut, b.montee, b.descente, b.plateau, b.creux], { fixe: true });   // bosses choisies à la main
+  if (!plan.regulier) for (let i = 0; i < plan.elan.bosses; i++) bosse(plan.elan.relief);
+  while (!plan.regulier && pts[pts.length - 1].x < finX - 4500) {
     const T = pts[pts.length - 1];
     avancer((q) => q.p.x > T.x - 500);
     const q = meilleur(), v = Math.hypot(q.p.vx, q.p.vy);
@@ -220,9 +230,10 @@ function construire(id, plan) {
       for (let i = 0; i < plan.saut.recup; i++) bosse(plan.elan.relief);   // de quoi reprendre de l'élan après un raté
     } else { bosse(plan.glisse.relief); glissesDeSuite++; }
   }
-  // arrivée : glissade presque plate jusqu'à l'igloo
+  // arrivée : glissade presque plate jusqu'à l'igloo (à partir du niveau du dernier point)
   const last = pts[pts.length - 1];
-  pousser({ x: Math.max(last.x + 600, finX - 300), y: -40 }, { x: finX + 8000, y: -110 });
+  const yFin = plan.regulier ? last.y - plan.regulier.haut - 60 : -40;
+  pousser({ x: Math.max(last.x + 900, finX - 300), y: yFin }, { x: finX + 8000, y: yFin - 70 });
 
   const niveau = {
     id, nom: plan.nom, long: plan.long, vmax: plan.vmax, ciel: plan.ciel, graine: plan.graine, sig: signature(plan), sauts: n,
@@ -237,7 +248,29 @@ function construire(id, plan) {
     console.log("  faisceau continu (pendant la construction) :", meilleur().time.toFixed(2), "s");
   }
   // parcours parfait sur le niveau fini (poissons compris), puis marge pour le joueur « moyen »
-  const pf = R.parfait({ ...niveau, monde: 0, numero: 0, poissons: {} });
+  // (bosses régulières : le pingouin parfait pique en l'air, c'est tout le geste ; sinon il reste au sol)
+  const pf = R.parfait({ ...niveau, monde: 0, numero: 0, poissons: {} }, { auSol: !plan.regulier });
+  if (plan.regulier) {
+    // poissons le long des vols du pingouin parfait (ils montrent la trajectoire), gros poissons au sommet
+    niveau.poissonsFixes = [];
+    const bits = Pingo.decoder(pf.entrees), rr = Pingo.aleatoire(plan.graine + 1);
+    const gg = Pingo.creerPartie({ niveau, rejeu: true });
+    let dernier = -1e9, vol = [];
+    const fin = () => {
+      if (vol.length > 6) {
+        const top = vol.reduce((a, b) => (b.y > a.y ? b : a));
+        for (const q of vol) if (q.x - dernier > 130 && q.x < finX - 250) { niveau.poissonsFixes.push([Math.round(q.x), Math.round(q.y + 18), "normal"]); dernier = q.x; }
+        if (rr() < plan.poissons.bleu) niveau.poissonsFixes.push([Math.round(top.x), Math.round(top.y + 150), "bleu"]);
+        if (rr() < plan.poissons.or) niveau.poissonsFixes.push([Math.round(top.x + 80), Math.round(top.y + 330), "or"]);
+      }
+      vol = [];
+    };
+    for (let i = 0; gg.etat === "jeu" && i < bits.length; i++) {
+      gg.hold = !!bits[i];
+      for (let k = 0; k < PAR_TRANCHE; k++) { gg.step(SOUS_PAS); if (!gg.p.ground) { if (k % 6 === 0) vol.push({ x: gg.p.x, y: gg.p.y }); } else if (vol.length) fin(); }
+    }
+    niveau.poissonsFixes.sort((a, b) => a[0] - b[0]);
+  }
   const j = Pingo.rejouer({ ...niveau }, pf.entrees);
   const tr = j.trace;
   const tAt = (x) => { for (let k = 1; k < tr.length; k++) if (tr[k] >= x) return (k - 1 + (x - tr[k - 1]) / Math.max(1, tr[k] - tr[k - 1])) * Pingo.PAS_TRACE; return tr.length * Pingo.PAS_TRACE; };

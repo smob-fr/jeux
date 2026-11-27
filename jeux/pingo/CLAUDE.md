@@ -99,11 +99,24 @@ en faisceau, `robots.cjs › etape`, sans plongée en l'air) au fur et à mesure
   parcours parfait) ; il repousse la banquise.
 - **Banquise** : elle suit le parcours parfait avec `marge` secondes de retard.
 
+### Bosses régulières (`plan.regulier` : { haut, demi, pente })
+
+Collines identiques (± `variation`), rondes (sinusoïde, montée = descente = `demi`, sans plateau : un plateau
+fait faire un petit bond au bord, puis un atterrissage raté), chaque sommet `pente` plus bas que le précédent.
+Réglage trouvé en faisant jouer le pingouin parfait sur des collines identiques : hauteur 280, demi 850,
+vitesse 1 700, pente 60 → il vole d'une bosse à l'autre et retombe en glisse parfaite à presque chaque bosse.
+**Le geste** (celui du pingouin parfait) : décoller dans la montée (vers 80 % de la bosse), **piquer** en
+l'air par-dessus le sommet suivant, **lâcher juste avant de toucher** pour arriver dans l'axe de la pente,
+retomber dans la descente (pas au fond du creux, trop plat : pas de glisse parfaite), appuyer dans le
+creux, lâcher dans la montée. Bulles d'aide et robot `bon` : en l'air, piquer si l'atterrissage prévu est
+à plat ou dans une montée (pente > −0,15), lâcher à moins de 70 du sol. Poissons placés le long des vols
+du pingouin parfait. Le pingouin parfait de ces niveaux pique en l'air (`auSol: false`).
+
 ### Plans (`outils/plans-niveaux.mjs`)
 
 | | Bosses | Sauts | Crevasses | Banquise |
 |---|---|---|---|---|
-| 1-1 → 1-3 | 70-100, rapprochées (montée ~430, descente ~500), sommets en plateau (~200), vitesse 1 000 → 1 150 | dès le 1-1, très tolérants (84-86 %) | non | 9-8,5 s |
+| 1-1 → 1-3 | **régulières** : sinusoïde ronde, hauteur 260 → 280, demi-longueur 850, chaque sommet 50-60 plus bas, vitesse 1 600 → 1 700, 1 500 → 2 000 m | on vole d'une bosse à l'autre | non | 10 → 9 s |
 | monde 1 | 110 → 150 | tolérance 88 → 90 % | non | 9 → 7 s |
 | monde 2 | 140 → 170 | 90 → 92 % | 50 → 80 % des sauts | 6,5 → 5 s |
 | monde 3 | 170 → 200 | 92 → 94 % | 85 → 100 % | 5 → 4 s |
