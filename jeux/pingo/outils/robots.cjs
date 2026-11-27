@@ -23,9 +23,10 @@ function bon() {
     const p = g.p, T = g.terrain;
     if (p.ground) return T.pente(p.x) < -0.02;
     // en l'air : il pique seulement s'il va trop loin (il retomberait dans une montée)
-    if (p.vy > 0) return false;
+    // (et lâche juste avant de toucher la neige, pour arriver dans l'axe de la pente : glisse parfaite)
+    if (p.y - T.h(p.x) < 70) return false;
     const a = g.atterrissagePrevu();
-    return !!a && a.pente > 0.02;
+    return !!a && a.pente > -0.15;   // il retomberait à plat ou dans une montée : piquer pour toucher la descente
   };
 }
 /** Joue une partie avec un robot qui décide à chaque sous-pas ; renvoie le bilan. maxS : durée maximale (s). */

@@ -18,14 +18,18 @@ function melanger(A, B, t) {
 }
 
 const PREMIERS = {
-  // Début du jeu : bosses basses, pentues et rapprochées (prendre vite le rythme appuyer / lâcher), sommets
-  // en plateau (relief [hauteur, montée, descente, plateau]), sauts dès le 1-1, sans eau, très tolérants.
-  "1-1": { long: 900, vmax: 1000, marge: 9, elan: { bosses: 3, relief: [70, 420, 480, 220] }, glisse: { relief: [80, 450, 520, 220] },
-    saut: { vitesse: 0.72, decollage: 1.4, tolerance: 0.84, eau: 0, recup: 2, vol: [1000, 1400] }, poissons: { bleu: 0, or: 0 } },
-  "1-2": { long: 1100, vmax: 1100, marge: 8.5, elan: { bosses: 3, relief: [80, 420, 480, 200] }, glisse: { relief: [90, 450, 520, 200] },
-    saut: { vitesse: 0.74, decollage: 1.4, tolerance: 0.85, eau: 0, recup: 2, vol: [1100, 1500] }, poissons: { bleu: 0, or: 0 } },
-  "1-3": { long: 1200, vmax: 1150, marge: 8.5, elan: { bosses: 2, relief: [90, 430, 500, 200] }, glisse: { relief: [100, 460, 540, 200] },
-    saut: { vitesse: 0.76, decollage: 1.4, tolerance: 0.86, eau: 0, recup: 2, vol: [1200, 1600] }, poissons: { bleu: 0.4, or: 0 } },
+  // Début du jeu : bosses régulières et rondes (sinusoïde, montée = descente), chaque sommet un peu plus bas
+  // que le précédent : on apprend le rythme (décoller dans la montée, piquer par-dessus le sommet suivant,
+  // retomber dans sa descente). Réglage trouvé en faisant jouer le pingouin parfait (voir le plan « test »).
+  "1-1": { long: 1500, vmax: 1600, marge: 10, variation: 0.03, regulier: { haut: 260, demi: 850, pente: 50 },
+    elan: { bosses: 0, relief: [260, 850, 850] }, glisse: { relief: [260, 850, 850] },
+    saut: { vitesse: 99, decollage: 1, tolerance: 1, eau: 0, recup: 0, vol: [0, 0] }, poissons: { bleu: 0, or: 0 } },
+  "1-2": { long: 1800, vmax: 1650, marge: 9.5, variation: 0.03, regulier: { haut: 270, demi: 850, pente: 55 },
+    elan: { bosses: 0, relief: [270, 850, 850] }, glisse: { relief: [270, 850, 850] },
+    saut: { vitesse: 99, decollage: 1, tolerance: 1, eau: 0, recup: 0, vol: [0, 0] }, poissons: { bleu: 0, or: 0 } },
+  "1-3": { long: 2000, vmax: 1700, marge: 9, variation: 0.03, regulier: { haut: 280, demi: 850, pente: 60 },
+    elan: { bosses: 0, relief: [280, 850, 850] }, glisse: { relief: [280, 850, 850] },
+    saut: { vitesse: 99, decollage: 1, tolerance: 1, eau: 0, recup: 0, vol: [0, 0] }, poissons: { bleu: 0.4, or: 0 } },
 };
 const MONDES = {
   1: {
@@ -64,18 +68,13 @@ export function plans() {
       L[id] = { ...p, ciel: CIEL[m], graine: m * 1000 + i * 37 + 11 };
     }
   }
-  // niveau test du terrain d'essai : le départ et les 3 premières bosses dessinés par le propriétaire au
-  // constructeur de bosses (27/11, ajustés : descente du départ 388 → 430 et montée de la 1re 446 → 480,
-  // trop raides), puis la suite dans le même style (bosses hautes posées sur 0, rapprochées, arrondies),
-  // avec des sauts calculés, sans crevasse.
-  L.test = { nom: "Niveau test : tes bosses", long: 1600, vmax: 1400, marge: 6, graine: 7, ciel: 0, penteMax: 1.3, variation: 0.06,
-    depart: { haut: 350, plateau: 20, descente: 430, creux: 0 },
-    fixes: [
-      { montee: 480, haut: 343, plateau: 40, descente: 520, creux: 0 },
-      { montee: 571, haut: 322, plateau: 40, descente: 516, creux: 0 },
-      { montee: 513, haut: 329, plateau: 40, descente: 601, creux: 4 },
-    ],
-    elan: { bosses: 1, relief: [330, 520, 560, 40, 0] }, glisse: { relief: [330, 540, 580, 40, 0] },
-    saut: { vitesse: 0.55, decollage: 1.15, tolerance: 0.88, eau: 0, recup: 1, vol: [1200, 1800], degagement: 50, chuteMax: 450 }, poissons: { bleu: 0.3, or: 0.1 } };
+  // niveau test du terrain d'essai : bosses régulières et rondes (28/11). Réglage trouvé en faisant jouer
+  // le pingouin parfait sur des collines identiques : hauteur 280, demi-longueur 850 (une bosse tous les
+  // 1 700), vitesse 1 700, chaque sommet 60 plus bas que le précédent : il vole d'une bosse à l'autre et
+  // retombe en glisse parfaite à presque chaque bosse. ± 3 % de variation.
+  L.test = { nom: "Niveau test : bosses régulières", long: 1600, vmax: 1700, marge: 8, graine: 7, ciel: 0, variation: 0.03,
+    regulier: { haut: 280, demi: 850, pente: 60 },
+    elan: { bosses: 0, relief: [280, 850, 850] }, glisse: { relief: [280, 850, 850] },
+    saut: { vitesse: 99, decollage: 1, tolerance: 1, eau: 0, recup: 0, vol: [0, 0] }, poissons: { bleu: 0.25, or: 0.1 } };
   return L;
 }

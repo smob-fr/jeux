@@ -973,8 +973,10 @@ function quelleAide() {
       const d = T.pente(p.x);
       if (d < -0.04 && !hold) return { txt: "Appuie !", fleche: 1 };
       if (d > 0.04 && hold) return { txt: "Lâche !", fleche: -1 };
-    } else if (!hold && p.vy < 0 && (g.atterrissagePrevu() || { pente: 0 }).pente > 0.02) {
-      return { txt: "Appuie : pique !", fleche: 1 };   // en l'air : il va trop loin, piquer pour retomber dans la pente
+    } else if (hold && p.y - T.h(p.x) < 70) {
+      return { txt: "Lâche !", fleche: -1 };           // juste avant de toucher la neige : arriver dans l'axe de la pente
+    } else if (!hold && p.y - T.h(p.x) > 90 && (g.atterrissagePrevu() || { pente: -1 }).pente > -0.15) {
+      return { txt: "Appuie : pique !", fleche: 1 };   // il retomberait à plat ou dans une montée : piquer vers la descente
     }
   }
   if (aide.type === "salto" && !aide.saltoFait && !p.ground && !p.flipping && p.y - T.h(p.x) > 110 && p.vy > -200) return { txt: "Touche : salto !", fleche: 0 };
